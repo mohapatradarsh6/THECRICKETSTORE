@@ -25,15 +25,28 @@ header {
   padding: 15px 30px;
   background-color: #fff;
   border-bottom: 1px solid #ddd;
-  font-weight: bold;
-  position: relative;
   flex-wrap: nowrap;
 }
 
-header h1#site-name {
+.header-left {
+  flex: 1; /* Take remaining space on the left */
+}
+
+.header-left h1 {
   margin: 0;
   font-size: 1.5em;
   color: #333;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 20px; /* space between cart and other items */
+}
+
+#cart-btn {
+  cursor: pointer;
+  white-space: nowrap; /* prevent breaking */
 }
 
 #cart-btn {
