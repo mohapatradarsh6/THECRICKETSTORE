@@ -106,7 +106,7 @@ payNowBtn.addEventListener("click", () => {
     }
   }
   alert(
-    `Demo Payment Successful!\nPayment Method: ${selectedMethod}\nDetails: ${
+    `Payment Successful!\nPayment Method: ${selectedMethod}\nDetails: ${
       details || "N/A"
     }`
   );
