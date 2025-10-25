@@ -92,14 +92,18 @@ function openPaymentModal(items) {
   let total = 0;
   items.forEach((item) => {
     const div = document.createElement("div");
-    div.textContent = `${item.title} - ₹${item.price} × ${item.quantity}`;
+    div.textContent = `${item.title} - ₹${item.price} × ${item.quantity || 1}`;
     paymentItems.appendChild(div);
-    total += item.price * item.quantity;
+    total += item.price * (item.quantity || 1);
   });
   paymentTotal.textContent = total;
   modal.style.display = "flex";
-}
 
+  const selectedRadio = document.querySelector('input[name="payment"]:checked');
+  if (selectedRadio) {
+    togglePaymentDetails();
+  }
+}
 closeModal.onclick = () => (modal.style.display = "none");
 window.onclick = (e) => {
   if (e.target === modal) modal.style.display = "none";
@@ -109,11 +113,16 @@ function togglePaymentDetails() {
   const selectedRadio = document.querySelector('input[name="payment"]:checked');
   if (!selectedRadio) return;
   const selected = selectedRadio.value;
-  if (selected === "Card" || selected === "UPI") {
+  if (selected === "Card") {
     cardUpiInput.style.display = "block";
-    cardUpiInput.placeholder =
-      selected === "Card" ? "Enter Card Number" : "Enter UPI ID";
-  } else cardUpiInput.style.display = "none";
+    cardUpiInput.placeholder = "Enter Card Number";
+  } else if (selected === "UPI") {
+    cardUpiInput.style.display = "block";
+    cardUpiInput.placeholder = "Enter UPI ID";
+  } else {
+    cardUpiInput.style.display = "none";
+    cardUpiInput.value = "";
+  }
 }
 
 paymentRadios.forEach((r) =>
