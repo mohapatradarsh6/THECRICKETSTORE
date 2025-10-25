@@ -3,116 +3,906 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Cricket Store</title>
+    <meta
+      name="description"
+      content="Premium Cricket Equipment Store - Shop for high-quality cricket bats, balls, pads, gloves and accessories from top brands"
+    />
+    <meta
+      name="keywords"
+      content="cricket, sports, equipment, bats, balls, SG, Kookaburra, BAS"
+    />
+    <title>The Cricket Store - Premium Cricket Equipment</title>
     <link rel="stylesheet" href="style.css" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+    />
   </head>
   <body>
-    <div class="page-container">
-      <header>
-        <div class="header-left">
-          <h1 id="site-name">TheCricketStore</h1>
-        </div>
-        <div class="header-right">
-          <div id="cart-btn">Cart (<span id="cart-count">0</span>)</div>
-          <div class="cart-dropdown" id="cart-dropdown">
-            <div id="cart-items"></div>
-            <button id="checkout-btn">Checkout</button>
-          </div>
-        </div>
-      </header>
-
-      <main class="products-container">
-        <div class="product-card" data-title="SG HP33" data-price="4999">
-          <img class="product-image" src="images/SS.png" alt="SG Bat" />
-          <div class="price-button">₹4999</div>
-          <h1 class="product-title">SG HP33</h1>
-          <h5 class="product-subtitle">
-            Power Meets Precision: Dominate Every Shot
-          </h5>
-          <div class="buttons">
-            <button class="btn-add-cart">Add to Cart</button>
-            <button class="btn-buy-now">Buy Now</button>
-          </div>
-        </div>
-
-        <div
-          class="product-card"
-          data-title="Kookabura Kahuna"
-          data-price="5999"
-        >
-          <img
-            class="product-image"
-            src="images/Kookabura.png"
-            alt="Kookabura Bat"
-          />
-          <div class="price-button">₹5999</div>
-          <h1 class="product-title">Kookabura Kahuna</h1>
-          <h5 class="product-subtitle">
-            Unleash the Beast: Perfect Balance for Every Innings
-          </h5>
-          <div class="buttons">
-            <button class="btn-add-cart">Add to Cart</button>
-            <button class="btn-buy-now">Buy Now</button>
-          </div>
-        </div>
-
-        <div class="product-card" data-title="SG Classic" data-price="3999">
-          <img class="product-image" src="images/SG.png" alt="SG Classic" />
-          <div class="price-button">₹3999</div>
-          <h1 class="product-title">SG Classic</h1>
-          <h5 class="product-subtitle">
-            Trusted by Champions: The Bat That Never Fails
-          </h5>
-          <div class="buttons">
-            <button class="btn-add-cart">Add to Cart</button>
-            <button class="btn-buy-now">Buy Now</button>
-          </div>
-        </div>
-
-        <div class="product-card" data-title="BAS SR23" data-price="5499">
-          <img class="product-image" src="images/BAS.png" alt="BAS Bat" />
-          <div class="price-button">₹5499</div>
-          <h1 class="product-title">BAS SR23</h1>
-          <h5 class="product-subtitle">
-            Feel the Edge: Engineered for Maximum Performance
-          </h5>
-          <div class="buttons">
-            <button class="btn-add-cart">Add to Cart</button>
-            <button class="btn-buy-now">Buy Now</button>
-          </div>
-        </div>
-      </main>
-
-      <footer>&copy; 2025 Darsh Mohapatra. All Rights Reserved.</footer>
-    </div>
-
-    <div id="demo-payment-modal" class="modal">
-      <div class="modal-content">
-        <span class="close">&times;</span>
-        <h2>Payment Gateway</h2>
-        <div id="payment-items"></div>
-        <p>Total: ₹<span id="payment-total">0</span></p>
-        <h3>Select Payment Method:</h3>
-        <div class="payment-methods">
-          <label
-            ><input type="radio" name="payment" value="Card" checked />
-            Card</label
+    <!-- Top Bar -->
+    <div class="top-bar">
+      <div class="container">
+        <div class="top-bar-content">
+          <span><i class="fas fa-phone"></i> +91 98765 43210</span>
+          <span
+            ><i class="fas fa-envelope"></i> support@thecricketstore.com</span
           >
-          <label><input type="radio" name="payment" value="UPI" /> UPI</label>
-          <label><input type="radio" name="payment" value="Cash" /> Cash</label>
-          <label
-            ><input type="radio" name="payment" value="Pay Later" /> Pay
-            Later</label
+          <span
+            ><i class="fas fa-shipping-fast"></i> Free Shipping on Orders Above
+            ₹2000</span
           >
         </div>
-        <input
-          type="text"
-          id="card-upi-input"
-          placeholder="Enter Card/UPI details"
-        />
-        <button id="pay-now">Pay</button>
       </div>
     </div>
+
+    <!-- Header -->
+    <header class="main-header">
+      <div class="container">
+        <div class="header-content">
+          <div class="logo">
+            <h1><i class="fas fa-baseball-ball"></i> The Cricket Store</h1>
+            <span class="tagline">Your Premium Cricket Partner</span>
+          </div>
+
+          <nav class="main-nav">
+            <ul>
+              <li><a href="#home" class="active">Home</a></li>
+              <li class="dropdown">
+                <a href="#products"
+                  >Products <i class="fas fa-chevron-down"></i
+                ></a>
+                <div class="dropdown-content">
+                  <a href="#bats">Cricket Bats</a>
+                  <a href="#balls">Balls</a>
+                  <a href="#pads">Pads & Guards</a>
+                  <a href="#gloves">Gloves</a>
+                  <a href="#accessories">Accessories</a>
+                </div>
+              </li>
+              <li><a href="#brands">Brands</a></li>
+              <li><a href="#offers">Offers</a></li>
+              <li><a href="#about">About</a></li>
+              <li><a href="#contact">Contact</a></li>
+            </ul>
+          </nav>
+
+          <div class="header-actions">
+            <div class="search-box">
+              <input
+                type="text"
+                id="search-input"
+                placeholder="Search products..."
+              />
+              <button id="search-btn"><i class="fas fa-search"></i></button>
+            </div>
+
+            <div class="user-actions">
+              <a href="#" class="user-btn" title="Account">
+                <i class="fas fa-user"></i>
+                <span>Account</span>
+              </a>
+              <a href="#" class="wishlist-btn" title="Wishlist">
+                <i class="fas fa-heart"></i>
+                <span class="wishlist-count">0</span>
+              </a>
+              <div class="cart-wrapper">
+                <button id="cart-btn" class="cart-btn">
+                  <i class="fas fa-shopping-cart"></i>
+                  <span>Cart</span>
+                  <span id="cart-count" class="cart-count">0</span>
+                </button>
+                <div class="cart-dropdown" id="cart-dropdown">
+                  <h3>Shopping Cart</h3>
+                  <div id="cart-items"></div>
+                  <div class="cart-total">
+                    <span>Total:</span>
+                    <span id="cart-total">₹0</span>
+                  </div>
+                  <div class="cart-actions">
+                    <button id="view-cart-btn" class="btn-secondary">
+                      View Cart
+                    </button>
+                    <button id="checkout-btn" class="btn-primary">
+                      Checkout
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Mobile Menu Toggle -->
+          <button class="mobile-menu-toggle" id="mobile-menu-toggle">
+            <i class="fas fa-bars"></i>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!--Hero Section with Multi-Slide Carousel -->
+    <section class="hero-section">
+      <div class="hero-slider" id="hero-slider">
+        <!-- Slide 1 -->
+        <div class="hero-slide active" data-slide="1">
+          <div class="hero-content">
+            <span class="hero-badge">New Arrival</span>
+            <h2 class="hero-title">Premium Cricket Equipment</h2>
+            <p class="hero-subtitle">
+              Unleash your potential with world-class gear from top brands
+            </p>
+            <div class="hero-stats">
+              <div class="stat-item">
+                <span class="stat-number">10,000+</span>
+                <span class="stat-label">Happy Customers</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-number">50+</span>
+                <span class="stat-label">Top Brands</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-number">24/7</span>
+                <span class="stat-label">Support</span>
+              </div>
+            </div>
+            <div class="hero-buttons">
+              <button class="btn-hero btn-primary-hero">Shop Now</button>
+              <button class="btn-hero btn-secondary-hero">
+                View Collection
+              </button>
+            </div>
+          </div>
+          <div class="hero-image">
+            <div class="image-wrapper">
+              <img
+                src="images/kit.png"
+                alt="Cricket Equipment"
+                class="hero-product-img"
+              />
+              <div class="floating-badge badge-1">
+                <i class="fas fa-shield-alt"></i>
+                <span>Premium Quality</span>
+              </div>
+              <div class="floating-badge badge-2">
+                <i class="fas fa-star"></i>
+                <span>Best Rated</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Slide 2 -->
+        <div class="hero-slide" data-slide="2">
+          <div class="hero-content">
+            <span class="hero-badge">Limited Offer</span>
+            <h2 class="hero-title">Mega Cricket Sale</h2>
+            <p class="hero-subtitle">
+              Get up to 40% off on premium bats and accessories
+            </p>
+            <div class="hero-features">
+              <div class="feature-item">
+                <i class="fas fa-check-circle"></i>
+                <span>Free Shipping Above ₹2000</span>
+              </div>
+              <div class="feature-item">
+                <i class="fas fa-check-circle"></i>
+                <span>30-Day Easy Returns</span>
+              </div>
+              <div class="feature-item">
+                <i class="fas fa-check-circle"></i>
+                <span>Authentic Products Only</span>
+              </div>
+            </div>
+            <div class="hero-buttons">
+              <button class="btn-hero btn-primary-hero">Grab Deals</button>
+              <button class="btn-hero btn-secondary-hero">Learn More</button>
+            </div>
+          </div>
+          <div class="hero-image">
+            <div class="image-wrapper">
+              <img
+                src="images/bats.png"
+                alt="Cricket Sale"
+                class="hero-product-img"
+              />
+              <div class="discount-circle">
+                <span class="discount-text">UP TO</span>
+                <span class="discount-percent">40%</span>
+                <span class="discount-off">OFF</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Slide 3 -->
+        <div class="hero-slide" data-slide="3">
+          <div class="hero-content">
+            <span class="hero-badge">Professional Grade</span>
+            <h2 class="hero-title">English Willow Collection</h2>
+            <p class="hero-subtitle">
+              Experience the touch of champions with handcrafted bats
+            </p>
+            <div class="hero-brands">
+              <span class="brand-text">Featured Brands:</span>
+              <div class="brand-logos">
+                <span class="brand-logo">SG</span>
+                <span class="brand-logo">Kookaburra</span>
+                <span class="brand-logo">BAS</span>
+                <span class="brand-logo">Gray Nicolls</span>
+              </div>
+            </div>
+            <div class="hero-buttons">
+              <button class="btn-hero btn-primary-hero">Explore Bats</button>
+              <button class="btn-hero btn-secondary-hero">
+                Compare Models
+              </button>
+            </div>
+          </div>
+          <div class="hero-image">
+            <div class="image-wrapper">
+              <img
+                src="images/willows.png"
+                alt="Premium Bats"
+                class="hero-product-img"
+              />
+              <div class="floating-badge badge-3">
+                <i class="fas fa-trophy"></i>
+                <span>Pro Choice</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Navigation Arrows -->
+      <button class="hero-arrow hero-arrow-prev" id="hero-prev">
+        <i class="fas fa-chevron-left"></i>
+      </button>
+      <button class="hero-arrow hero-arrow-next" id="hero-next">
+        <i class="fas fa-chevron-right"></i>
+      </button>
+
+      <!-- Dots Navigation -->
+      <div class="hero-dots" id="hero-dots">
+        <span class="dot active" data-slide="1"></span>
+        <span class="dot" data-slide="2"></span>
+        <span class="dot" data-slide="3"></span>
+      </div>
+
+      <!-- Progress Bar -->
+      <div class="hero-progress">
+        <div class="hero-progress-bar" id="hero-progress-bar"></div>
+      </div>
+    </section>
+
+    <!-- Filter and Sort Section -->
+    <section class="filter-section">
+      <div class="container">
+        <div class="filter-header">
+          <h2>Featured Products</h2>
+          <div class="filter-controls">
+            <select id="category-filter" class="filter-select">
+              <option value="all">All Categories</option>
+              <option value="bats">Cricket Bats</option>
+              <option value="balls">Balls</option>
+              <option value="pads">Pads</option>
+              <option value="gloves">Gloves</option>
+            </select>
+
+            <select id="brand-filter" class="filter-select">
+              <option value="all">All Brands</option>
+              <option value="sg">SG</option>
+              <option value="kookaburra">Kookaburra</option>
+              <option value="bas">BAS</option>
+            </select>
+
+            <select id="sort-filter" class="filter-select">
+              <option value="featured">Featured</option>
+              <option value="price-low">Price: Low to High</option>
+              <option value="price-high">Price: High to Low</option>
+              <option value="rating">Highest Rated</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Products Section -->
+    <main class="products-section">
+      <div class="container">
+        <div class="products-container" id="products-container">
+          <!-- Product 1 -->
+          <div
+            class="product-card"
+            data-title="SG HP33 Kashmir Willow"
+            data-price="4999"
+            data-category="bats"
+            data-brand="sg"
+          >
+            <div class="product-badge">Bestseller</div>
+            <div class="product-image-wrapper">
+              <img
+                class="product-image"
+                src="images/SS.png"
+                alt="SG HP33 Bat"
+              />
+              <div class="product-overlay">
+                <button class="btn-quick-view" data-product="SG HP33">
+                  Quick View
+                </button>
+              </div>
+            </div>
+            <div class="product-info">
+              <div class="product-brand">SG</div>
+              <h3 class="product-title">HP33 Kashmir Willow</h3>
+              <div class="product-rating">
+                <div class="stars">
+                  <i class="fas fa-star"></i>
+                  <i class="fas fa-star"></i>
+                  <i class="fas fa-star"></i>
+                  <i class="fas fa-star"></i>
+                  <i class="fas fa-star-half-alt"></i>
+                </div>
+                <span class="rating-count">(125 reviews)</span>
+              </div>
+              <p class="product-description">
+                Professional grade Kashmir willow bat with superior grip and
+                balance
+              </p>
+              <div class="product-price">
+                <span class="price-current">₹4,999</span>
+                <span class="price-original">₹6,999</span>
+                <span class="price-discount">-29%</span>
+              </div>
+              <div class="product-actions">
+                <button class="btn-wishlist" title="Add to Wishlist">
+                  <i class="far fa-heart"></i>
+                </button>
+                <button class="btn-add-cart">
+                  <i class="fas fa-shopping-cart"></i> Add to Cart
+                </button>
+                <button class="btn-buy-now">Buy Now</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Product 2 -->
+          <div
+            class="product-card"
+            data-title="Kookaburra Kahuna Pro"
+            data-price="8999"
+            data-category="bats"
+            data-brand="kookaburra"
+          >
+            <div class="product-badge badge-new">New Arrival</div>
+            <div class="product-image-wrapper">
+              <img
+                class="product-image"
+                src="images/Kookabura.png"
+                alt="Kookaburra Kahuna"
+              />
+              <div class="product-overlay">
+                <button class="btn-quick-view" data-product="Kookaburra Kahuna">
+                  Quick View
+                </button>
+              </div>
+            </div>
+            <div class="product-info">
+              <div class="product-brand">Kookaburra</div>
+              <h3 class="product-title">Kahuna Pro English Willow</h3>
+              <div class="product-rating">
+                <div class="stars">
+                  <i class="fas fa-star"></i>
+                  <i class="fas fa-star"></i>
+                  <i class="fas fa-star"></i>
+                  <i class="fas fa-star"></i>
+                  <i class="fas fa-star"></i>
+                </div>
+                <span class="rating-count">(89 reviews)</span>
+              </div>
+              <p class="product-description">
+                Premium English willow with enhanced sweet spot and pro-level
+                performance
+              </p>
+              <div class="product-price">
+                <span class="price-current">₹8,999</span>
+                <span class="price-original">₹10,999</span>
+                <span class="price-discount">-18%</span>
+              </div>
+              <div class="product-actions">
+                <button class="btn-wishlist" title="Add to Wishlist">
+                  <i class="far fa-heart"></i>
+                </button>
+                <button class="btn-add-cart">
+                  <i class="fas fa-shopping-cart"></i> Add to Cart
+                </button>
+                <button class="btn-buy-now">Buy Now</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Product 3 -->
+          <div
+            class="product-card"
+            data-title="SG Classic Elite"
+            data-price="3999"
+            data-category="bats"
+            data-brand="sg"
+          >
+            <div class="product-image-wrapper">
+              <img class="product-image" src="images/SG.png" alt="SG Classic" />
+              <div class="product-overlay">
+                <button class="btn-quick-view" data-product="SG Classic">
+                  Quick View
+                </button>
+              </div>
+            </div>
+            <div class="product-info">
+              <div class="product-brand">SG</div>
+              <h3 class="product-title">Classic Elite Kashmir Willow</h3>
+              <div class="product-rating">
+                <div class="stars">
+                  <i class="fas fa-star"></i>
+                  <i class="fas fa-star"></i>
+                  <i class="fas fa-star"></i>
+                  <i class="fas fa-star"></i>
+                  <i class="far fa-star"></i>
+                </div>
+                <span class="rating-count">(203 reviews)</span>
+              </div>
+              <p class="product-description">
+                Traditional design with modern technology for consistent
+                performance
+              </p>
+              <div class="product-price">
+                <span class="price-current">₹3,999</span>
+                <span class="price-original">₹5,499</span>
+                <span class="price-discount">-27%</span>
+              </div>
+              <div class="product-actions">
+                <button class="btn-wishlist" title="Add to Wishlist">
+                  <i class="far fa-heart"></i>
+                </button>
+                <button class="btn-add-cart">
+                  <i class="fas fa-shopping-cart"></i> Add to Cart
+                </button>
+                <button class="btn-buy-now">Buy Now</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Product 4 -->
+          <div
+            class="product-card"
+            data-title="BAS Vampire SR23"
+            data-price="7499"
+            data-category="bats"
+            data-brand="bas"
+          >
+            <div class="product-badge badge-limited">Limited Edition</div>
+            <div class="product-image-wrapper">
+              <img class="product-image" src="images/BAS.png" alt="BAS SR23" />
+              <div class="product-overlay">
+                <button class="btn-quick-view" data-product="BAS SR23">
+                  Quick View
+                </button>
+              </div>
+            </div>
+            <div class="product-info">
+              <div class="product-brand">BAS</div>
+              <h3 class="product-title">Vampire SR23 English Willow</h3>
+              <div class="product-rating">
+                <div class="stars">
+                  <i class="fas fa-star"></i>
+                  <i class="fas fa-star"></i>
+                  <i class="fas fa-star"></i>
+                  <i class="fas fa-star"></i>
+                  <i class="fas fa-star-half-alt"></i>
+                </div>
+                <span class="rating-count">(156 reviews)</span>
+              </div>
+              <p class="product-description">
+                Signature series bat with exceptional power and precision
+                engineering
+              </p>
+              <div class="product-price">
+                <span class="price-current">₹7,499</span>
+                <span class="price-original">₹9,999</span>
+                <span class="price-discount">-25%</span>
+              </div>
+              <div class="product-actions">
+                <button class="btn-wishlist" title="Add to Wishlist">
+                  <i class="far fa-heart"></i>
+                </button>
+                <button class="btn-add-cart">
+                  <i class="fas fa-shopping-cart"></i> Add to Cart
+                </button>
+                <button class="btn-buy-now">Buy Now</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Additional Products -->
+          <div
+            class="product-card"
+            data-title="SG Test Cricket Ball"
+            data-price="899"
+            data-category="balls"
+            data-brand="sg"
+          >
+            <div class="product-image-wrapper">
+              <img
+                class="product-image"
+                src="images/sgred.png"
+                alt="SG Test Ball"
+              />
+              <div class="product-overlay">
+                <button class="btn-quick-view" data-product="SG Test Ball">
+                  Quick View
+                </button>
+              </div>
+            </div>
+            <div class="product-info">
+              <div class="product-brand">SG</div>
+              <h3 class="product-title">Test Cricket Ball (Red)</h3>
+              <div class="product-rating">
+                <div class="stars">
+                  <i class="fas fa-star"></i>
+                  <i class="fas fa-star"></i>
+                  <i class="fas fa-star"></i>
+                  <i class="fas fa-star"></i>
+                  <i class="fas fa-star"></i>
+                </div>
+                <span class="rating-count">(78 reviews)</span>
+              </div>
+              <p class="product-description">
+                4-piece leather ball, hand-stitched for professional matches
+              </p>
+              <div class="product-price">
+                <span class="price-current">₹899</span>
+                <span class="price-original">₹1,199</span>
+                <span class="price-discount">-25%</span>
+              </div>
+              <div class="product-actions">
+                <button class="btn-wishlist" title="Add to Wishlist">
+                  <i class="far fa-heart"></i>
+                </button>
+                <button class="btn-add-cart">
+                  <i class="fas fa-shopping-cart"></i> Add to Cart
+                </button>
+                <button class="btn-buy-now">Buy Now</button>
+              </div>
+            </div>
+          </div>
+
+          <div
+            class="product-card"
+            data-title="Kookaburra Batting Pads"
+            data-price="2999"
+            data-category="pads"
+            data-brand="kookaburra"
+          >
+            <div class="product-image-wrapper">
+              <img
+                class="product-image"
+                src="images/pads.png"
+                alt="Batting Pads"
+              />
+              <div class="product-overlay">
+                <button class="btn-quick-view" data-product="Batting Pads">
+                  Quick View
+                </button>
+              </div>
+            </div>
+            <div class="product-info">
+              <div class="product-brand">Kookaburra</div>
+              <h3 class="product-title">Pro Batting Pads</h3>
+              <div class="product-rating">
+                <div class="stars">
+                  <i class="fas fa-star"></i>
+                  <i class="fas fa-star"></i>
+                  <i class="fas fa-star"></i>
+                  <i class="fas fa-star"></i>
+                  <i class="far fa-star"></i>
+                </div>
+                <span class="rating-count">(92 reviews)</span>
+              </div>
+              <p class="product-description">
+                Lightweight protection with premium comfort and flexibility
+              </p>
+              <div class="product-price">
+                <span class="price-current">₹2,999</span>
+                <span class="price-original">₹3,999</span>
+                <span class="price-discount">-25%</span>
+              </div>
+              <div class="product-actions">
+                <button class="btn-wishlist" title="Add to Wishlist">
+                  <i class="far fa-heart"></i>
+                </button>
+                <button class="btn-add-cart">
+                  <i class="fas fa-shopping-cart"></i> Add to Cart
+                </button>
+                <button class="btn-buy-now">Buy Now</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- Features Section -->
+    <section class="features-section">
+      <div class="container">
+        <div class="features-grid">
+          <div class="feature-card">
+            <i class="fas fa-truck"></i>
+            <h3>Free Shipping</h3>
+            <p>On orders above ₹2000</p>
+          </div>
+          <div class="feature-card">
+            <i class="fas fa-shield-alt"></i>
+            <h3>Secure Payment</h3>
+            <p>100% secure transactions</p>
+          </div>
+          <div class="feature-card">
+            <i class="fas fa-undo"></i>
+            <h3>Easy Returns</h3>
+            <p>30-day return policy</p>
+          </div>
+          <div class="feature-card">
+            <i class="fas fa-headset"></i>
+            <h3>24/7 Support</h3>
+            <p>Dedicated customer service</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Newsletter Section -->
+    <section class="newsletter-section">
+      <div class="container">
+        <div class="newsletter-content">
+          <h2>Subscribe to Our Newsletter</h2>
+          <p>Get exclusive offers and updates on new arrivals</p>
+          <form class="newsletter-form">
+            <input
+              type="email"
+              placeholder="Enter your email address"
+              required
+            />
+            <button type="submit">Subscribe</button>
+          </form>
+        </div>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="main-footer">
+      <div class="container">
+        <div class="footer-content">
+          <div class="footer-column">
+            <h3>About The Cricket Store</h3>
+            <p>
+              Your one-stop destination for premium cricket equipment. We offer
+              authentic products from world-renowned brands with guaranteed
+              quality.
+            </p>
+            <div class="social-links">
+              <a href="#"><i class="fab fa-facebook"></i></a>
+              <a href="#"><i class="fab fa-twitter"></i></a>
+              <a href="#"><i class="fab fa-instagram"></i></a>
+              <a href="#"><i class="fab fa-youtube"></i></a>
+            </div>
+          </div>
+
+          <div class="footer-column">
+            <h3>Quick Links</h3>
+            <ul>
+              <li><a href="#">About Us</a></li>
+              <li><a href="#">Contact Us</a></li>
+              <li><a href="#">Store Locator</a></li>
+              <li><a href="#">Size Guide</a></li>
+              <li><a href="#">Blog</a></li>
+            </ul>
+          </div>
+
+          <div class="footer-column">
+            <h3>Customer Service</h3>
+            <ul>
+              <li><a href="#">Track Order</a></li>
+              <li><a href="#">Return Policy</a></li>
+              <li><a href="#">Shipping Info</a></li>
+              <li><a href="#">FAQs</a></li>
+              <li><a href="#">Terms & Conditions</a></li>
+            </ul>
+          </div>
+
+          <div class="footer-column">
+            <h3>Contact Info</h3>
+            <ul class="contact-info">
+              <li>
+                <i class="fas fa-map-marker-alt"></i> 123 Sports Avenue, Mumbai,
+                India
+              </li>
+              <li><i class="fas fa-phone"></i> +91 98765 43210</li>
+              <li>
+                <i class="fas fa-envelope"></i> support@thecricketstore.com
+              </li>
+              <li><i class="fas fa-clock"></i> Mon-Sat: 9AM-8PM</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="footer-bottom">
+          <p>
+            &copy; 2025 The Cricket Store. All Rights Reserved. | Developed by
+            Darsh Mohapatra
+          </p>
+          <div class="payment-methods">
+            <i class="fab fa-cc-visa"></i>
+            <i class="fab fa-cc-mastercard"></i>
+            <i class="fab fa-cc-paypal"></i>
+            <i class="fab fa-google-pay"></i>
+            <i class="fab fa-amazon-pay"></i>
+          </div>
+        </div>
+      </div>
+    </footer>
+
+    <!-- Payment Modal -->
+    <div id="demo-payment-modal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>Secure Checkout</h2>
+          <span class="close">&times;</span>
+        </div>
+
+        <div class="modal-body">
+          <div class="checkout-steps">
+            <div class="step active">
+              <span class="step-number">1</span>
+              <span class="step-title">Cart</span>
+            </div>
+            <div class="step">
+              <span class="step-number">2</span>
+              <span class="step-title">Details</span>
+            </div>
+            <div class="step">
+              <span class="step-number">3</span>
+              <span class="step-title">Payment</span>
+            </div>
+          </div>
+
+          <div id="payment-items"></div>
+
+          <div class="order-summary">
+            <div class="summary-row">
+              <span>Subtotal:</span>
+              <span>₹<span id="payment-subtotal">0</span></span>
+            </div>
+            <div class="summary-row">
+              <span>Shipping:</span>
+              <span>₹<span id="payment-shipping">0</span></span>
+            </div>
+            <div class="summary-row">
+              <span>Tax (GST 18%):</span>
+              <span>₹<span id="payment-tax">0</span></span>
+            </div>
+            <div class="summary-row total">
+              <span>Total:</span>
+              <span>₹<span id="payment-total">0</span></span>
+            </div>
+          </div>
+
+          <h3>Payment Method</h3>
+          <div class="payment-methods-grid">
+            <label class="payment-option">
+              <input type="radio" name="payment" value="card" checked />
+              <div class="payment-option-content">
+                <i class="fas fa-credit-card"></i>
+                <span>Credit/Debit Card</span>
+              </div>
+            </label>
+            <label class="payment-option">
+              <input type="radio" name="payment" value="upi" />
+              <div class="payment-option-content">
+                <i class="fas fa-mobile-alt"></i>
+                <span>UPI</span>
+              </div>
+            </label>
+            <label class="payment-option">
+              <input type="radio" name="payment" value="netbanking" />
+              <div class="payment-option-content">
+                <i class="fas fa-university"></i>
+                <span>Net Banking</span>
+              </div>
+            </label>
+            <label class="payment-option">
+              <input type="radio" name="payment" value="cod" />
+              <div class="payment-option-content">
+                <i class="fas fa-money-bill-wave"></i>
+                <span>Cash on Delivery</span>
+              </div>
+            </label>
+          </div>
+
+          <div id="payment-details">
+            <div class="payment-form" id="card-form">
+              <input
+                type="text"
+                placeholder="Card Number"
+                maxlength="16"
+                pattern="[0-9]*"
+              />
+              <div class="form-row">
+                <input type="text" placeholder="MM/YY" maxlength="5" />
+                <input
+                  type="text"
+                  placeholder="CVV"
+                  maxlength="3"
+                  pattern="[0-9]*"
+                />
+              </div>
+              <input type="text" placeholder="Cardholder Name" />
+            </div>
+
+            <div class="payment-form" id="upi-form" style="display: none">
+              <input type="text" placeholder="Enter UPI ID (e.g., name@upi)" />
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button id="cancel-payment" class="btn-secondary">Cancel</button>
+          <button id="pay-now" class="btn-primary">
+            <i class="fas fa-lock"></i> Pay Securely
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick View Modal -->
+    <div id="quick-view-modal" class="modal">
+      <div class="modal-content quick-view-content">
+        <span class="close" id="close-quick-view">&times;</span>
+        <div class="quick-view-body">
+          <div class="quick-view-image">
+            <img id="quick-view-img" src="" alt="" />
+          </div>
+          <div class="quick-view-details">
+            <h2 id="quick-view-title"></h2>
+            <div id="quick-view-rating"></div>
+            <p id="quick-view-description"></p>
+            <div id="quick-view-price"></div>
+            <div class="quick-view-actions">
+              <div class="quantity-selector">
+                <button class="qty-minus">-</button>
+                <input type="number" class="qty-input" value="1" min="1" />
+                <button class="qty-plus">+</button>
+              </div>
+              <button class="btn-add-cart-modal">Add to Cart</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Mobile Navigation -->
+    <nav class="mobile-nav" id="mobile-nav">
+      <div class="mobile-nav-header">
+        <h2>Menu</h2>
+        <button class="close-mobile-nav" id="close-mobile-nav">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <ul>
+        <li><a href="#home">Home</a></li>
+        <li><a href="#products">Products</a></li>
+        <li><a href="#brands">Brands</a></li>
+        <li><a href="#offers">Offers</a></li>
+        <li><a href="#about">About</a></li>
+        <li><a href="#contact">Contact</a></li>
+      </ul>
+    </nav>
 
     <script src="script.js"></script>
   </body>
