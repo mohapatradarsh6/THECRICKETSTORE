@@ -1,64 +1,116 @@
 let cart = [];
-
-const cartCountEl = document.getElementById("cart-count");
-const cartTotalEl = document.getElementById("cart-total");
+const cartBtn = document.getElementById("cart-btn");
 const cartDropdown = document.getElementById("cart-dropdown");
-const cartItemsEl = document.getElementById("cart-items");
-const cartTotalDropdownEl = document.getElementById("cart-total-dropdown");
-const cartToggle = document.getElementById("cart-toggle");
+const cartItemsContainer = document.getElementById("cart-items");
+const cartCount = document.getElementById("cart-count");
 const checkoutBtn = document.getElementById("checkout-btn");
 
-function updateCartDisplay() {
-  cartCountEl.textContent = cart.length;
-  const total = cart.reduce((sum, item) => sum + item.price, 0);
-  cartTotalEl.textContent = total;
-  cartTotalDropdownEl.textContent = total;
+const modal = document.getElementById("demo-payment-modal");
+const closeModal = document.querySelector(".modal .close");
+const paymentItems = document.getElementById("payment-items");
+const paymentTotal = document.getElementById("payment-total");
+const payNowBtn = document.getElementById("pay-now");
 
-  cartItemsEl.innerHTML = "";
-  cart.forEach((item, i) => {
-    const div = document.createElement("div");
-    div.textContent = `${item.name} - ₹${item.price}`;
-    cartItemsEl.appendChild(div);
-  });
-}
+const paymentRadios = document.querySelectorAll('input[name="payment"]');
+const cardUpiInput = document.getElementById("card-upi-input");
 
-document.querySelectorAll(".btn-add-cart").forEach((button) => {
-  button.addEventListener("click", () => {
-    const card = button.closest(".product-card");
-    const price = parseInt(card.dataset.price);
-    const name = card.querySelector(".product-title").textContent;
-    cart.push({ name, price });
-    updateCartDisplay();
-  });
-});
-
-document.querySelectorAll(".btn-buy-now").forEach((button) => {
-  button.addEventListener("click", () => {
-    const card = button.closest(".product-card");
-    const price = parseInt(card.dataset.price);
-    const name = card.querySelector(".product-title").textContent;
-    const confirmPayment = confirm(`Pay ₹${price} for ${name}?`);
-    if (confirmPayment) {
-      window.open("https://rzp.io/l/demo", "_blank");
-    }
-  });
-});
-
-cartToggle.addEventListener("click", () => {
+cartBtn.addEventListener("click", () => {
   cartDropdown.style.display =
     cartDropdown.style.display === "block" ? "none" : "block";
 });
 
+function updateCart() {
+  cartItemsContainer.innerHTML = "";
+  cartCount.textContent = cart.length;
+  cart.forEach((item) => {
+    const div = document.createElement("div");
+    div.textContent = `${item.title} - ₹${item.price}`;
+    cartItemsContainer.appendChild(div);
+  });
+}
+
+document.querySelectorAll(".btn-add-cart").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    const card = btn.closest(".product-card");
+    const title = card.getAttribute("data-title");
+    const price = card.getAttribute("data-price");
+    cart.push({ title, price });
+    updateCart();
+  });
+});
+
+function openPaymentModal(items) {
+  paymentItems.innerHTML = "";
+  let total = 0;
+  items.forEach((item) => {
+    const div = document.createElement("div");
+    div.textContent = `${item.title} - ₹${item.price}`;
+    paymentItems.appendChild(div);
+    total += parseInt(item.price);
+  });
+  paymentTotal.textContent = total;
+  modal.style.display = "block";
+}
+
+closeModal.onclick = () => {
+  modal.style.display = "none";
+};
+window.onclick = (e) => {
+  if (e.target === modal) modal.style.display = "none";
+};
+
+document.querySelectorAll(".btn-buy-now").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    const card = btn.closest(".product-card");
+    const title = card.getAttribute("data-title");
+    const price = card.getAttribute("data-price");
+    openPaymentModal([{ title, price }]);
+  });
+});
+
 checkoutBtn.addEventListener("click", () => {
   if (cart.length === 0) {
-    alert("Your cart is empty!");
+    alert("Cart is empty!");
     return;
   }
+  openPaymentModal(cart);
+});
+
+function togglePaymentDetails() {
+  const selected = document.querySelector(
+    'input[name="payment"]:checked'
+  ).value;
+  if (selected === "Card" || selected === "UPI") {
+    cardUpiInput.style.display = "block";
+  } else {
+    cardUpiInput.style.display = "none";
+  }
+}
+
+paymentRadios.forEach((radio) => {
+  radio.addEventListener("change", togglePaymentDetails);
+});
+
+togglePaymentDetails();
+
+payNowBtn.addEventListener("click", () => {
+  const selectedMethod = document.querySelector(
+    'input[name="payment"]:checked'
+  ).value;
+  let details = "";
+  if (selectedMethod === "Card" || selectedMethod === "UPI") {
+    details = cardUpiInput.value.trim();
+    if (details === "") {
+      alert(`Please enter your ${selectedMethod} details.`);
+      return;
+    }
+  }
   alert(
-    `Proceeding to payment of ₹${cart.reduce(
-      (sum, item) => sum + item.price,
-      0
-    )}`
+    `Demo Payment Successful!\nPayment Method: ${selectedMethod}\nDetails: ${
+      details || "N/A"
+    }`
   );
-  window.open("https://rzp.io/l/demo", "_blank");
+  modal.style.display = "none";
+  cart = [];
+  updateCart();
 });
