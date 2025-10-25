@@ -26,14 +26,18 @@ header {
   background-color: #fff;
   border-bottom: 1px solid #ddd;
   font-weight: bold;
-  cursor: pointer;
   position: relative;
+  flex-wrap: nowrap;
 }
 
 header h1#site-name {
   margin: 0;
-  color: #333;
   font-size: 1.5em;
+  color: #333;
+}
+
+#cart-btn {
+  cursor: pointer;
 }
 
 .cart-dropdown {
