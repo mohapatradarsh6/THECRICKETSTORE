@@ -20,7 +20,8 @@ body {
 
 header {
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
+  align-items: center;
   padding: 15px 30px;
   background-color: #fff;
   border-bottom: 1px solid #ddd;
@@ -29,8 +30,10 @@ header {
   position: relative;
 }
 
-header.h1 {
-  align: left;
+header h1#site-name {
+  margin: 0;
+  color: #333;
+  font-size: 1.5em;
 }
 
 .cart-dropdown {
