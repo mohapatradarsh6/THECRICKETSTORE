@@ -1,0 +1,111 @@
+body {
+  background-color: #e6f1e8;
+  font-family: "Montserrat", sans-serif;
+  color: #1a1a1a;
+  margin: 0;
+  padding: 40px 20px;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  min-height: 100vh;
+  overflow-x: auto;
+}
+
+.products-container {
+  display: flex;
+  justify-content: center;
+  gap: 35px;
+  flex-wrap: wrap;
+  max-width: none;
+  padding-bottom: 20px;
+}
+
+.product-card {
+  background-color: #ffffff;
+  border-radius: 15px;
+  padding: 25px 20px;
+  min-width: 280px;
+  text-align: center;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1),
+    box-shadow 0.4s ease;
+  overflow: hidden;
+}
+
+.product-card:hover {
+  transform: translateY(-10px);
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3);
+}
+
+.product-image {
+  max-height: 180px;
+  width: auto;
+  object-fit: contain;
+  margin-bottom: 20px;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1));
+}
+
+.product-title {
+  font-size: 1.6em;
+  font-weight: 700;
+  color: #176e3c;
+  margin-top: 0;
+  margin-bottom: 5px;
+  letter-spacing: -0.5px;
+}
+
+.product-subtitle {
+  font-size: 0.9em;
+  color: #5a5a5a;
+  line-height: 1.5;
+  min-height: 55px;
+  margin-bottom: 25px;
+  padding: 0 5px;
+}
+
+.buttons {
+  display: flex;
+  justify-content: space-between;
+  gap: 15px;
+  margin-top: 20px;
+}
+
+.btn-add-cart,
+.btn-buy-now {
+  padding: 12px 18px;
+  font-size: 0.95em;
+  font-weight: 600;
+  cursor: pointer;
+  border-radius: 50px;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  flex-grow: 1;
+  text-decoration: none;
+  text-align: center;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.btn-buy-now {
+  background-color: #ff8c00;
+  color: #ffffff;
+  border: 2px solid #ff8c00;
+}
+
+.btn-buy-now:hover {
+  background-color: #301c04;
+  border-color: #180e02;
+  box-shadow: 0 6px 8px rgba(255, 140, 0, 0.4);
+}
+
+.btn-add-cart {
+  background-color: #ffffff;
+  color: #176e3c;
+  border: 2px solid #176e3c;
+}
+
+.btn-add-cart:hover {
+  background-color: #176e3c;
+  color: #ffffff;
+  border-color: #176e3c;
+  box-shadow: 0 6px 8px rgba(23, 110, 60, 0.2);
+}
