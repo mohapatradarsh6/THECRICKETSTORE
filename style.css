@@ -25,7 +25,7 @@ header {
   align-items: center;
   padding: 15px 30px;
   background-color: #008080;
-  border-bottom: 1px solid #ddd;
+  border-bottom: 1px solid #006666;
   flex-wrap: nowrap;
 }
 
@@ -93,7 +93,7 @@ main.products-container {
   width: 100%;
   height: 300px;
   object-fit: contain;
-  background-color: #f9f9f9;
+  background-color: #e0f7f1;
 }
 
 .price-button {
@@ -110,7 +110,7 @@ main.products-container {
 
 .product-title {
   margin: 10px;
-  color: #333;
+  color: #1f1f2e;
   font-weight: bold;
 }
 
@@ -127,55 +127,6 @@ main.products-container {
   margin: 10px;
 }
 
-.btn-add-cart {
-  background-color: transparent;
-  border: 2px solid #28a745;
-  color: #28a745;
-  font-weight: bold;
-  padding: 8px 12px;
-  border-radius: 5px;
-  cursor: pointer;
-  transition: all 0.3s;
-}
-
-.btn-add-cart:hover {
-  background-color: #006400;
-  color: #fff;
-  border-radius: 20px;
-}
-
-.btn-buy-now {
-  background-color: #ffeb3b;
-  color: #fff;
-  font-weight: bold;
-  padding: 8px 12px;
-  border: 2px solid #ffeb3b;
-  border-radius: 5px;
-  cursor: pointer;
-  transition: all 0.3s;
-}
-
-.btn-buy-now:hover {
-  background-color: #006400;
-  border-color: #006400;
-  color: #fff;
-}
-
-#checkout-btn {
-  width: 100%;
-  padding: 8px;
-  background-color: #333;
-  color: #fff;
-  font-weight: bold;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-}
-
-#checkout-btn:hover {
-  background-color: #555;
-}
-
 footer {
   background-color: #008080;
   color: #fff;
@@ -184,89 +135,6 @@ footer {
   flex-shrink: 0;
 }
 
-.modal {
-  display: none;
-  position: fixed;
-  z-index: 2000;
-  left: 0;
-  top: 0;
-  width: 100%;
-  height: 100%;
-  overflow: auto;
-  background-color: rgba(0, 0, 0, 0.6);
-}
-
 .modal-content {
-  background-color: #fff;
-  margin: 10% auto;
-  padding: 20px;
-  border-radius: 10px;
-  width: 90%;
-  max-width: 400px;
-  text-align: center;
-}
-
-.modal .close {
-  color: #aaa;
-  float: right;
-  font-size: 28px;
-  font-weight: bold;
-  cursor: pointer;
-}
-
-#pay-now {
-  background-color: #ffeb3b;
-  border: none;
-  color: #fff;
-  padding: 10px 20px;
-  font-weight: bold;
-  border-radius: 5px;
-  cursor: pointer;
-  margin-top: 10px;
-}
-
-#pay-now:hover {
-  background-color: #006400;
-}
-
-.payment-methods {
-  text-align: left;
-  margin: 10px 0;
-}
-
-.payment-methods label {
-  display: block;
-  margin: 5px 0;
-  font-weight: bold;
-  cursor: pointer;
-}
-
-.payment-methods input[type="radio"] {
-  margin-right: 10px;
-}
-
-#payment-details {
-  margin: 10px 0;
-  display: block;
-}
-
-#card-upi-input {
-  width: 90%;
-  padding: 8px;
-  border-radius: 5px;
-  border: 1px solid #ccc;
-  font-size: 1em;
-}
-
-@media screen and (max-width: 900px) {
-  main.products-container {
-    grid-template-columns: 1fr;
-  }
-}
-
-@media screen and (max-width: 600px) {
-  .cart-dropdown {
-    right: 10px;
-    width: 90%;
-  }
+  background-color: #f5f5dc;
 }
