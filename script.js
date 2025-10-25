@@ -1,4 +1,5 @@
 let cart = [];
+
 const cartBtn = document.getElementById("cart-btn");
 const cartDropdown = document.getElementById("cart-dropdown");
 const cartItemsContainer = document.getElementById("cart-items");
@@ -19,54 +20,64 @@ cartBtn.addEventListener("click", () => {
     cartDropdown.style.display === "block" ? "none" : "block";
 });
 
-function updateCart() {
-  cartItemsContainer.innerHTML = "";
-  cartCount.textContent = cart.length;
-  cart.forEach((item) => {
-    const div = document.createElement("div");
-    div.textContent = `${item.title} - ₹${item.price}`;
-    cartItemsContainer.appendChild(div);
-  });
-}
-
 document.querySelectorAll(".btn-add-cart").forEach((btn) => {
   btn.addEventListener("click", () => {
     const card = btn.closest(".product-card");
-    const title = card.getAttribute("data-title");
-    const price = card.getAttribute("data-price");
-    cart.push({ title, price });
+    const title = card.dataset.title;
+    const price = parseInt(card.dataset.price);
+    const existing = cart.find((item) => item.title === title);
+    if (existing) existing.quantity++;
+    else cart.push({ title, price, quantity: 1 });
     updateCart();
   });
 });
 
-function openPaymentModal(items) {
-  paymentItems.innerHTML = "";
-  let total = 0;
-  items.forEach((item) => {
-    const div = document.createElement("div");
-    div.textContent = `${item.title} - ₹${item.price}`;
-    paymentItems.appendChild(div);
-    total += parseInt(item.price);
-  });
-  paymentTotal.textContent = total;
-  modal.style.display = "block";
-}
-
-closeModal.onclick = () => {
-  modal.style.display = "none";
-};
-window.onclick = (e) => {
-  if (e.target === modal) modal.style.display = "none";
-};
-
 document.querySelectorAll(".btn-buy-now").forEach((btn) => {
   btn.addEventListener("click", () => {
     const card = btn.closest(".product-card");
-    const title = card.getAttribute("data-title");
-    const price = card.getAttribute("data-price");
-    openPaymentModal([{ title, price }]);
+    const title = card.dataset.title;
+    const price = parseInt(card.dataset.price);
+    openPaymentModal([{ title, price, quantity: 1 }]);
   });
 });
+
+function updateCart() {
+  cartItemsContainer.innerHTML = "";
+  cartCount.textContent = cart.reduce((sum, item) => sum + item.quantity, 0);
+  cart.forEach((item, index) => {
+    const div = document.createElement("div");
+    div.classList.add("cart-item");
+    div.innerHTML = `
+      ${item.title} - ₹${item.price} × 
+      <button class="quantity-btn" data-action="decrease" data-index="${index}">-</button>
+      ${item.quantity}
+      <button class="quantity-btn" data-action="increase" data-index="${index}">+</button>
+      <button class="remove-item" data-index="${index}">X</button>
+    `;
+    cartItemsContainer.appendChild(div);
+  });
+
+  document.querySelectorAll(".remove-item").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const i = btn.dataset.index;
+      cart.splice(i, 1);
+      updateCart();
+    });
+  });
+
+  document.querySelectorAll(".quantity-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const i = btn.dataset.index;
+      const action = btn.dataset.action;
+      if (action === "increase") cart[i].quantity++;
+      if (action === "decrease") {
+        cart[i].quantity--;
+        if (cart[i].quantity <= 0) cart.splice(i, 1);
+      }
+      updateCart();
+    });
+  });
+}
 
 checkoutBtn.addEventListener("click", () => {
   if (cart.length === 0) {
@@ -76,22 +87,38 @@ checkoutBtn.addEventListener("click", () => {
   openPaymentModal(cart);
 });
 
-function togglePaymentDetails() {
-  const selected = document.querySelector(
-    'input[name="payment"]:checked'
-  ).value;
-  if (selected === "Card" || selected === "UPI") {
-    cardUpiInput.style.display = "block";
-  } else {
-    cardUpiInput.style.display = "none";
-  }
+function openPaymentModal(items) {
+  paymentItems.innerHTML = "";
+  let total = 0;
+  items.forEach((item) => {
+    const div = document.createElement("div");
+    div.textContent = `${item.title} - ₹${item.price} × ${item.quantity}`;
+    paymentItems.appendChild(div);
+    total += item.price * item.quantity;
+  });
+  paymentTotal.textContent = total;
+  modal.style.display = "flex";
 }
 
-paymentRadios.forEach((radio) => {
-  radio.addEventListener("change", togglePaymentDetails);
-});
+closeModal.onclick = () => (modal.style.display = "none");
+window.onclick = (e) => {
+  if (e.target === modal) modal.style.display = "none";
+};
 
-togglePaymentDetails();
+function togglePaymentDetails() {
+  const selectedRadio = document.querySelector('input[name="payment"]:checked');
+  if (!selectedRadio) return;
+  const selected = selectedRadio.value;
+  if (selected === "Card" || selected === "UPI") {
+    cardUpiInput.style.display = "block";
+    cardUpiInput.placeholder =
+      selected === "Card" ? "Enter Card Number" : "Enter UPI ID";
+  } else cardUpiInput.style.display = "none";
+}
+
+paymentRadios.forEach((r) =>
+  r.addEventListener("change", togglePaymentDetails)
+);
 
 payNowBtn.addEventListener("click", () => {
   const selectedMethod = document.querySelector(
