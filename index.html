@@ -7,55 +7,82 @@
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
+    <header>
+      <div class="cart" id="cart-toggle">
+        🛒 Cart (<span id="cart-count">0</span>) | ₹<span id="cart-total"
+          >0</span
+        >
+      </div>
+    </header>
+
+    <div class="cart-dropdown" id="cart-dropdown">
+      <h3>Your Cart</h3>
+      <div id="cart-items"></div>
+      <p>Total: ₹<span id="cart-total-dropdown">0</span></p>
+      <button id="checkout-btn">Checkout</button>
+    </div>
+
     <div class="products-container">
-      <div class="product-card">
+      <div class="product-card" data-price="4500">
         <img class="product-image" src="images/SS.png" alt="SG Bat" />
+        <div class="price-button">₹4500</div>
         <h1 class="product-title">SG HP33</h1>
         <h5 class="product-subtitle">
           Power Meets Precision: Dominate Every Shot
         </h5>
         <div class="buttons">
-          <a href="#" class="btn-add-cart">Add to Cart</a>
-          <a href="#" class="btn-buy-now">Buy Now</a>
+          <button class="btn-add-cart">Add to Cart</button>
+          <button class="btn-buy-now">Buy Now</button>
         </div>
       </div>
-      <div class="product-card">
+
+      <div class="product-card" data-price="5500">
         <img
           class="product-image"
           src="images/Kookabura.png"
           alt="Kookabura Bat"
         />
+        <div class="price-button">₹5500</div>
         <h1 class="product-title">Kookabura Kahuna</h1>
         <h5 class="product-subtitle">
           Unleash the Beast: Perfect Balance for Every Innings
         </h5>
         <div class="buttons">
-          <a href="#" class="btn-add-cart">Add to Cart</a>
-          <a href="#" class="btn-buy-now">Buy Now</a>
+          <button class="btn-add-cart">Add to Cart</button>
+          <button class="btn-buy-now">Buy Now</button>
         </div>
       </div>
-      <div class="product-card">
+
+      <div class="product-card" data-price="5000">
         <img class="product-image" src="images/SG.png" alt="SG Classic" />
+        <div class="price-button">₹5000</div>
         <h1 class="product-title">SG Classic</h1>
         <h5 class="product-subtitle">
           Trusted by Champions: The Bat That Never Fails
         </h5>
         <div class="buttons">
-          <a href="#" class="btn-add-cart">Add to Cart</a>
-          <a href="#" class="btn-buy-now">Buy Now</a>
+          <button class="btn-add-cart">Add to Cart</button>
+          <button class="btn-buy-now">Buy Now</button>
         </div>
       </div>
-      <div class="product-card">
+
+      <div class="product-card" data-price="6000">
         <img class="product-image" src="images/BAS.png" alt="BAS Bat" />
+        <div class="price-button">₹6000</div>
         <h1 class="product-title">BAS SR23</h1>
         <h5 class="product-subtitle">
           Feel the Edge: Engineered for Maximum Performance
         </h5>
         <div class="buttons">
-          <a href="#" class="btn-add-cart">Add to Cart</a>
-          <a href="#" class="btn-buy-now">Buy Now</a>
+          <button class="btn-add-cart">Add to Cart</button>
+          <button class="btn-buy-now">Buy Now</button>
         </div>
       </div>
     </div>
+    <footer>
+      <p>&copy; 2025 Darsh Mohapatra. All rights reserved.</p>
+    </footer>
+
+    <script src="script.js"></script>
   </body>
 </html>
