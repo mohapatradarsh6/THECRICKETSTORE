@@ -106,7 +106,7 @@ payNowBtn.addEventListener("click", () => {
     }
   }
   alert(
-    `Payment Successful!\nPayment Method: ${selectedMethod}\nDetails: ${
+    `Order placed!\nPayment Method: ${selectedMethod}\nDetails: ${
       details || "N/A"
     }`
   );
