@@ -29,7 +29,8 @@
           >
           <span
             ><i class="fas fa-shipping-fast"></i> Free Shipping on Orders Above
-            ₹2000</span
+            ₹2000 | <i class="fas fa-tags"></i> Up to 40% OFF on Selected
+            Items!</span
           >
         </div>
       </div>
@@ -76,15 +77,35 @@
               <button id="search-btn"><i class="fas fa-search"></i></button>
             </div>
 
-            <div class="user-actions">
-              <a href="#" class="user-btn" title="Account">
-                <i class="fas fa-user"></i>
-                <span>Account</span>
-              </a>
-              <a href="#" class="wishlist-btn" title="Wishlist">
-                <i class="fas fa-heart"></i>
-                <span class="wishlist-count">0</span>
-              </a>
+            <div class="user-action-item account-dropdown">
+            <a href="#" class="user-btn" id="account-btn" title="Account">
+             <i class="fas fa-user"></i>
+             <span>Account</span>
+             </a>
+           <div class="account-menu">
+          <a href="#">Login</a>
+            <a href="#">Register</a>
+            <a href="#">My Orders</a>
+               <a href="#">Logout</a>
+               </div>
+</div>
+
+              <div class="wishlist-wrapper">
+                <button id="wishlist-btn" class="wishlist-btn" title="Wishlist">
+                  <i class="fas fa-heart"></i>
+                  <span class="wishlist-count">0</span>
+                </button>
+                <div class="wishlist-dropdown" id="wishlist-dropdown">
+                  <h3>Your Wishlist</h3>
+                  <div id="wishlist-items">
+                    </div>
+                  <div class="wishlist-actions">
+                    <button id="view-wishlist-btn" class="btn-primary">
+                      View All
+                    </button>
+                  </div>
+                </div>
+              </div>
               <div class="cart-wrapper">
                 <button id="cart-btn" class="cart-btn">
                   <i class="fas fa-shopping-cart"></i>
@@ -903,6 +924,33 @@
         <li><a href="#contact">Contact</a></li>
       </ul>
     </nav>
+
+    <!-- Login/Signup Modal -->
+<div id="auth-modal" class="auth-modal">
+  <div class="auth-modal-content">
+    <span class="close-auth">&times;</span>
+
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="login-tab">Login</button>
+      <button class="auth-tab" id="signup-tab">Sign Up</button>
+    </div>
+
+    <form id="login-form" class="auth-form active">
+      <h3>Welcome Back!</h3>
+      <input type="email" id="login-email" placeholder="Email" required />
+      <input type="password" id="login-password" placeholder="Password" required />
+      <button type="submit" class="btn-primary">Login</button>
+    </form>
+
+    <form id="signup-form" class="auth-form">
+      <h3>Create Account</h3>
+      <input type="text" id="signup-name" placeholder="Full Name" required />
+      <input type="email" id="signup-email" placeholder="Email" required />
+      <input type="password" id="signup-password" placeholder="Password" required />
+      <button type="submit" class="btn-primary">Sign Up</button>
+    </form>
+  </div>
+</div>
 
     <script src="script.js"></script>
   </body>

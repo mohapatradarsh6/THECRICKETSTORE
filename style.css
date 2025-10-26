@@ -201,6 +201,93 @@ body {
 .wishlist-btn:hover {
   color: var(--primary-color);
 }
+/* --- Wishlist Dropdown Styles (New) --- */
+
+.wishlist-wrapper {
+  position: relative;
+}
+
+.wishlist-btn {
+  /* Style to look like the original icon/count link */
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  text-decoration: none;
+  color: var(--text-color);
+  transition: var(--transition);
+  position: relative;
+  font-size: 1rem;
+}
+
+.wishlist-btn:hover {
+  color: var(--primary-color);
+}
+
+.wishlist-dropdown {
+  display: none;
+  position: absolute;
+  right: 0;
+  top: 120%;
+  width: 300px; /* Slightly smaller than cart's 350px */
+  background-color: white;
+  border-radius: 10px;
+  box-shadow: 0 5px 25px rgba(0, 0, 0, 0.15);
+  padding: 20px;
+  z-index: 1001;
+}
+
+.wishlist-dropdown h3 {
+  margin-bottom: 15px;
+  color: var(--primary-color);
+  border-bottom: 2px solid var(--border-color);
+  padding-bottom: 10px;
+}
+
+#wishlist-items {
+  max-height: 250px;
+  overflow-y: auto;
+  margin-bottom: 15px;
+}
+
+.wishlist-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.wishlist-item:last-child {
+  border-bottom: none;
+}
+
+.wishlist-item-title {
+  font-weight: 500;
+  color: var(--text-color);
+  flex: 1;
+}
+
+.wishlist-item-remove {
+  color: var(--danger-color);
+  cursor: pointer;
+  font-size: 1.2rem;
+  transition: var(--transition);
+  margin-left: 10px;
+}
+
+.wishlist-item-remove:hover {
+  transform: scale(1.2);
+}
+
+.wishlist-actions {
+  padding-top: 15px;
+  border-top: 2px solid var(--border-color);
+  text-align: center;
+}
 
 .wishlist-count {
   position: absolute;
@@ -2340,4 +2427,149 @@ body {
 }
 .visible {
   display: block;
+}
+
+/* Account Dropdown */
+.account-dropdown {
+  position: relative;
+}
+
+.account-menu {
+  display: none;
+  position: absolute;
+  top: 120%;
+  right: 0;
+  background-color: #fff;
+  box-shadow: var(--box-shadow);
+  border-radius: 8px;
+  overflow: hidden;
+  min-width: 180px;
+  z-index: 1001;
+}
+
+.account-menu a {
+  display: block;
+  padding: 12px 18px;
+  color: var(--text-color);
+  text-decoration: none;
+  font-weight: 500;
+  transition: var(--transition);
+}
+
+.account-menu a:hover {
+  background-color: var(--light-color);
+  color: var(--primary-color);
+}
+
+/* Hover & Active Effect */
+.account-dropdown:hover .account-menu,
+.account-dropdown.active .account-menu {
+  display: block;
+}
+
+/* Optional hover underline animation */
+.account-menu a::after {
+  content: "";
+  display: block;
+  width: 0;
+  height: 2px;
+  background: var(--primary-color);
+  transition: width 0.3s;
+  margin-top: 3px;
+}
+
+.account-menu a:hover::after {
+  width: 100%;
+}
+
+/* Auth Modal */
+.auth-modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 2000;
+  align-items: center;
+  justify-content: center;
+}
+
+.auth-modal-content {
+  background: #fff;
+  width: 90%;
+  max-width: 400px;
+  padding: 25px 30px;
+  border-radius: 12px;
+  box-shadow: var(--box-shadow);
+  position: relative;
+  animation: fadeIn 0.3s ease;
+}
+
+.close-auth {
+  position: absolute;
+  top: 12px;
+  right: 15px;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: var(--text-color);
+}
+
+.auth-tabs {
+  display: flex;
+  justify-content: space-around;
+  margin-bottom: 20px;
+}
+
+.auth-tab {
+  flex: 1;
+  padding: 10px 0;
+  border: none;
+  background: transparent;
+  font-weight: 600;
+  font-size: 1rem;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: var(--transition);
+}
+
+.auth-tab.active {
+  border-bottom: 2px solid var(--primary-color);
+  color: var(--primary-color);
+}
+
+.auth-form {
+  display: none;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.auth-form.active {
+  display: flex;
+}
+
+.auth-form h3 {
+  text-align: center;
+  margin-bottom: 10px;
+  color: var(--primary-color);
+}
+
+.auth-form input {
+  padding: 10px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  outline: none;
+}
+
+.auth-form button {
+  background: var(--primary-color);
+  color: white;
+  border: none;
+  padding: 10px;
+  border-radius: 6px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.auth-form button:hover {
+  background: var(--secondary-color);
 }
