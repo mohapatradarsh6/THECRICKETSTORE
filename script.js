@@ -87,94 +87,25 @@ class CartManager {
 
     if (index === -1) {
       this.wishlist.push(product);
-      // NEW: Ensure toast shows item name and is type 'success'
       this.showToast(`${product.title} added to wishlist!`, "success");
     } else {
       this.wishlist.splice(index, 1);
-      // NEW: Ensure toast shows item name and is type 'info'
       this.showToast(`${product.title} removed from wishlist!`, "info");
     }
 
     this.saveWishlist();
   }
 
-  isInWishlist(productTitle) {
-    return this.wishlist.some((item) => item.title === productTitle);
-  }
-
-  // Inside CartManager Class (around line 102)
-
-  // ... after toggleWishlist(product) { ... }
-
   clearWishlist() {
-    // <-- NEW METHOD
+    // <-- ADDED for logout
     this.wishlist = [];
     this.saveWishlist();
-    this.showToast("Your wishlist has been cleared.", "info");
   }
 
   isInWishlist(productTitle) {
     return this.wishlist.some((item) => item.title === productTitle);
   }
 
-  updateUI() {
-    this.updateCartCount();
-    this.updateCartDropdown();
-    this.updateWishlistUI();
-  }
-
-  // ... (updateCartCount and updateCartDropdown remain the same)
-
-  updateWishlistUI() {
-    // <-- MODIFIED METHOD
-    const wishlistCount = document.querySelector(".wishlist-count");
-    if (wishlistCount) {
-      wishlistCount.textContent = this.wishlist.length;
-    }
-
-    this.updateWishlistDropdown(); // <-- NEW CALL
-
-    // Update wishlist button states
-    document.querySelectorAll(".btn-wishlist").forEach((btn) => {
-      const card = btn.closest(".product-card");
-      if (card) {
-        const title = card.getAttribute("data-title");
-        if (this.isInWishlist(title)) {
-          btn.classList.add("active");
-          btn.innerHTML = '<i class="fas fa-heart"></i>';
-        } else {
-          btn.classList.remove("active");
-          btn.innerHTML = '<i class="far fa-heart"></i>';
-        }
-      }
-    });
-  }
-
-  updateWishlistDropdown() {
-    // <-- NEW METHOD for the dropdown content
-    const wishlistItemsContainer = document.getElementById("wishlist-items");
-
-    if (!wishlistItemsContainer) return;
-
-    if (this.wishlist.length === 0) {
-      wishlistItemsContainer.innerHTML =
-        '<p style="text-align: center; color: #666; padding: 10px 0;">Your wishlist is empty</p>';
-      return;
-    }
-
-    wishlistItemsContainer.innerHTML = this.wishlist
-      .map(
-        (item) => `
-        <div class="wishlist-item">
-          <div class="wishlist-item-title">${item.title}</div>
-          <i class="fas fa-trash wishlist-item-remove" onclick="cartManager.toggleWishlist({title: '${item.title}'})"></i>
-        </div>
-      `
-      )
-      .join("");
-  }
-
-  // ... (rest of CartManager class)
   updateUI() {
     this.updateCartCount();
     this.updateCartDropdown();
@@ -240,11 +171,40 @@ class CartManager {
     }
   }
 
+  updateWishlistDropdown() {
+    // NEW METHOD for the dropdown content
+    const wishlistItemsContainer = document.getElementById("wishlist-items");
+
+    if (!wishlistItemsContainer) return;
+
+    if (this.wishlist.length === 0) {
+      wishlistItemsContainer.innerHTML =
+        '<p style="text-align: center; color: #666; padding: 10px 0;">Your wishlist is empty</p>';
+      return;
+    }
+
+    wishlistItemsContainer.innerHTML = this.wishlist
+      .map(
+        (item) => `
+        <div class="wishlist-item">
+          <div class="wishlist-item-title">${item.title}</div>
+          <i class="fas fa-trash wishlist-item-remove" onclick="window.cartManager.toggleWishlist({title: '${item.title.replace(
+            /'/g,
+            "\\'"
+          )}', price: '${item.price}'})"></i>
+        </div>
+      `
+      )
+      .join("");
+  }
+
   updateWishlistUI() {
     const wishlistCount = document.querySelector(".wishlist-count");
     if (wishlistCount) {
       wishlistCount.textContent = this.wishlist.length;
     }
+
+    this.updateWishlistDropdown(); // Call the new dropdown update
 
     document.querySelectorAll(".btn-wishlist").forEach((btn) => {
       const card = btn.closest(".product-card");
@@ -280,10 +240,18 @@ class CartManager {
   initializeEventListeners() {
     const cartBtn = document.getElementById("cart-btn");
     const cartDropdown = document.getElementById("cart-dropdown");
+    const wishlistBtn = document.getElementById("wishlist-btn"); // NEW
+    const wishlistDropdown = document.getElementById("wishlist-dropdown"); // NEW
 
     if (cartBtn && cartDropdown) {
       cartBtn.addEventListener("click", (e) => {
         e.stopPropagation();
+
+        // FIX: Close Wishlist dropdown when Cart opens
+        if (wishlistDropdown) {
+          wishlistDropdown.style.display = "none";
+        }
+
         cartDropdown.style.display =
           cartDropdown.style.display === "block" ? "none" : "block";
       });
@@ -295,6 +263,31 @@ class CartManager {
           !cartBtn.contains(e.target)
         ) {
           cartDropdown.style.display = "none";
+        }
+      });
+    }
+
+    if (wishlistBtn && wishlistDropdown) {
+      // NEW Wishlist Toggle
+      wishlistBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+
+        // FIX: Close Cart dropdown when Wishlist opens
+        if (cartDropdown) {
+          cartDropdown.style.display = "none";
+        }
+
+        wishlistDropdown.style.display =
+          wishlistDropdown.style.display === "block" ? "none" : "block";
+      });
+
+      document.addEventListener("click", (e) => {
+        if (
+          wishlistDropdown &&
+          !wishlistDropdown.contains(e.target) &&
+          !wishlistBtn.contains(e.target)
+        ) {
+          wishlistDropdown.style.display = "none";
         }
       });
     }
@@ -313,7 +306,7 @@ class CartManager {
   }
 }
 
-// --- 2. Product Management ---
+// --- 2. Product Management (remains the same) ---
 class ProductManager {
   constructor() {
     this.products = [];
@@ -321,6 +314,7 @@ class ProductManager {
     this.initializeProducts();
     this.initializeFilters();
     this.initializeSearch();
+    this.displayProducts(); // Ensure products are displayed on load
   }
 
   initializeProducts() {
@@ -450,7 +444,7 @@ class ProductManager {
   }
 }
 
-// --- 3. Quick View Modal ---
+// --- 3. Quick View Modal (remains the same) ---
 class QuickViewModal {
   constructor() {
     this.modal = document.getElementById("quick-view-modal");
@@ -557,7 +551,7 @@ class QuickViewModal {
       };
     }
 
-    this.modal.style.display = "block";
+    this.modal.style.display = "flex";
   }
 
   closeModal() {
@@ -567,7 +561,7 @@ class QuickViewModal {
   }
 }
 
-// --- 4. Payment Modal Functions (Moved to a standard function group) ---
+// --- 4. Payment Modal Functions (remains the same) ---
 
 function closePaymentModal() {
   const modal = document.getElementById("demo-payment-modal");
@@ -610,7 +604,7 @@ function openPaymentModal(items) {
   if (paymentTax) paymentTax.textContent = tax.toFixed(2);
   if (paymentTotal) paymentTotal.textContent = total.toFixed(2);
 
-  modal.style.display = "block";
+  modal.style.display = "flex";
 
   const paymentRadios = document.querySelectorAll('input[name="payment"]');
   const cardForm = document.getElementById("card-form");
@@ -672,6 +666,12 @@ class MobileNav {
   openNav() {
     if (this.nav) {
       this.nav.classList.add("active");
+
+      // FIX: Close dropdowns when mobile nav opens
+      const cartDropdown = document.getElementById("cart-dropdown");
+      const wishlistDropdown = document.getElementById("wishlist-dropdown");
+      if (cartDropdown) cartDropdown.style.display = "none";
+      if (wishlistDropdown) wishlistDropdown.style.display = "none";
     }
   }
 
@@ -691,15 +691,14 @@ class HeroCarousel {
     this.autoPlayDuration = 5000;
     this.progressInterval = null;
     this.isPaused = false;
-    this.slider = null; // Defined here for clarity
-    this.slides = []; // Defined here for clarity
+    this.slider = null;
+    this.slides = [];
 
     this.init();
   }
 
   init() {
     this.cacheElements();
-    // Only initialize if we found the necessary elements
     if (this.slides.length > 0) {
       this.attachEventListeners();
       this.startAutoPlay();
@@ -764,7 +763,7 @@ class HeroCarousel {
     });
 
     this.setupTouchEvents();
-    this.setupHeroButtons(); // Includes the fix for slides 2 & 3 buttons
+    this.setupHeroButtons();
   }
 
   setupTouchEvents() {
@@ -807,8 +806,7 @@ class HeroCarousel {
   }
 
   setupHeroButtons() {
-    // FIX: This function already correctly targets ALL .btn-hero elements,
-    // ensuring the buttons on slides 2 and 3 scroll to the product section
+    // Buttons on ALL slides scroll to products
     const heroButtons = document.querySelectorAll(".btn-hero");
     heroButtons.forEach((btn) => {
       btn.addEventListener("click", (e) => {
@@ -941,20 +939,18 @@ function getUser() {
 }
 
 function logoutUser() {
-  // 1. Genuinely logs the user out using the correct key (AUTH_KEY)
+  // 1. Genuinely logs the user out using the correct key
   localStorage.removeItem(AUTH_KEY);
 
   if (typeof cartManager !== "undefined") {
-    // 2. Clear the cart (makes cart count 0)
+    // 2. Clear both cart and wishlist (FIX for count not becoming 0)
     cartManager.clearCart();
-
-    // 3. Clear the wishlist (makes wishlist count 0, as requested)
     cartManager.clearWishlist();
 
     cartManager.showToast("Logged out successfully!", "success");
   }
 
-  // 4. Updates the header UI from "User Name" back to "Account"
+  // 3. Updates the header UI
   updateAccountUI();
 }
 
@@ -1043,23 +1039,20 @@ document.addEventListener("DOMContentLoaded", () => {
   window.productManager = new ProductManager();
   window.quickViewModal = new QuickViewModal();
   window.mobileNav = new MobileNav();
-  window.heroCarousel = new HeroCarousel(); // Unified and functional carousel
+  window.heroCarousel = new HeroCarousel();
 
-  // 2. Auth Modal Event Listeners
+  // 2. Auth Modal Event Listeners (remains the same)
   const authModal = document.getElementById("auth-modal");
   const closeAuth = document.querySelector(".close-auth");
 
-  // Close modal on 'X' click
   if (closeAuth) closeAuth.addEventListener("click", closeAuthModal);
 
-  // Close modal on outside click
   if (authModal) {
     authModal.addEventListener("click", (e) => {
       if (e.target === authModal) closeAuthModal();
     });
   }
 
-  // Modal tab switching
   document.getElementById("login-tab")?.addEventListener("click", () => {
     document.getElementById("login-form")?.classList.add("active");
     document.getElementById("signup-form")?.classList.remove("active");
@@ -1119,7 +1112,7 @@ document.addEventListener("DOMContentLoaded", () => {
     );
   });
 
-  // Account Button Dropdown Toggle (Activated on click)
+  // Account Button Dropdown Toggle (remains the same)
   const accountDropdown = document.querySelector(".account-dropdown");
   const accountBtn = document.getElementById("account-btn");
 
@@ -1139,7 +1132,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // 3. Product Action Buttons
+  // 3. Product Action Buttons (remains the same)
   document.querySelectorAll(".btn-add-cart").forEach((btn) => {
     btn.addEventListener("click", () => {
       const card = btn.closest(".product-card");
@@ -1178,12 +1171,12 @@ document.addEventListener("DOMContentLoaded", () => {
           title: card.getAttribute("data-title"),
           price: card.getAttribute("data-price"),
         };
-        cartManager.toggleWishlist(product); // Now uses 'success'/'info' type
+        cartManager.toggleWishlist(product);
       }
     });
   });
 
-  // 4. Payment Modal Close Handlers
+  // 4. Payment Modal Close Handlers (remains the same)
   const modalClose = document.querySelector("#demo-payment-modal .close");
   const cancelBtn = document.getElementById("cancel-payment");
   const paymentModal = document.getElementById("demo-payment-modal");
@@ -1236,7 +1229,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // 5. Other general DOM logic
+  // 5. Other general DOM logic (remains the same)
   const newsletterForm = document.querySelector(".newsletter-form");
   if (newsletterForm) {
     newsletterForm.addEventListener("submit", (e) => {
@@ -1249,7 +1242,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Hero button (Scrolls to products-section - applies to all slides)
+  // Hero button (Scrolls to products-section)
   const heroBtn = document.querySelector(".btn-hero");
   if (heroBtn) {
     heroBtn.addEventListener("click", () => {
@@ -1323,10 +1316,18 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  // View wishlist button
+  const viewWishlistBtn = document.getElementById("view-wishlist-btn");
+  if (viewWishlistBtn) {
+    viewWishlistBtn.addEventListener("click", () => {
+      cartManager.showToast("Full wishlist page coming soon!", "warning");
+    });
+  }
+
   // Final UI Initialization
   updateAccountUI();
 
-  // Parallax effect (kept separate for readability)
+  // Parallax effect (only runs on desktop)
   const isMobile = window.innerWidth <= 768;
   if (!isMobile) {
     window.addEventListener("scroll", () => {
