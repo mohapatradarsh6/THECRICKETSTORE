@@ -355,7 +355,6 @@ body {
   color: var(--primary-color);
 }
 
-/* Hero Section */
 /* Enhanced Hero Section with Advanced Animations */
 .hero-section {
   background: linear-gradient(135deg, #0f4c2e 0%, #1a5f3f 50%, #2ecc71 100%);
@@ -714,7 +713,7 @@ body {
 /* Discount Circle */
 .discount-circle {
   position: absolute;
-  top: 75%;
+  top: 50%;
   right: -20px;
   transform: translateY(-50%);
   width: 140px;
@@ -730,6 +729,7 @@ body {
   animation: rotateScale 0.8s cubic-bezier(0.68, -0.55, 0.265, 1.55) 1s both;
   z-index: 5;
 }
+
 @keyframes rotateScale {
   0% {
     opacity: 0;
@@ -869,12 +869,19 @@ body {
 
 /* Responsive Design */
 @media (max-width: 1024px) {
+  .hero-section {
+    height: auto;
+    min-height: 500px;
+    padding: 40px 0;
+  }
+
   .hero-title {
     font-size: 3rem;
   }
 
   .hero-product-img {
-    width: 90%;
+    width: 85%;
+    max-width: 450px;
   }
 
   .hero-arrow {
@@ -882,104 +889,324 @@ body {
     height: 50px;
     font-size: 1.2rem;
   }
+
+  .floating-badge {
+    padding: 10px 16px;
+    font-size: 0.85rem;
+  }
 }
 
 @media (max-width: 768px) {
   .hero-section {
     height: auto;
     min-height: auto;
-    padding: 60px 0;
+    padding: 40px 0 60px;
+  }
+
+  .hero-slider {
+    padding: 0 20px;
   }
 
   .hero-slide {
     flex-direction: column-reverse;
     text-align: center;
     gap: 30px;
+    padding: 20px 0;
   }
 
   .hero-content {
     max-width: 100%;
+    padding: 0 10px;
+  }
+
+  .hero-badge {
+    font-size: 0.85rem;
+    padding: 6px 16px;
+    margin-bottom: 15px;
   }
 
   .hero-title {
-    font-size: 2.5rem;
+    font-size: 2.2rem;
+    line-height: 1.2;
+    margin-bottom: 15px;
   }
 
   .hero-subtitle {
-    font-size: 1.1rem;
+    font-size: 1rem;
+    line-height: 1.5;
+    margin-bottom: 20px;
   }
 
   .hero-stats {
     justify-content: center;
-    gap: 20px;
+    gap: 15px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+
+  .stat-item {
+    min-width: 80px;
+  }
+
+  .stat-number {
+    font-size: 1.6rem;
+  }
+
+  .stat-label {
+    font-size: 0.85rem;
+  }
+
+  .hero-features {
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+
+  .feature-item {
+    font-size: 0.95rem;
+    justify-content: center;
+  }
+
+  .hero-brands {
+    margin-bottom: 20px;
+  }
+
+  .brand-logos {
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .brand-logo {
+    padding: 6px 15px;
+    font-size: 0.9rem;
   }
 
   .hero-buttons {
     justify-content: center;
     flex-wrap: wrap;
+    gap: 12px;
   }
 
   .btn-hero {
-    padding: 14px 30px;
-    font-size: 1rem;
+    padding: 12px 28px;
+    font-size: 0.95rem;
+  }
+
+  /* Mobile Image Adjustments */
+  .hero-image {
+    width: 100%;
+    max-width: 100%;
+    justify-content: center;
+    padding: 0;
+  }
+
+  .image-wrapper {
+    width: 100%;
+    max-width: 400px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: center;
+    align-items: center;
   }
 
   .hero-product-img {
-    width: 80%;
-    max-width: 350px;
+    width: 90%;
+    max-width: 320px;
+    height: auto;
+    margin: 0 auto;
+    display: block;
   }
 
+  /* Hide floating badges on mobile */
   .floating-badge {
     display: none;
   }
 
+  /* Adjust discount circle for mobile */
   .discount-circle {
-    width: 100px;
-    height: 100px;
-    right: 5%;
+    width: 90px;
+    height: 90px;
+    right: 10px;
+    top: 10px;
+    transform: translateY(0);
+    position: absolute;
+  }
+
+  .discount-text {
+    font-size: 0.7rem;
   }
 
   .discount-percent {
-    font-size: 2rem;
+    font-size: 1.8rem;
   }
 
+  .discount-off {
+    font-size: 0.75rem;
+  }
+
+  /* Hide navigation arrows on mobile */
   .hero-arrow {
     display: none;
   }
 
-  .hero-slider {
-    padding: 0 20px;
+  /* Adjust dots for mobile */
+  .hero-dots {
+    bottom: 20px;
+    gap: 8px;
+  }
+
+  .dot {
+    width: 10px;
+    height: 10px;
+  }
+
+  .dot.active {
+    width: 30px;
+  }
+
+  /* Progress bar */
+  .hero-progress {
+    height: 3px;
   }
 }
 
 @media (max-width: 480px) {
+  .hero-section {
+    padding: 30px 0 50px;
+  }
+
+  .hero-slider {
+    padding: 0 15px;
+  }
+
+  .hero-slide {
+    gap: 20px;
+  }
+
+  .hero-badge {
+    font-size: 0.75rem;
+    padding: 5px 12px;
+  }
+
   .hero-title {
-    font-size: 2rem;
+    font-size: 1.8rem;
+    margin-bottom: 12px;
   }
 
   .hero-subtitle {
-    font-size: 1rem;
+    font-size: 0.9rem;
+    margin-bottom: 15px;
+  }
+
+  .hero-stats {
+    gap: 12px;
   }
 
   .stat-number {
-    font-size: 1.5rem;
+    font-size: 1.4rem;
   }
 
   .stat-label {
-    font-size: 0.8rem;
+    font-size: 0.75rem;
   }
 
   .feature-item {
-    font-size: 0.95rem;
+    font-size: 0.85rem;
+  }
+
+  .feature-item i {
+    font-size: 1rem;
+  }
+
+  .brand-logo {
+    padding: 5px 12px;
+    font-size: 0.85rem;
   }
 
   .hero-buttons {
     flex-direction: column;
     width: 100%;
+    gap: 10px;
   }
 
   .btn-hero {
     width: 100%;
+    padding: 12px 20px;
+    font-size: 0.9rem;
+  }
+
+  /* Extra small mobile image */
+  .image-wrapper {
+    max-width: 300px;
+  }
+
+  .hero-product-img {
+    width: 95%;
+    max-width: 280px;
+  }
+
+  .discount-circle {
+    width: 80px;
+    height: 80px;
+    right: 5px;
+    top: 5px;
+  }
+
+  .discount-text {
+    font-size: 0.65rem;
+  }
+
+  .discount-percent {
+    font-size: 1.6rem;
+  }
+
+  .discount-off {
+    font-size: 0.7rem;
+  }
+
+  .hero-dots {
+    bottom: 15px;
+  }
+}
+
+/* Landscape orientation fixes */
+@media (max-width: 768px) and (orientation: landscape) {
+  .hero-section {
+    min-height: auto;
+    padding: 30px 0;
+  }
+
+  .hero-slide {
+    flex-direction: row;
+    gap: 20px;
+  }
+
+  .hero-content {
+    flex: 1;
+    text-align: left;
+  }
+
+  .hero-image {
+    flex: 1;
+  }
+
+  .hero-title {
+    font-size: 2rem;
+  }
+
+  .hero-subtitle {
+    font-size: 0.95rem;
+  }
+
+  .hero-stats {
+    justify-content: flex-start;
+  }
+
+  .hero-buttons {
+    justify-content: flex-start;
+  }
+
+  .hero-product-img {
+    max-width: 250px;
   }
 }
 
