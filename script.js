@@ -392,10 +392,12 @@ class ProductManager {
   }
 
   searchProducts(query) {
-    if (!query) {
+    const trimmedQuery = query ? query.trim() : "";
+
+    if (!trimmedQuery) {
       this.filteredProducts = [...this.products];
     } else {
-      const searchTerm = query.toLowerCase();
+      const searchTerm = trimmedQuery.toLowerCase();
       this.filteredProducts = this.products.filter(
         (product) =>
           product.title.toLowerCase().includes(searchTerm) ||
@@ -410,6 +412,31 @@ class ProductManager {
     }
 
     this.displayProducts();
+
+    // Show search result message
+    if (trimmedQuery && this.filteredProducts.length === 0) {
+      this.showNoResultsMessage(trimmedQuery);
+    }
+  }
+
+  showNoResultsMessage(searchTerm) {
+    const container = document.getElementById("products-container");
+    if (!container) return;
+
+    // Remove existing message if any
+    const existingMsg = document.getElementById("no-products-message");
+    if (existingMsg) existingMsg.remove();
+
+    const message = document.createElement("div");
+    message.id = "no-products-message";
+    message.style.gridColumn = "1 / -1";
+    message.style.textAlign = "center";
+    message.style.padding = "40px";
+    message.innerHTML = `
+    <h3>No products found for "${searchTerm}"</h3>
+    <p>Try adjusting your search terms or browse our categories</p>
+  `;
+    container.appendChild(message);
   }
   displayProducts() {
     const container = document.getElementById("products-container");
