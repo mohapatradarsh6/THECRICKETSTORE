@@ -2578,90 +2578,125 @@ body {
    MOBILE RESPONSIVENESS FIXES (New Section)
    ==================================================================== */
 
-/* --- 1. General Layout and Padding --- */
 @media (max-width: 768px) {
+  /* --- 1. General Layout and Header Fixes --- */
+
   .container {
-    padding: 0 15px; /* Slightly tighter padding on small screens */
+    padding: 0 15px; /* Adjust container padding */
   }
 
-  /* Adjustments to the top-bar for space */
+  /* Hide top bar details to save space */
   .top-bar-content {
-    display: none; /* Hide top bar content to save space on mobile */
+    display: none;
   }
 
-  /* --- 2. Header and Navigation Fixes --- */
-  .header .container {
-    display: flex;
+  .header-content {
+    /* Ensure elements don't get squished */
+    gap: 10px;
+    padding: 10px 0;
     justify-content: space-between;
-    align-items: center;
-    padding-top: 15px;
-    padding-bottom: 15px;
   }
 
-  .header-main {
-    display: none; /* Hide desktop search/nav on mobile */
+  /* Hide main navigation and search box on mobile */
+  .main-nav,
+  .search-box {
+    display: none;
   }
 
-  .logo img {
-    height: 35px; /* Smaller logo */
+  /* Show the mobile menu toggle button */
+  .mobile-menu-toggle {
+    display: block;
+    font-size: 1.5rem;
+    color: var(--dark-color);
   }
 
-  .header-actions {
-    gap: 15px; /* Tighter spacing for action icons */
+  /* * FIX 1: Account and Shopping Cart Display 
+  * We make the action buttons compact by hiding text labels.
+  */
+  .user-actions {
+    gap: 5px; /* Reduce space between actions */
+    flex-shrink: 0;
   }
 
-  /* Ensure action icons are visible and properly sized */
-  .user-btn i,
-  .cart-btn i,
-  .wishlist-btn i {
-    font-size: 1.3rem;
-  }
-
-  /* Hide the word 'Account' next to the user icon on mobile */
+  /* Hide the text label (e.g., 'Account') next to the icon */
   .user-btn span {
     display: none;
   }
 
-  /* Mobile menu button visibility */
-  #mobile-menu-toggle {
-    display: block;
-    font-size: 1.5rem;
-    color: var(--text-color);
+  /* Make the Account/Wishlist button icon-only and compact */
+  .user-btn {
+    padding: 8px 10px;
   }
 
-  /* --- 3. Dropdown Positioning Fix (Crucial) --- */
-  /* Ensures cart/wishlist dropdowns are fixed over content and reach max width */
-  .cart-dropdown,
-  .wishlist-dropdown {
-    width: 90%; /* Take up most of the screen width */
-    max-width: 350px; /* Cap size so it doesn't look bad on tablets */
-    right: 50%; /* Center the dropdown */
-    transform: translateX(50%); /* Center the dropdown */
-    top: 65px; /* Position below the header */
-    border-radius: 5px;
+  /* Hide the text label for the Cart button */
+  .cart-btn span:first-child {
+    display: none;
   }
 
-  /* --- 4. Hero Section Adjustments --- */
+  /* Make the Cart button a compact, circular icon */
+  .cart-btn {
+    padding: 8px; /* Equal padding for circular shape */
+    border-radius: 50%;
+    height: 40px;
+    width: 40px;
+    justify-content: center;
+    align-items: center;
+    gap: 0; /* Remove gap inside compact button */
+  }
+
+  .cart-btn i {
+    margin-right: 0; /* Remove space if icon had margin */
+    font-size: 1.2rem;
+  }
+
+  /* Reposition the Cart count badge for the smaller button */
+  .cart-count {
+    position: absolute;
+    top: -3px;
+    right: -3px;
+    margin-left: 0;
+    font-size: 0.7rem;
+    padding: 3px 6px;
+  }
+
+  /* Ensure dropdowns align to the right edge of the screen */
+  .account-menu,
+  .wishlist-dropdown,
+  .cart-dropdown {
+    right: 15px; /* Align to the container padding */
+    left: auto; /* Overrides any left alignment */
+    max-width: 90vw;
+  }
+
+  /* --- 2. Hero Section (Carousel) Fixes --- */
+
+  .hero-section {
+    height: auto; /* Allow height to adapt to content */
+    min-height: 450px; /* Ensures a minimum visible area */
+  }
+
   .hero-slide {
-    height: 400px; /* Shorter hero section */
+    flex-direction: column; /* Stack content and image vertically */
+    padding: 30px 0;
+    height: auto;
   }
 
   .hero-content {
-    padding: 20px;
+    order: 2; /* Content moves below the image */
+    padding: 10px 15px;
     text-align: center;
-    align-items: center;
-    justify-content: center;
     max-width: 100%;
   }
 
+  /* Adjust typography for mobile */
   .hero-content h1 {
-    font-size: 2rem;
-    margin-bottom: 10px;
+    font-size: 1.8rem;
+    margin-bottom: 8px;
   }
 
   .hero-content p {
     font-size: 0.9rem;
-    margin-bottom: 20px;
+    margin-bottom: 15px;
     line-height: 1.4;
     display: -webkit-box;
     -webkit-line-clamp: 3; /* Limit text to 3 lines */
@@ -2669,55 +2704,63 @@ body {
     overflow: hidden;
   }
 
+  /*
+  * FIX 2: Carousel Image Not Visible
+  * We reset opacity and manage image container size.
+  */
   .hero-image {
-    opacity: 0.3; /* Make the background image subtle */
+    order: 1; /* Image moves above the content */
+    opacity: 1; /* ***THE FIX: Make the image fully visible (was 0.3)*** */
+    position: relative;
+    max-width: 80%; /* Adjust container size and center it */
+    margin: 20px auto 0;
   }
 
-  /* --- 5. Products, Categories & Footer Layout Fixes --- */
-
-  .products-header h2 {
-    font-size: 1.8rem;
+  .hero-product-img {
+    width: 100%; /* Make the image fill its new container */
+    max-width: 250px; /* Set a reasonable max width for the image itself */
+    height: auto;
+    object-fit: contain;
   }
 
-  /* Stack filters and search vertically */
-  .filter-bar {
-    flex-direction: column;
-    gap: 15px;
-    padding: 20px 0;
+  /* Hide extra visual clutter like floating badges */
+  .floating-badge {
+    display: none;
   }
 
-  .filter-group,
-  .search-container {
-    width: 100%; /* Make them full width */
-  }
+  /* --- 3. Products, Categories & Footer Layout Fixes --- */
 
-  /* Force product grid to 2 columns on mobile */
   .products-grid {
     grid-template-columns: repeat(2, 1fr);
     gap: 15px;
   }
 
-  /* Category grid layout */
-  .categories-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 15px;
+  .product-card {
+    padding: 15px;
   }
 
   .footer-content {
-    grid-template-columns: 1fr; /* Stack footer sections vertically */
-    text-align: center;
-    gap: 30px;
+    grid-template-columns: repeat(2, 1fr);
   }
 
-  .footer-links {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
+  .footer-column:nth-child(3),
+  .footer-column:nth-child(4) {
+    grid-column: span 2; /* Make the last two columns span full width */
+  }
+}
+
+@media (max-width: 480px) {
+  .products-grid {
+    grid-template-columns: 1fr; /* Single column layout for very small screens */
   }
 
-  /* Payment Modal adjustment */
-  .payment-modal-content {
-    width: 95%;
-    max-width: unset;
+  .footer-content {
+    grid-template-columns: 1fr; /* Single column footer */
   }
+}
+
+/* Payment Modal adjustment */
+.payment-modal-content {
+  width: 95%;
+  max-width: unset;
 }
