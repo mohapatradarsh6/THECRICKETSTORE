@@ -46,7 +46,6 @@ class CartManager {
     }
 
     this.saveCart();
-    // NEW: Added 'success' type for toast
     this.showToast(`${product.title} added to cart!`, "success");
   }
 
@@ -97,7 +96,6 @@ class CartManager {
   }
 
   clearWishlist() {
-    // <-- ADDED for logout
     this.wishlist = [];
     this.saveWishlist();
   }
@@ -172,7 +170,6 @@ class CartManager {
   }
 
   updateWishlistDropdown() {
-    // NEW METHOD for the dropdown content
     const wishlistItemsContainer = document.getElementById("wishlist-items");
 
     if (!wishlistItemsContainer) return;
@@ -204,7 +201,7 @@ class CartManager {
       wishlistCount.textContent = this.wishlist.length;
     }
 
-    this.updateWishlistDropdown(); // Call the new dropdown update
+    this.updateWishlistDropdown();
 
     document.querySelectorAll(".btn-wishlist").forEach((btn) => {
       const card = btn.closest(".product-card");
@@ -240,14 +237,13 @@ class CartManager {
   initializeEventListeners() {
     const cartBtn = document.getElementById("cart-btn");
     const cartDropdown = document.getElementById("cart-dropdown");
-    const wishlistBtn = document.getElementById("wishlist-btn"); // NEW
-    const wishlistDropdown = document.getElementById("wishlist-dropdown"); // NEW
+    const wishlistBtn = document.getElementById("wishlist-btn");
+    const wishlistDropdown = document.getElementById("wishlist-dropdown");
 
     if (cartBtn && cartDropdown) {
       cartBtn.addEventListener("click", (e) => {
         e.stopPropagation();
 
-        // FIX: Close Wishlist dropdown when Cart opens
         if (wishlistDropdown) {
           wishlistDropdown.style.display = "none";
         }
@@ -268,11 +264,9 @@ class CartManager {
     }
 
     if (wishlistBtn && wishlistDropdown) {
-      // NEW Wishlist Toggle
       wishlistBtn.addEventListener("click", (e) => {
         e.stopPropagation();
 
-        // FIX: Close Cart dropdown when Wishlist opens
         if (cartDropdown) {
           cartDropdown.style.display = "none";
         }
@@ -299,14 +293,13 @@ class CartManager {
           this.showToast("Your cart is empty!", "warning");
           return;
         }
-        // Assuming openPaymentModal is defined globally
         openPaymentModal(this.cart);
       });
     }
   }
 }
 
-// --- 2. Product Management (remains the same) ---
+// --- 2. Product Management ---
 class ProductManager {
   constructor() {
     this.products = [];
@@ -314,7 +307,6 @@ class ProductManager {
     this.initializeProducts();
     this.initializeFilters();
     this.initializeSearch();
-    this.displayProducts(); // Ensure products are displayed on load
   }
 
   initializeProducts() {
@@ -414,15 +406,19 @@ class ProductManager {
 
   displayProducts() {
     const container = document.getElementById("products-container");
-    if (!container) return;
+    if (!container) {
+      console.error("Products container not found!");
+      return;
+    }
 
-    this.products.forEach((product) => {
-      product.element.style.display = "none";
-    });
-
-    this.filteredProducts.forEach((product) => {
-      product.element.style.display = "block";
-    });
+    if (window.productPagination) {
+      console.log(
+        `Updating pagination with ${this.filteredProducts.length} filtered products`
+      );
+      window.productPagination.updateProducts(this.filteredProducts);
+    } else {
+      console.error("ProductPagination not initialized!");
+    }
 
     if (this.filteredProducts.length === 0) {
       if (!document.getElementById("no-products-message")) {
@@ -444,7 +440,7 @@ class ProductManager {
   }
 }
 
-// --- 3. Quick View Modal (remains the same) ---
+// --- 3. Quick View Modal ---
 class QuickViewModal {
   constructor() {
     this.modal = document.getElementById("quick-view-modal");
@@ -561,7 +557,223 @@ class QuickViewModal {
   }
 }
 
-// --- 4. Payment Modal Functions (remains the same) ---
+// ====================================================================
+// PAGINATION SYSTEM
+// ====================================================================
+
+class ProductPagination {
+  constructor() {
+    this.currentPage = 1;
+    this.productsPerPage = 6;
+    this.allProducts = [];
+    this.filteredProducts = [];
+    this.init();
+  }
+
+  init() {
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", () => this.setup());
+    } else {
+      this.setup();
+    }
+  }
+
+  setup() {
+    const productCards = document.querySelectorAll(".product-card");
+    console.log(`Found ${productCards.length} product cards`);
+
+    this.allProducts = Array.from(productCards);
+    this.filteredProducts = [...this.allProducts];
+
+    if (this.allProducts.length === 0) {
+      console.error("No product cards found! Check your HTML.");
+      return;
+    }
+
+    this.createPaginationControls();
+
+    console.log("Displaying first page...");
+    this.displayPage(1);
+  }
+
+  createPaginationControls() {
+    const container = document.getElementById("products-container");
+    if (!container) return;
+
+    if (document.querySelector(".pagination-wrapper")) return;
+
+    const paginationWrapper = document.createElement("div");
+    paginationWrapper.className = "pagination-wrapper";
+    paginationWrapper.innerHTML = `
+      <div class="pagination-info">
+        Showing <span id="page-start">1</span>-<span id="page-end">6</span> of <span id="total-products">0</span> products
+      </div>
+      <div class="pagination-controls">
+        <button id="prev-page" class="pagination-btn" disabled>
+          <i class="fas fa-chevron-left"></i> <span>Previous</span>
+        </button>
+        <div id="page-numbers" class="page-numbers"></div>
+        <button id="next-page" class="pagination-btn">
+          <span>Next</span> <i class="fas fa-chevron-right"></i>
+        </button>
+      </div>
+    `;
+
+    container.parentNode.insertBefore(paginationWrapper, container.nextSibling);
+
+    document
+      .getElementById("prev-page")
+      .addEventListener("click", () => this.previousPage());
+    document
+      .getElementById("next-page")
+      .addEventListener("click", () => this.nextPage());
+  }
+
+  updateProducts(filteredProducts) {
+    this.filteredProducts = filteredProducts;
+    this.currentPage = 1;
+    this.displayPage(1);
+  }
+
+  displayPage(pageNumber) {
+    this.currentPage = pageNumber;
+
+    const startIndex = (pageNumber - 1) * this.productsPerPage;
+    const endIndex = startIndex + this.productsPerPage;
+
+    const container = document.getElementById("products-container");
+    if (!container) {
+      console.error("Products container not found!");
+      return;
+    }
+
+    this.allProducts.forEach((product) => {
+      product.style.display = "none";
+    });
+
+    const productsToShow = this.filteredProducts.slice(startIndex, endIndex);
+    console.log(
+      `Showing ${productsToShow.length} products on page ${pageNumber}`
+    );
+
+    productsToShow.forEach((product) => {
+      product.style.display = "block";
+    });
+
+    this.updatePaginationUI();
+
+    const productsSection = document.querySelector(".products-section");
+    if (productsSection) {
+      productsSection.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }
+
+  updatePaginationUI() {
+    const totalPages = Math.ceil(
+      this.filteredProducts.length / this.productsPerPage
+    );
+    const startIndex = (this.currentPage - 1) * this.productsPerPage + 1;
+    const endIndex = Math.min(
+      this.currentPage * this.productsPerPage,
+      this.filteredProducts.length
+    );
+
+    const pageStartEl = document.getElementById("page-start");
+    const pageEndEl = document.getElementById("page-end");
+    const totalProductsEl = document.getElementById("total-products");
+
+    if (pageStartEl)
+      pageStartEl.textContent =
+        this.filteredProducts.length > 0 ? startIndex : 0;
+    if (pageEndEl) pageEndEl.textContent = endIndex;
+    if (totalProductsEl)
+      totalProductsEl.textContent = this.filteredProducts.length;
+
+    const prevBtn = document.getElementById("prev-page");
+    const nextBtn = document.getElementById("next-page");
+
+    if (prevBtn) {
+      prevBtn.disabled = this.currentPage === 1;
+    }
+
+    if (nextBtn) {
+      nextBtn.disabled =
+        this.currentPage >= totalPages || this.filteredProducts.length === 0;
+    }
+
+    this.updatePageNumbers(totalPages);
+  }
+
+  updatePageNumbers(totalPages) {
+    const pageNumbersContainer = document.getElementById("page-numbers");
+    if (!pageNumbersContainer) return;
+
+    pageNumbersContainer.innerHTML = "";
+
+    if (totalPages <= 1) return;
+
+    let startPage = Math.max(1, this.currentPage - 2);
+    let endPage = Math.min(totalPages, startPage + 4);
+
+    if (endPage - startPage < 4) {
+      startPage = Math.max(1, endPage - 4);
+    }
+
+    if (startPage > 1) {
+      this.createPageButton(1, pageNumbersContainer);
+      if (startPage > 2) {
+        const ellipsis = document.createElement("span");
+        ellipsis.className = "page-ellipsis";
+        ellipsis.textContent = "...";
+        pageNumbersContainer.appendChild(ellipsis);
+      }
+    }
+
+    for (let i = startPage; i <= endPage; i++) {
+      this.createPageButton(i, pageNumbersContainer);
+    }
+
+    if (endPage < totalPages) {
+      if (endPage < totalPages - 1) {
+        const ellipsis = document.createElement("span");
+        ellipsis.className = "page-ellipsis";
+        ellipsis.textContent = "...";
+        pageNumbersContainer.appendChild(ellipsis);
+      }
+      this.createPageButton(totalPages, pageNumbersContainer);
+    }
+  }
+
+  createPageButton(pageNumber, container) {
+    const button = document.createElement("button");
+    button.className = "page-number-btn";
+    button.textContent = pageNumber;
+
+    if (pageNumber === this.currentPage) {
+      button.classList.add("active");
+    }
+
+    button.addEventListener("click", () => this.displayPage(pageNumber));
+    container.appendChild(button);
+  }
+
+  nextPage() {
+    const totalPages = Math.ceil(
+      this.filteredProducts.length / this.productsPerPage
+    );
+    if (this.currentPage < totalPages) {
+      this.displayPage(this.currentPage + 1);
+    }
+  }
+
+  previousPage() {
+    if (this.currentPage > 1) {
+      this.displayPage(this.currentPage - 1);
+    }
+  }
+}
+
+// --- 4. Payment Modal Functions ---
 
 function closePaymentModal() {
   const modal = document.getElementById("demo-payment-modal");
@@ -667,7 +879,6 @@ class MobileNav {
     if (this.nav) {
       this.nav.classList.add("active");
 
-      // FIX: Close dropdowns when mobile nav opens
       const cartDropdown = document.getElementById("cart-dropdown");
       const wishlistDropdown = document.getElementById("wishlist-dropdown");
       if (cartDropdown) cartDropdown.style.display = "none";
@@ -682,7 +893,7 @@ class MobileNav {
   }
 }
 
-// --- 6. Hero Carousel (Unified & Functional) ---
+// --- 6. Hero Carousel ---
 class HeroCarousel {
   constructor() {
     this.currentSlide = 1;
@@ -806,7 +1017,6 @@ class HeroCarousel {
   }
 
   setupHeroButtons() {
-    // Buttons on ALL slides scroll to products
     const heroButtons = document.querySelectorAll(".btn-hero");
     heroButtons.forEach((btn) => {
       btn.addEventListener("click", (e) => {
@@ -928,7 +1138,6 @@ class HeroCarousel {
 
 const AUTH_KEY = "cricketStoreCurrentUser";
 
-// --- State Management ---
 function saveUser(user) {
   localStorage.setItem(AUTH_KEY, JSON.stringify(user));
 }
@@ -939,22 +1148,79 @@ function getUser() {
 }
 
 function logoutUser() {
-  // 1. Genuinely logs the user out using the correct key
   localStorage.removeItem(AUTH_KEY);
 
   if (typeof cartManager !== "undefined") {
-    // 2. Clear both cart and wishlist (FIX for count not becoming 0)
     cartManager.clearCart();
     cartManager.clearWishlist();
-
     cartManager.showToast("Logged out successfully!", "success");
   }
 
-  // 3. Updates the header UI
   updateAccountUI();
 }
 
-// --- Modal & Form Handlers ---
+// --- Order Management ---
+const ORDERS_KEY = "cricketStoreOrders";
+
+function generateOrderId() {
+  const prefix = "ORD";
+  const timestamp = Date.now().toString().slice(-8);
+  const random = Math.floor(Math.random() * 1000)
+    .toString()
+    .padStart(3, "0");
+  return `${prefix}${timestamp}${random}`;
+}
+
+function saveOrder(orderData) {
+  const user = getUser();
+  if (!user) {
+    console.error("User must be logged in to save orders");
+    return null;
+  }
+
+  const orderId = generateOrderId();
+  const order = {
+    orderId: orderId,
+    userEmail: user.email,
+    items: orderData.items,
+    subtotal: orderData.subtotal,
+    shipping: orderData.shipping,
+    tax: orderData.tax,
+    total: orderData.total,
+    paymentMethod: orderData.paymentMethod,
+    orderDate: new Date().toISOString(),
+    status: "Processing",
+  };
+
+  const allOrders = getAllOrders();
+  allOrders.push(order);
+  localStorage.setItem(ORDERS_KEY, JSON.stringify(allOrders));
+
+  return order;
+}
+
+function getAllOrders() {
+  const orders = localStorage.getItem(ORDERS_KEY);
+  return orders ? JSON.parse(orders) : [];
+}
+
+function getUserOrders() {
+  const user = getUser();
+  if (!user) return [];
+
+  const allOrders = getAllOrders();
+  return allOrders.filter((order) => order.userEmail === user.email);
+}
+
+function formatDate(isoString) {
+  const date = new Date(isoString);
+  return date.toLocaleDateString("en-IN", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
+
 function openAuthModal(mode = "login") {
   const modal = document.getElementById("auth-modal");
   const loginTab = document.getElementById("login-tab");
@@ -989,6 +1255,118 @@ function closeAuthModal() {
   }
 }
 
+function openOrdersModal() {
+  const user = getUser();
+  if (!user) {
+    openAuthModal("login");
+    return;
+  }
+
+  const orders = getUserOrders();
+
+  let modal = document.getElementById("orders-modal");
+  if (!modal) {
+    modal = document.createElement("div");
+    modal.id = "orders-modal";
+    modal.className = "modal";
+    modal.innerHTML = `
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>My Orders</h2>
+          <span class="close" id="close-orders-modal">&times;</span>
+        </div>
+        <div class="modal-body" id="orders-modal-body">
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+
+    document
+      .getElementById("close-orders-modal")
+      ?.addEventListener("click", closeOrdersModal);
+    modal.addEventListener("click", (e) => {
+      if (e.target === modal) closeOrdersModal();
+    });
+  }
+
+  const modalBody = document.getElementById("orders-modal-body");
+
+  if (orders.length === 0) {
+    modalBody.innerHTML = `
+      <div style="text-align: center; padding: 40px;">
+        <i class="fas fa-shopping-bag" style="font-size: 4rem; color: #ccc; margin-bottom: 20px;"></i>
+        <h3 style="color: #666;">No Orders Yet</h3>
+        <p style="color: #999;">Start shopping to see your orders here!</p>
+      </div>
+    `;
+  } else {
+    modalBody.innerHTML = `
+      <div class="orders-list">
+        ${orders
+          .reverse()
+          .map(
+            (order) => `
+          <div class="order-card">
+            <div class="order-header">
+              <div>
+                <h3>Order #${order.orderId}</h3>
+                <p class="order-date">${formatDate(order.orderDate)}</p>
+              </div>
+              <div class="order-status status-${order.status.toLowerCase()}">
+                ${order.status}
+              </div>
+            </div>
+            <div class="order-items">
+              ${order.items
+                .map(
+                  (item) => `
+                <div class="order-item">
+                  <span>${item.title} × ${item.quantity}</span>
+                  <span>₹${(item.price * item.quantity).toFixed(2)}</span>
+                </div>
+              `
+                )
+                .join("")}
+            </div>
+            <div class="order-summary">
+              <div class="summary-row">
+                <span>Subtotal:</span>
+                <span>₹${order.subtotal.toFixed(2)}</span>
+              </div>
+              <div class="summary-row">
+                <span>Shipping:</span>
+                <span>₹${order.shipping.toFixed(2)}</span>
+              </div>
+              <div class="summary-row">
+                <span>Tax:</span>
+                <span>₹${order.tax.toFixed(2)}</span>
+              </div>
+              <div class="summary-row total">
+                <span>Total:</span>
+                <span>₹${order.total.toFixed(2)}</span>
+              </div>
+            </div>
+            <div class="order-footer">
+              <span>Payment: ${order.paymentMethod}</span>
+            </div>
+          </div>
+        `
+          )
+          .join("")}
+      </div>
+    `;
+  }
+
+  modal.style.display = "flex";
+}
+
+function closeOrdersModal() {
+  const modal = document.getElementById("orders-modal");
+  if (modal) {
+    modal.style.display = "none";
+  }
+}
+
 function updateAccountUI() {
   const user = getUser();
   const accountName = document.querySelector(".user-btn span");
@@ -1002,9 +1380,16 @@ function updateAccountUI() {
   if (user) {
     accountName.textContent = user.name.split(" ")[0];
     accountMenu.innerHTML = `
-      <a href="#">My Orders</a>
+      <a href="#" id="my-orders-link">My Orders</a>
       <a href="#" id="logout-link">Logout</a>
     `;
+    document
+      .getElementById("my-orders-link")
+      ?.addEventListener("click", (e) => {
+        e.preventDefault();
+        openOrdersModal();
+        accountDropdown?.classList.remove("active");
+      });
     document.getElementById("logout-link")?.addEventListener("click", (e) => {
       e.preventDefault();
       logoutUser();
@@ -1034,14 +1419,26 @@ function updateAccountUI() {
 // ====================================================================
 
 document.addEventListener("DOMContentLoaded", () => {
-  // 1. Initialize Managers and make them global
-  window.cartManager = new CartManager();
-  window.productManager = new ProductManager();
-  window.quickViewModal = new QuickViewModal();
-  window.mobileNav = new MobileNav();
-  window.heroCarousel = new HeroCarousel();
+  console.log("DOM Content Loaded - Initializing...");
 
-  // 2. Auth Modal Event Listeners (remains the same)
+  window.cartManager = new CartManager();
+  console.log("✓ CartManager initialized");
+
+  window.productPagination = new ProductPagination();
+  console.log("✓ ProductPagination initialized");
+
+  window.productManager = new ProductManager();
+  console.log("✓ ProductManager initialized");
+
+  window.quickViewModal = new QuickViewModal();
+  console.log("✓ QuickViewModal initialized");
+
+  window.mobileNav = new MobileNav();
+  console.log("✓ MobileNav initialized");
+
+  window.heroCarousel = new HeroCarousel();
+  console.log("✓ HeroCarousel initialized");
+
   const authModal = document.getElementById("auth-modal");
   const closeAuth = document.querySelector(".close-auth");
 
@@ -1059,6 +1456,7 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("login-tab")?.classList.add("active");
     document.getElementById("signup-tab")?.classList.remove("active");
   });
+
   document.getElementById("signup-tab")?.addEventListener("click", () => {
     document.getElementById("signup-form")?.classList.add("active");
     document.getElementById("login-form")?.classList.remove("active");
@@ -1066,7 +1464,6 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("login-tab")?.classList.remove("active");
   });
 
-  // Auth Form Submission Handlers
   document.getElementById("login-form")?.addEventListener("submit", (e) => {
     e.preventDefault();
     const email = document.getElementById("login-email").value;
@@ -1078,7 +1475,9 @@ document.addEventListener("DOMContentLoaded", () => {
       (storedUser.email === email && storedUser.password === pass)
     ) {
       if (!storedUser) {
-        saveUser({ name: "Demo User", email: email, password: pass });
+        // Extract name from email (part before @)
+        const nameFromEmail = email.split("@")[0];
+        saveUser({ name: nameFromEmail, email: email, password: pass });
       }
       closeAuthModal();
       updateAccountUI();
@@ -1112,7 +1511,6 @@ document.addEventListener("DOMContentLoaded", () => {
     );
   });
 
-  // Account Button Dropdown Toggle (remains the same)
   const accountDropdown = document.querySelector(".account-dropdown");
   const accountBtn = document.getElementById("account-btn");
 
@@ -1132,7 +1530,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // 3. Product Action Buttons (remains the same)
   document.querySelectorAll(".btn-add-cart").forEach((btn) => {
     btn.addEventListener("click", () => {
       const card = btn.closest(".product-card");
@@ -1176,7 +1573,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
-  // 4. Payment Modal Close Handlers (remains the same)
   const modalClose = document.querySelector("#demo-payment-modal .close");
   const cancelBtn = document.getElementById("cancel-payment");
   const paymentModal = document.getElementById("demo-payment-modal");
@@ -1200,6 +1596,15 @@ document.addEventListener("DOMContentLoaded", () => {
   const payNowBtn = document.getElementById("pay-now");
   if (payNowBtn) {
     payNowBtn.addEventListener("click", () => {
+      const user = getUser();
+
+      if (!user) {
+        closePaymentModal();
+        cartManager.showToast("Please login to place an order", "warning");
+        setTimeout(() => openAuthModal("login"), 500);
+        return;
+      }
+
       const selectedMethod = document.querySelector(
         'input[name="payment"]:checked'
       )?.value;
@@ -1220,16 +1625,57 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       }
 
-      cartManager.showToast(
-        "Order placed successfully! You will receive a confirmation email.",
-        "success"
+      const subtotal = parseFloat(
+        document.getElementById("payment-subtotal").textContent
       );
-      cartManager.clearCart();
-      closePaymentModal();
+      const shipping = parseFloat(
+        document.getElementById("payment-shipping").textContent
+      );
+      const tax = parseFloat(
+        document.getElementById("payment-tax").textContent
+      );
+      const total = parseFloat(
+        document.getElementById("payment-total").textContent
+      );
+
+      const items = cartManager.cart.map((item) => ({
+        title: item.title,
+        price: item.price,
+        quantity: item.quantity,
+      }));
+
+      const paymentMethodNames = {
+        card: "Credit/Debit Card",
+        upi: "UPI",
+        netbanking: "Net Banking",
+        cod: "Cash on Delivery",
+      };
+
+      const order = saveOrder({
+        items: items,
+        subtotal: subtotal,
+        shipping: shipping,
+        tax: tax,
+        total: total,
+        paymentMethod: paymentMethodNames[selectedMethod] || selectedMethod,
+      });
+
+      if (order) {
+        cartManager.showToast(
+          `Order #${order.orderId} placed successfully! Check "My Orders" for details.`,
+          "success"
+        );
+        cartManager.clearCart();
+        closePaymentModal();
+      } else {
+        cartManager.showToast(
+          "Failed to place order. Please try again.",
+          "error"
+        );
+      }
     });
   }
 
-  // 5. Other general DOM logic (remains the same)
   const newsletterForm = document.querySelector(".newsletter-form");
   if (newsletterForm) {
     newsletterForm.addEventListener("submit", (e) => {
@@ -1242,7 +1688,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Hero button (Scrolls to products-section)
   const heroBtn = document.querySelector(".btn-hero");
   if (heroBtn) {
     heroBtn.addEventListener("click", () => {
@@ -1252,7 +1697,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Category cards
   document.querySelectorAll(".category-card").forEach((card) => {
     card.addEventListener("click", () => {
       const categoryName = card.querySelector("h3")?.textContent;
@@ -1276,7 +1720,26 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
-  // Smooth scroll for navigation links
+  document
+    .querySelectorAll(".dropdown-content a[data-category]")
+    .forEach((link) => {
+      link.addEventListener("click", (e) => {
+        e.preventDefault();
+        const category = link.getAttribute("data-category");
+        const categoryFilter = document.getElementById("category-filter");
+
+        if (categoryFilter) {
+          categoryFilter.value = category;
+          productManager.applyFilters();
+
+          document.querySelector(".products-section")?.scrollIntoView({
+            behavior: "smooth",
+            block: "start",
+          });
+        }
+      });
+    });
+
   document.querySelectorAll('a[href^="#"]').forEach((anchor) => {
     anchor.addEventListener("click", function (e) {
       e.preventDefault();
@@ -1287,7 +1750,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
-  // Card formatting logic
   const cardInput = document.querySelector('input[placeholder="Card Number"]');
   if (cardInput) {
     cardInput.addEventListener("input", (e) => {
@@ -1308,7 +1770,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // View cart button
   const viewCartBtn = document.getElementById("view-cart-btn");
   if (viewCartBtn) {
     viewCartBtn.addEventListener("click", () => {
@@ -1316,7 +1777,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // View wishlist button
   const viewWishlistBtn = document.getElementById("view-wishlist-btn");
   if (viewWishlistBtn) {
     viewWishlistBtn.addEventListener("click", () => {
@@ -1324,10 +1784,8 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Final UI Initialization
   updateAccountUI();
 
-  // Parallax effect (only runs on desktop)
   const isMobile = window.innerWidth <= 768;
   if (!isMobile) {
     window.addEventListener("scroll", () => {
@@ -1376,7 +1834,6 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 });
 
-// Window resize handler
 window.addEventListener("resize", () => {
   if (window.innerWidth > 768) {
     const mobileNav = document.getElementById("mobile-nav");
@@ -1386,7 +1843,6 @@ window.addEventListener("resize", () => {
   }
 });
 
-// Prevent form resubmission on page refresh
 if (window.history.replaceState) {
   window.history.replaceState(null, null, window.location.href);
 }
