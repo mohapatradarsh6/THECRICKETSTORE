@@ -1119,3 +1119,341 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 });
+
+// Enhanced Hero Carousel with Auto-play and Animations
+class HeroCarousel {
+  constructor() {
+    this.currentSlide = 1;
+    this.totalSlides = 3;
+    this.autoPlayInterval = null;
+    this.autoPlayDuration = 5000; // 5 seconds per slide
+    this.progressInterval = null;
+    this.isPaused = false;
+
+    this.init();
+  }
+
+  init() {
+    this.cacheElements();
+    this.attachEventListeners();
+    this.startAutoPlay();
+  }
+
+  cacheElements() {
+    this.slider = document.getElementById("hero-slider");
+    this.slides = document.querySelectorAll(".hero-slide");
+    this.dots = document.querySelectorAll(".hero-dots .dot");
+    this.prevBtn = document.getElementById("hero-prev");
+    this.nextBtn = document.getElementById("hero-next");
+    this.progressBar = document.getElementById("hero-progress-bar");
+  }
+
+  attachEventListeners() {
+    // Previous button
+    if (this.prevBtn) {
+      this.prevBtn.addEventListener("click", () => {
+        this.stopAutoPlay();
+        this.previousSlide();
+        this.startAutoPlay();
+      });
+    }
+
+    // Next button
+    if (this.nextBtn) {
+      this.nextBtn.addEventListener("click", () => {
+        this.stopAutoPlay();
+        this.nextSlide();
+        this.startAutoPlay();
+      });
+    }
+
+    // Dots navigation
+    this.dots.forEach((dot) => {
+      dot.addEventListener("click", (e) => {
+        const slideNum = parseInt(e.target.getAttribute("data-slide"));
+        this.stopAutoPlay();
+        this.goToSlide(slideNum);
+        this.startAutoPlay();
+      });
+    });
+
+    // Pause on hover
+    if (this.slider) {
+      this.slider.addEventListener("mouseenter", () => {
+        this.pauseAutoPlay();
+      });
+
+      this.slider.addEventListener("mouseleave", () => {
+        this.resumeAutoPlay();
+      });
+    }
+
+    // Keyboard navigation
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowLeft") {
+        this.stopAutoPlay();
+        this.previousSlide();
+        this.startAutoPlay();
+      } else if (e.key === "ArrowRight") {
+        this.stopAutoPlay();
+        this.nextSlide();
+        this.startAutoPlay();
+      }
+    });
+
+    // Touch support for mobile
+    this.setupTouchEvents();
+
+    // Hero buttons
+    this.setupHeroButtons();
+  }
+
+  setupTouchEvents() {
+    let touchStartX = 0;
+    let touchEndX = 0;
+
+    if (this.slider) {
+      this.slider.addEventListener(
+        "touchstart",
+        (e) => {
+          touchStartX = e.changedTouches[0].screenX;
+        },
+        { passive: true }
+      );
+
+      this.slider.addEventListener(
+        "touchend",
+        (e) => {
+          touchEndX = e.changedTouches[0].screenX;
+          this.handleSwipe(touchStartX, touchEndX);
+        },
+        { passive: true }
+      );
+    }
+  }
+
+  handleSwipe(startX, endX) {
+    const swipeThreshold = 50;
+    const diff = startX - endX;
+
+    if (Math.abs(diff) > swipeThreshold) {
+      this.stopAutoPlay();
+      if (diff > 0) {
+        // Swipe left - next slide
+        this.nextSlide();
+      } else {
+        // Swipe right - previous slide
+        this.previousSlide();
+      }
+      this.startAutoPlay();
+    }
+  }
+
+  setupHeroButtons() {
+    // All hero buttons scroll to products section
+    const heroButtons = document.querySelectorAll(".btn-hero");
+    heroButtons.forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        e.preventDefault();
+        const productsSection = document.querySelector(".products-section");
+        if (productsSection) {
+          productsSection.scrollIntoView({
+            behavior: "smooth",
+            block: "start",
+          });
+        }
+      });
+    });
+  }
+
+  goToSlide(slideNum) {
+    // Remove active class from all slides and dots
+    this.slides.forEach((slide) => slide.classList.remove("active"));
+    this.dots.forEach((dot) => dot.classList.remove("active"));
+
+    // Add active class to target slide and dot
+    const targetSlide = document.querySelector(
+      `.hero-slide[data-slide="${slideNum}"]`
+    );
+    const targetDot = document.querySelector(
+      `.hero-dots .dot[data-slide="${slideNum}"]`
+    );
+
+    if (targetSlide) {
+      targetSlide.classList.add("active");
+    }
+
+    if (targetDot) {
+      targetDot.classList.add("active");
+    }
+
+    this.currentSlide = slideNum;
+    this.resetProgress();
+  }
+
+  nextSlide() {
+    let nextSlide = this.currentSlide + 1;
+    if (nextSlide > this.totalSlides) {
+      nextSlide = 1;
+    }
+    this.goToSlide(nextSlide);
+  }
+
+  previousSlide() {
+    let prevSlide = this.currentSlide - 1;
+    if (prevSlide < 1) {
+      prevSlide = this.totalSlides;
+    }
+    this.goToSlide(prevSlide);
+  }
+
+  startAutoPlay() {
+    this.stopAutoPlay(); // Clear any existing intervals
+
+    // Progress bar animation
+    this.startProgress();
+
+    // Auto slide change
+    this.autoPlayInterval = setInterval(() => {
+      if (!this.isPaused) {
+        this.nextSlide();
+      }
+    }, this.autoPlayDuration);
+  }
+
+  stopAutoPlay() {
+    if (this.autoPlayInterval) {
+      clearInterval(this.autoPlayInterval);
+      this.autoPlayInterval = null;
+    }
+    this.stopProgress();
+  }
+
+  pauseAutoPlay() {
+    this.isPaused = true;
+  }
+
+  resumeAutoPlay() {
+    this.isPaused = false;
+  }
+
+  startProgress() {
+    this.stopProgress();
+
+    if (!this.progressBar) return;
+
+    let progress = 0;
+    const increment = 100 / (this.autoPlayDuration / 50); // Update every 50ms
+
+    this.progressInterval = setInterval(() => {
+      if (!this.isPaused) {
+        progress += increment;
+        if (progress >= 100) {
+          progress = 100;
+        }
+        this.progressBar.style.width = progress + "%";
+      }
+    }, 50);
+  }
+
+  stopProgress() {
+    if (this.progressInterval) {
+      clearInterval(this.progressInterval);
+      this.progressInterval = null;
+    }
+  }
+
+  resetProgress() {
+    if (this.progressBar) {
+      this.progressBar.style.width = "0%";
+    }
+  }
+}
+
+// Initialize Hero Carousel when DOM is ready
+document.addEventListener("DOMContentLoaded", () => {
+  // Initialize hero carousel
+  window.heroCarousel = new HeroCarousel();
+
+  // Check if mobile device
+  const isMobile = window.innerWidth <= 768;
+
+  // Add parallax effect to hero section (desktop only)
+  if (!isMobile) {
+    window.addEventListener("scroll", () => {
+      const heroSection = document.querySelector(".hero-section");
+      if (!heroSection) return;
+
+      const scrolled = window.pageYOffset;
+      const heroHeight = heroSection.offsetHeight;
+
+      if (scrolled <= heroHeight) {
+        // Parallax effect on hero content
+        const heroContent = document.querySelector(
+          ".hero-slide.active .hero-content"
+        );
+        const heroImage = document.querySelector(
+          ".hero-slide.active .hero-image"
+        );
+
+        if (heroContent) {
+          heroContent.style.transform = `translateY(${scrolled * 0.3}px)`;
+          heroContent.style.opacity = 1 - (scrolled / heroHeight) * 0.8;
+        }
+
+        if (heroImage) {
+          heroImage.style.transform = `translateY(${scrolled * 0.2}px) scale(${
+            1 - (scrolled / heroHeight) * 0.1
+          })`;
+        }
+      }
+    });
+  }
+
+  // Add entrance animation on page load
+  setTimeout(() => {
+    const heroSection = document.querySelector(".hero-section");
+    if (heroSection) {
+      heroSection.style.opacity = "1";
+    }
+  }, 100);
+
+  // Performance optimization: Pause carousel when tab is hidden
+  document.addEventListener("visibilitychange", () => {
+    if (window.heroCarousel) {
+      if (document.hidden) {
+        window.heroCarousel.pauseAutoPlay();
+      } else {
+        window.heroCarousel.resumeAutoPlay();
+      }
+    }
+  });
+
+  // Handle window resize - adjust carousel behavior
+  let resizeTimer;
+  window.addEventListener("resize", () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+      const isMobileNow = window.innerWidth <= 768;
+
+      // Reset parallax on resize
+      if (isMobileNow) {
+        const heroContent = document.querySelector(
+          ".hero-slide.active .hero-content"
+        );
+        const heroImage = document.querySelector(
+          ".hero-slide.active .hero-image"
+        );
+
+        if (heroContent) {
+          heroContent.style.transform = "";
+          heroContent.style.opacity = "";
+        }
+
+        if (heroImage) {
+          heroImage.style.transform = "";
+        }
+      }
+    }, 250);
+  });
+});
