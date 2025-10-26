@@ -385,7 +385,9 @@ class ProductManager {
         this.filteredProducts.sort(() => Math.random() - 0.5);
         break;
     }
-
+    if (window.productPagination) {
+      window.productPagination.currentPage = 1;
+    }
     this.displayProducts();
   }
 
@@ -401,9 +403,14 @@ class ProductManager {
           product.brand.toLowerCase().includes(searchTerm)
       );
     }
+
+    // CRITICAL FIX: Reset pagination to page 1 when searching
+    if (window.productPagination) {
+      window.productPagination.currentPage = 1;
+    }
+
     this.displayProducts();
   }
-
   displayProducts() {
     const container = document.getElementById("products-container");
     if (!container) {
@@ -839,13 +846,29 @@ function openPaymentModal(items) {
   });
 }
 
-// --- 5. Mobile Navigation ---
+// --- 5. Enhanced Mobile Navigation with Dropdowns ---
 class MobileNav {
   constructor() {
     this.nav = document.getElementById("mobile-nav");
     this.toggleBtn = document.getElementById("mobile-menu-toggle");
     this.closeBtn = document.getElementById("close-mobile-nav");
+    this.overlay = this.createOverlay();
     this.initializeNav();
+    this.initializeMobileSearch();
+    this.initializeDropdowns();
+  }
+
+  createOverlay() {
+    let overlay = document.getElementById("mobile-nav-overlay");
+    if (!overlay) {
+      overlay = document.createElement("div");
+      overlay.id = "mobile-nav-overlay";
+      overlay.className = "mobile-nav-overlay";
+      document.body.appendChild(overlay);
+
+      overlay.addEventListener("click", () => this.closeNav());
+    }
+    return overlay;
   }
 
   initializeNav() {
@@ -857,28 +880,113 @@ class MobileNav {
       this.closeBtn.addEventListener("click", () => this.closeNav());
     }
 
+    // Close on link click (except dropdown toggles)
     if (this.nav) {
-      this.nav.querySelectorAll("a").forEach((link) => {
-        link.addEventListener("click", () => this.closeNav());
+      this.nav
+        .querySelectorAll("a:not(.mobile-dropdown-toggle)")
+        .forEach((link) => {
+          link.addEventListener("click", () => {
+            // If it's a category link with data-category, trigger filter
+            if (link.hasAttribute("data-category")) {
+              const category = link.getAttribute("data-category");
+              const categoryFilter = document.getElementById("category-filter");
+              if (categoryFilter) {
+                categoryFilter.value = category;
+                window.productManager.applyFilters();
+
+                // Scroll to products section
+                setTimeout(() => {
+                  document.querySelector(".products-section")?.scrollIntoView({
+                    behavior: "smooth",
+                    block: "start",
+                  });
+                }, 300);
+              }
+            }
+            this.closeNav();
+          });
+        });
+    }
+  }
+
+  initializeDropdowns() {
+    const dropdownToggles = document.querySelectorAll(
+      ".mobile-dropdown-toggle"
+    );
+
+    dropdownToggles.forEach((toggle) => {
+      toggle.addEventListener("click", (e) => {
+        e.preventDefault();
+        const parent = toggle.closest(".mobile-dropdown");
+        const isActive = parent.classList.contains("active");
+
+        // Close all other dropdowns
+        document.querySelectorAll(".mobile-dropdown").forEach((dropdown) => {
+          dropdown.classList.remove("active");
+        });
+
+        // Toggle current dropdown
+        if (!isActive) {
+          parent.classList.add("active");
+        }
+      });
+    });
+  }
+
+  initializeMobileSearch() {
+    const searchInput = document.getElementById("mobile-search-input");
+    const searchBtn = document.getElementById("mobile-search-btn");
+
+    if (searchInput) {
+      searchInput.addEventListener("input", (e) => {
+        if (window.productManager) {
+          window.productManager.searchProducts(e.target.value);
+        }
+      });
+
+      searchInput.addEventListener("keypress", (e) => {
+        if (e.key === "Enter") {
+          if (window.productManager) {
+            window.productManager.searchProducts(e.target.value);
+          }
+          this.closeNav();
+
+          // Scroll to products
+          setTimeout(() => {
+            document.querySelector(".products-section")?.scrollIntoView({
+              behavior: "smooth",
+              block: "start",
+            });
+          }, 300);
+        }
       });
     }
 
-    document.addEventListener("click", (e) => {
-      if (this.nav && this.nav.classList.contains("active")) {
-        if (
-          !this.nav.contains(e.target) &&
-          !this.toggleBtn?.contains(e.target)
-        ) {
+    if (searchBtn) {
+      searchBtn.addEventListener("click", () => {
+        if (searchInput && window.productManager) {
+          window.productManager.searchProducts(searchInput.value);
           this.closeNav();
+
+          // Scroll to products
+          setTimeout(() => {
+            document.querySelector(".products-section")?.scrollIntoView({
+              behavior: "smooth",
+              block: "start",
+            });
+          }, 300);
         }
-      }
-    });
+      });
+    }
   }
 
   openNav() {
     if (this.nav) {
       this.nav.classList.add("active");
+      this.overlay.classList.add("active");
+      document.body.style.overflow = "hidden"; // Prevent background scrolling
 
+      // Close cart and wishlist dropdowns
       const cartDropdown = document.getElementById("cart-dropdown");
       const wishlistDropdown = document.getElementById("wishlist-dropdown");
       if (cartDropdown) cartDropdown.style.display = "none";
@@ -889,10 +997,16 @@ class MobileNav {
   closeNav() {
     if (this.nav) {
       this.nav.classList.remove("active");
+      this.overlay.classList.remove("active");
+      document.body.style.overflow = ""; // Restore scrolling
+
+      // Close all dropdowns when closing menu
+      document.querySelectorAll(".mobile-dropdown").forEach((dropdown) => {
+        dropdown.classList.remove("active");
+      });
     }
   }
 }
-
 // --- 6. Hero Carousel ---
 class HeroCarousel {
   constructor() {

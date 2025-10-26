@@ -1355,22 +1355,120 @@
     </div>
 
     <!-- Mobile Navigation -->
-    <nav class="mobile-nav" id="mobile-nav">
-      <div class="mobile-nav-header">
-        <h2>Menu</h2>
-        <button class="close-mobile-nav" id="close-mobile-nav">
-          <i class="fas fa-times"></i>
-        </button>
-      </div>
-      <ul>
-        <li><a href="#home">Home</a></li>
-        <li><a href="#products">Products</a></li>
-        <li><a href="#brands">Brands</a></li>
-        <li><a href="#offers">Offers</a></li>
-        <li><a href="#about">About</a></li>
-        <li><a href="#contact">Contact</a></li>
+    <!-- Mobile Navigation -->
+<nav class="mobile-nav" id="mobile-nav">
+  <div class="mobile-nav-header">
+    <h2><i class="fas fa-baseball-ball"></i> Menu</h2>
+    <button class="close-mobile-nav" id="close-mobile-nav">
+      <i class="fas fa-times"></i>
+    </button>
+  </div>
+
+  <!-- Mobile Search Bar -->
+  <div class="mobile-search-box">
+    <input
+      type="text"
+      id="mobile-search-input"
+      placeholder="Search products..."
+    />
+    <button id="mobile-search-btn">
+      <i class="fas fa-search"></i>
+    </button>
+  </div>
+
+  <ul class="mobile-menu-list">
+    <li><a href="#home"><i class="fas fa-home"></i> Home</a></li>
+    
+    <!-- Products with Submenu -->
+    <li class="mobile-dropdown">
+      <a href="#products" class="mobile-dropdown-toggle">
+        <i class="fas fa-shopping-bag"></i> Products 
+        <i class="fas fa-chevron-down"></i>
+      </a>
+      <ul class="mobile-submenu">
+        <li><a href="#bats" data-category="bats"><i class="fas fa-baseball-bat-ball"></i> Cricket Bats<span class="mobile-desc">English & Kashmir Willow</span></a></li>
+        <li><a href="#balls" data-category="balls"><i class="fas fa-circle"></i> Cricket Balls<span class="mobile-desc">Leather, Tennis & Practice</span></a></li>
+        <li><a href="#pads" data-category="pads"><i class="fas fa-shield-alt"></i> Pads & Guards<span class="mobile-desc">Leg Guards, Thigh Guards</span></a></li>
+        <li><a href="#gloves" data-category="gloves"><i class="fas fa-mitten"></i> Gloves<span class="mobile-desc">Batting, Keeping & Inner</span></a></li>
+        <li><a href="#helmets"><i class="fas fa-hard-hat"></i> Helmets<span class="mobile-desc">Premium Protection</span></a></li>
+        <li><a href="#shoes"><i class="fas fa-shoe-prints"></i> Cricket Shoes<span class="mobile-desc">Spikes, Rubber & Training</span></a></li>
+        <li><a href="#bags"><i class="fas fa-briefcase"></i> Kit Bags<span class="mobile-desc">Wheelie, Duffle & Backpacks</span></a></li>
+        <li><a href="#accessories"><i class="fas fa-tools"></i> Accessories<span class="mobile-desc">Grips, Guards & More</span></a></li>
       </ul>
-    </nav>
+    </li>
+
+    <!-- Brands with Submenu -->
+    <li class="mobile-dropdown">
+      <a href="#brands" class="mobile-dropdown-toggle">
+        <i class="fas fa-star"></i> Brands 
+        <i class="fas fa-chevron-down"></i>
+      </a>
+      <ul class="mobile-submenu">
+        <li><a href="#sg"><i class="fas fa-award"></i> SG<span class="mobile-desc">Since 1931</span></a></li>
+        <li><a href="#kookaburra"><i class="fas fa-award"></i> Kookaburra<span class="mobile-desc">Australian Excellence</span></a></li>
+        <li><a href="#bas"><i class="fas fa-award"></i> BAS Vampire<span class="mobile-desc">Power & Precision</span></a></li>
+        <li><a href="#gray-nicolls"><i class="fas fa-award"></i> Gray-Nicolls<span class="mobile-desc">British Heritage</span></a></li>
+        <li><a href="#mrf"><i class="fas fa-award"></i> MRF<span class="mobile-desc">Legends Choice</span></a></li>
+        <li><a href="#ss"><i class="fas fa-award"></i> SS<span class="mobile-desc">Premium Quality</span></a></li>
+        <li><a href="#adidas"><i class="fas fa-award"></i> Adidas<span class="mobile-desc">Global Leader</span></a></li>
+        <li><a href="#nike"><i class="fas fa-award"></i> Nike<span class="mobile-desc">Innovation</span></a></li>
+      </ul>
+    </li>
+
+    <!-- Offers with Submenu -->
+    <li class="mobile-dropdown">
+      <a href="#offers" class="mobile-dropdown-toggle">
+        <i class="fas fa-tags"></i> Offers 
+        <i class="fas fa-chevron-down"></i>
+      </a>
+      <ul class="mobile-submenu">
+        <li><a href="#clearance"><i class="fas fa-percentage"></i> Clearance Sale<span class="mobile-desc">Up to 60% OFF</span></a></li>
+        <li><a href="#new-arrivals"><i class="fas fa-sparkles"></i> New Arrivals<span class="mobile-desc">Latest 2025 Collection</span></a></li>
+        <li><a href="#bestsellers"><i class="fas fa-fire"></i> Bestsellers<span class="mobile-desc">Top Rated</span></a></li>
+        <li><a href="#combo-deals"><i class="fas fa-gift"></i> Combo Deals<span class="mobile-desc">Complete Kits</span></a></li>
+        <li><a href="#season-sale"><i class="fas fa-tag"></i> Season End Sale<span class="mobile-desc">Massive Discounts</span></a></li>
+      </ul>
+    </li>
+
+    <!-- About with Submenu -->
+    <li class="mobile-dropdown">
+      <a href="#about" class="mobile-dropdown-toggle">
+        <i class="fas fa-info-circle"></i> About 
+        <i class="fas fa-chevron-down"></i>
+      </a>
+      <ul class="mobile-submenu">
+        <li><a href="#our-story"><i class="fas fa-book"></i> Our Story<span class="mobile-desc">20+ Years Excellence</span></a></li>
+        <li><a href="#why-us"><i class="fas fa-heart"></i> Why Choose Us<span class="mobile-desc">Quality & Trust</span></a></li>
+        <li><a href="#testimonials"><i class="fas fa-comments"></i> Reviews<span class="mobile-desc">50,000+ Happy Customers</span></a></li>
+        <li><a href="#store-locator"><i class="fas fa-map-marked-alt"></i> Store Locator<span class="mobile-desc">500+ Stores</span></a></li>
+        <li><a href="#careers"><i class="fas fa-briefcase"></i> Careers<span class="mobile-desc">Join Our Team</span></a></li>
+      </ul>
+    </li>
+
+    <!-- Contact with Submenu -->
+    <li class="mobile-dropdown">
+      <a href="#contact" class="mobile-dropdown-toggle">
+        <i class="fas fa-phone"></i> Contact 
+        <i class="fas fa-chevron-down"></i>
+      </a>
+      <ul class="mobile-submenu">
+        <li><a href="#customer-support"><i class="fas fa-headset"></i> 24/7 Support<span class="mobile-desc">Expert Assistance</span></a></li>
+        <li><a href="#bulk-orders"><i class="fas fa-boxes"></i> Bulk Orders<span class="mobile-desc">Schools & Clubs</span></a></li>
+        <li><a href="#track-order"><i class="fas fa-shipping-fast"></i> Track Order<span class="mobile-desc">Real-time Updates</span></a></li>
+        <li><a href="#feedback"><i class="fas fa-comment-dots"></i> Feedback<span class="mobile-desc">Share Your Opinion</span></a></li>
+        <li><a href="#faq"><i class="fas fa-question-circle"></i> FAQs<span class="mobile-desc">Quick Answers</span></a></li>
+      </ul>
+    </li>
+  </ul>
+
+  <!-- Mobile Menu Footer -->
+  <div class="mobile-nav-footer">
+    <div class="mobile-contact-info">
+      <p><i class="fas fa-phone"></i> +91 98765 43210</p>
+      <p><i class="fas fa-envelope"></i> support@thecricketstore.com</p>
+    </div>
+  </div>
+</nav>
 
     <!-- Login/Signup Modal -->
 <div id="auth-modal" class="auth-modal">
