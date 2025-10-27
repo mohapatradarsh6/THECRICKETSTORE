@@ -1595,6 +1595,44 @@ document.addEventListener("DOMContentLoaded", () => {
   window.heroCarousel = new HeroCarousel();
   console.log("✓ HeroCarousel initialized");
 
+  // Home button click - Reset to default state
+  document.querySelectorAll('a[href="#home"]').forEach((homeLink) => {
+    homeLink.addEventListener("click", (e) => {
+      e.preventDefault();
+
+      // Clear search input
+      const searchInput = document.getElementById("search-input");
+      const mobileSearchInput = document.getElementById("mobile-search-input");
+      if (searchInput) searchInput.value = "";
+      if (mobileSearchInput) mobileSearchInput.value = "";
+
+      // Reset filters to default
+      const categoryFilter = document.getElementById("category-filter");
+      const brandFilter = document.getElementById("brand-filter");
+      const sortFilter = document.getElementById("sort-filter");
+
+      if (categoryFilter) categoryFilter.value = "all";
+      if (brandFilter) brandFilter.value = "all";
+      if (sortFilter) sortFilter.value = "featured";
+
+      // Reset products and pagination
+      if (window.productManager) {
+        window.productManager.filteredProducts = [
+          ...window.productManager.products,
+        ];
+        if (window.productPagination) {
+          window.productPagination.currentPage = 1;
+          window.productPagination.updateProducts(
+            window.productManager.filteredProducts
+          );
+        }
+      }
+
+      // Scroll to top smoothly
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    });
+  });
+
   const authModal = document.getElementById("auth-modal");
   const closeAuth = document.querySelector(".close-auth");
 
