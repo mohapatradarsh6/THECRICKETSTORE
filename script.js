@@ -616,7 +616,15 @@ class ProductPagination {
     const productCards = document.querySelectorAll(".product-card");
     console.log(`Found ${productCards.length} product cards`);
 
-    this.allProducts = Array.from(productCards);
+    // **THE FIX: Store as objects matching ProductManager's structure**
+    this.allProducts = Array.from(productCards).map((card) => ({
+      element: card,
+      title: card.getAttribute("data-title"),
+      price: parseFloat(card.getAttribute("data-price")),
+      category: card.getAttribute("data-category"),
+      brand: card.getAttribute("data-brand"),
+    }));
+
     this.filteredProducts = [...this.allProducts];
 
     if (this.allProducts.length === 0) {
@@ -681,21 +689,28 @@ class ProductPagination {
       return;
     }
 
-    this.allProducts.forEach((product) => {
-      product.style.display = "none";
+    // Hide ALL products first
+    this.allProducts.forEach((productObj) => {
+      if (productObj.element) {
+        productObj.element.style.display = "none";
+      }
     });
-
+    // Get the products to show on this page
     const productsToShow = this.filteredProducts.slice(startIndex, endIndex);
     console.log(
       `Showing ${productsToShow.length} products on page ${pageNumber}`
     );
 
-    productsToShow.forEach((product) => {
-      product.style.display = "block";
+    // **THE FIX: Access the .element property to show the actual DOM element**
+    productsToShow.forEach((productObj) => {
+      if (productObj.element) {
+        productObj.element.style.display = "block";
+      }
     });
 
     this.updatePaginationUI();
 
+    // Smooth scroll to products section
     const productsSection = document.querySelector(".products-section");
     if (productsSection) {
       productsSection.scrollIntoView({ behavior: "smooth", block: "start" });
