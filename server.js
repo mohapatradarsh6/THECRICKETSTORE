@@ -60,6 +60,13 @@ app.get(/(.*)/, (req, res) => {
 
 // Start Server
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () =>
-  console.log(`🚀 Website running at http://localhost:${PORT}`)
-);
+
+// Only listen if we are running locally (Vercel handles this automatically in cloud)
+if (require.main === module) {
+  app.listen(PORT, () =>
+    console.log(`🚀 Website running at http://localhost:${PORT}`)
+  );
+}
+
+// Export the app for Vercel Serverless
+module.exports = app;
