@@ -1534,7 +1534,7 @@ function formatDate(isoString) {
   });
 }
 
-// New function to switch to the Forgot Password form
+// New function to switch to the Forgot Password form (Hoisted to global scope)
 function openForgotPasswordForm() {
   document.getElementById("login-form")?.classList.remove("active");
   document.getElementById("signup-form")?.classList.remove("active");
@@ -1550,7 +1550,7 @@ function openForgotPasswordForm() {
   }
 }
 
-// Corrected and updated openAuthModal (moved from inside DOMContentLoaded)
+// Corrected and updated openAuthModal (Hoisted to global scope)
 function openAuthModal(mode = "login") {
   const modal = document.getElementById("auth-modal");
   const loginTab = document.getElementById("login-tab");
@@ -1811,6 +1811,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const data = await res.json();
        if (res.ok) {
+        // Response 200 is expected for security reasons (even if email isn't found)
         window.cartManager.showToast(data.message, "success");
         e.target.reset();
         openAuthModal("login"); 
@@ -1977,6 +1978,10 @@ document.addEventListener("DOMContentLoaded", () => {
     accountBtn.addEventListener("click", (e) => {
       e.preventDefault();
       e.stopPropagation();
+      
+      // *** FIX APPLIED HERE: Ensures the UI updates to show Login/Logout based on status ***
+      updateAccountUI(); 
+      
       accountDropdown.classList.toggle("active");
     });
     document.addEventListener("click", (e) => {
