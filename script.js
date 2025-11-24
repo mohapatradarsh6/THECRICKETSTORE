@@ -1851,49 +1851,47 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
 
-  // --- REAL SIGNUP LOGIC ---
-  document.getElementById("signup-form")?.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const name = document.getElementById("signup-name").value;
-    const email = document.getElementById("signup-email").value;
-    const password = document.getElementById("signup-password").value;
-    const submitBtn = e.target.querySelector('button');
+  // --- REAL SIGNUP LOGIC (CORRECTED) ---
+  document
+    .getElementById("signup-form")
+    ?.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const name = document.getElementById("signup-name").value;
+      const email = document.getElementById("signup-email").value;
+      const password = document.getElementById("signup-password").value;
+      const submitBtn = e.target.querySelector("button");
 
-    try {
-      submitBtn.textContent = "Signing up...";
-      submitBtn.disabled = true;
+      try {
+        submitBtn.textContent = "Signing up...";
+        submitBtn.disabled = true;
 
-      const res = await fetch("/api/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, password }),
-      });
+        const res = await fetch("/api/register", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name, email, password }),
+        });
 
-      const data = await res.json();
+        const data = await res.json();
 
-      if (res.ok) {
-        cartManager.showToast("Account created! Please login.", "success");
-        // Switch to login tab automatically
-        document.getElementById("login-tab")?.click();
-      } else {
-        cartManager.showToast(data.error, "danger");
+        if (res.ok) {
+          // Show success toast and switch to login tab
+          cartManager.showToast("Account created! Please login.", "success");
+          document.getElementById("login-tab")?.click();
+
+          // Clear the signup form
+          e.target.reset();
+        } else {
+          // Correct error handling
+          cartManager.showToast(data.error, "danger");
+        }
+      } catch (error) {
+        console.error("Signup failed:", error);
+        cartManager.showToast("Signup failed. Check connection.", "error");
+      } finally {
+        submitBtn.textContent = "Sign Up";
+        submitBtn.disabled = false;
       }
-    } catch (error) {
-      cartManager.showToast("Signup failed. Check connection.", "error");
-    } finally {
-      submitBtn.textContent = "Sign Up";
-      submitBtn.disabled = false;
-    }
-  });
-    const newUser = { name, email, password: pass };
-    saveUser(newUser);
-    closeAuthModal();
-    updateAccountUI();
-    cartManager.showToast(
-      `Sign up successful! Logged in as ${name.split(" ")[0]}.`,
-      "success"
-    );
-  });
+    });
 
   const accountDropdown = document.querySelector(".account-dropdown");
   const accountBtn = document.getElementById("account-btn");
@@ -2216,17 +2214,17 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }
   });
-});
 
-window.addEventListener("resize", () => {
-  if (window.innerWidth > 768) {
-    const mobileNav = document.getElementById("mobile-nav");
-    if (mobileNav) {
-      mobileNav.classList.remove("active");
+  window.addEventListener("resize", () => {
+    if (window.innerWidth > 768) {
+      const mobileNav = document.getElementById("mobile-nav");
+      if (mobileNav) {
+        mobileNav.classList.remove("active");
+      }
     }
+  });
+
+  if (window.history.replaceState) {
+    window.history.replaceState(null, null, window.location.href);
   }
 });
-
-if (window.history.replaceState) {
-  window.history.replaceState(null, null, window.location.href);
-}
