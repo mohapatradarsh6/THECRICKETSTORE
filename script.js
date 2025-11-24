@@ -1811,42 +1811,80 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("login-tab")?.classList.remove("active");
   });
 
-  document.getElementById("login-form")?.addEventListener("submit", (e) => {
-    e.preventDefault();
-    const email = document.getElementById("login-email").value;
-    const pass = document.getElementById("login-password").value;
-    const storedUser = getUser();
+  // --- REAL LOGIN LOGIC ---
+  document
+    .getElementById("login-form")
+    ?.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const email = document.getElementById("login-email").value;
+      const password = document.getElementById("login-password").value;
+      const submitBtn = e.target.querySelector("button");
 
-    if (
-      !storedUser ||
-      (storedUser.email === email && storedUser.password === pass)
-    ) {
-      if (!storedUser) {
-        const nameFromEmail = email.split("@")[0];
-        saveUser({ name: nameFromEmail, email: email, password: pass });
+      try {
+        submitBtn.textContent = "Logging in...";
+        submitBtn.disabled = true;
+
+        const res = await fetch("/api/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password }),
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+          // Save the Token and User Info
+          saveUser(data.user);
+          localStorage.setItem("authToken", data.token); // Store JWT
+
+          closeAuthModal();
+          updateAccountUI();
+          cartManager.showToast(`Welcome back, ${data.user.name}!`, "success");
+        } else {
+          cartManager.showToast(data.error, "danger");
+        }
+      } catch (error) {
+        cartManager.showToast("Login failed. Check connection.", "error");
+      } finally {
+        submitBtn.textContent = "Login";
+        submitBtn.disabled = false;
       }
-      closeAuthModal();
-      updateAccountUI();
-      cartManager.showToast("Login successful!", "success");
-    } else {
-      cartManager.showToast("Invalid credentials!", "danger");
-    }
-  });
+    });
 
-  document.getElementById("signup-form")?.addEventListener("submit", (e) => {
+  // --- REAL SIGNUP LOGIC ---
+  document.getElementById("signup-form")?.addEventListener("submit", async (e) => {
     e.preventDefault();
     const name = document.getElementById("signup-name").value;
     const email = document.getElementById("signup-email").value;
-    const pass = document.getElementById("signup-password").value;
+    const password = document.getElementById("signup-password").value;
+    const submitBtn = e.target.querySelector('button');
 
-    if (getUser() && getUser().email === email) {
-      cartManager.showToast(
-        "Account already exists with this email.",
-        "danger"
-      );
-      return;
+    try {
+      submitBtn.textContent = "Signing up...";
+      submitBtn.disabled = true;
+
+      const res = await fetch("/api/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email, password }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        cartManager.showToast("Account created! Please login.", "success");
+        // Switch to login tab automatically
+        document.getElementById("login-tab")?.click();
+      } else {
+        cartManager.showToast(data.error, "danger");
+      }
+    } catch (error) {
+      cartManager.showToast("Signup failed. Check connection.", "error");
+    } finally {
+      submitBtn.textContent = "Sign Up";
+      submitBtn.disabled = false;
     }
-
+  });
     const newUser = { name, email, password: pass };
     saveUser(newUser);
     closeAuthModal();
