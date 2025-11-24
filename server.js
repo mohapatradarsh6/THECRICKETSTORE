@@ -1,6 +1,31 @@
+require("dotenv").config();
+const express = require("express");
 const mongoose = require("mongoose");
+const cors = require("cors");
+const path = require("path");
 
-// 1. Define Schema
+const app = express();
+
+// Middleware
+app.use(cors());
+app.use(express.json());
+
+// Serve static files (HTML, CSS, Images, JS)
+app.use(express.static(path.join(__dirname)));
+
+// 1. Database Connection
+const MONGO_URI = process.env.MONGO_URI;
+
+if (!MONGO_URI) {
+  console.error("❌ Error: MONGO_URI is missing in .env file");
+} else {
+  mongoose
+    .connect(MONGO_URI)
+    .then(() => console.log("✅ MongoDB Connected"))
+    .catch((err) => console.error("❌ DB Connection Error:", err));
+}
+
+// 2. Define Schema
 const productSchema = new mongoose.Schema({
   title: { type: String, required: true },
   price: { type: Number, required: true },
@@ -15,60 +40,39 @@ const productSchema = new mongoose.Schema({
   isBestSeller: { type: Boolean, default: false },
 });
 
-// Prevent model overwrite error
 const Product =
   mongoose.models.Product || mongoose.model("Product", productSchema);
 
-// 2. Connect to Database (Clean Version)
-let cachedDb = null;
-
-async function connectToDatabase() {
-  if (cachedDb) {
-    return cachedDb;
-  }
-
-  if (!process.env.MONGO_URI) {
-    throw new Error("MONGO_URI is missing in Environment Variables");
-  }
-
-  // FIXED: Removed deprecated options that cause crash in Mongoose v8+
-  const db = await mongoose.connect(process.env.MONGO_URI);
-
-  cachedDb = db;
-  return db;
-}
-
-// 3. API Handler
-module.exports = async (req, res) => {
-  // Enable CORS
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
-
-  if (req.method === "OPTIONS") {
-    return res.status(200).end();
-  }
-
+// 3. API Routes
+app.get("/api/products", async (req, res) => {
   try {
-    await connectToDatabase();
-
-    if (req.method === "GET") {
-      const products = await Product.find();
-      return res.status(200).json(products);
-    }
-
-    if (req.method === "POST") {
-      const product = new Product(req.body);
-      const newProduct = await product.save();
-      return res.status(201).json(newProduct);
-    }
-
-    return res.status(405).json({ message: "Method not allowed" });
-  } catch (error) {
-    console.error("API Error:", error);
-    return res.status(500).json({
-      message: "Internal Server Error",
-      error: error.message,
-    });
+    const products = await Product.find();
+    res.json(products);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
-};
+});
+
+app.post("/api/products", async (req, res) => {
+  try {
+    const product = new Product(req.body);
+    await product.save();
+    res.status(201).json(product);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// 4. Serve the Frontend for any other route
+// Fixed for Express v5: uses regex instead of "*"
+app.get(/(.*)/, (req, res) => {
+  res.sendFile(path.join(__dirname, "index.html"));
+});
+// 5. Start the Server
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`🚀 Server running at http://localhost:${PORT}`);
+});
+
+// REQUIRED FOR VERCEL
+module.exports = app;
