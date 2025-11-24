@@ -9,11 +9,10 @@ const app = express();
 // Middleware
 app.use(cors());
 app.use(express.json());
-// Serve static files (HTML, CSS, Images) bundled by Vercel
 app.use(express.static(path.join(__dirname)));
 
-/const seedProducts = [
-  // ================= BATS (6 Items) =================
+// --- 1. PRODUCT DATA ---
+const seedProducts = [
   {
     title: "SG HP33 Kashmir Willow",
     price: 4999,
@@ -24,7 +23,8 @@ app.use(express.static(path.join(__dirname)));
     rating: 4.5,
     reviews: 125,
     isBestSeller: true,
-    description: "Hand-crafted Kashmir Willow bat with excellent balance. Hardik Pandya Edition.",
+    description:
+      "Hand-crafted Kashmir Willow bat with excellent balance. Hardik Pandya Edition.",
   },
   {
     title: "Kookaburra Kahuna Pro",
@@ -36,7 +36,8 @@ app.use(express.static(path.join(__dirname)));
     rating: 5,
     reviews: 89,
     isNewArrival: true,
-    description: "The iconic Kahuna. Mid-blade sweet spot for all-round stroke play.",
+    description:
+      "The iconic Kahuna. Mid-blade sweet spot for all-round stroke play.",
   },
   {
     title: "SS Ton Retro Classic",
@@ -58,7 +59,8 @@ app.use(express.static(path.join(__dirname)));
     image: "images/mrf.png",
     rating: 5,
     reviews: 32,
-    description: "Virat Kohli's choice. Premium English Willow with lightweight pickup.",
+    description:
+      "Virat Kohli's choice. Premium English Willow with lightweight pickup.",
   },
   {
     title: "Gray-Nicolls Cobra",
@@ -82,8 +84,6 @@ app.use(express.static(path.join(__dirname)));
     reviews: 156,
     description: "Legendary BAS profile with thick edges.",
   },
-
-  // ================= BALLS (4 Items) =================
   {
     title: "SG Test Cricket Ball",
     price: 899,
@@ -129,8 +129,6 @@ app.use(express.static(path.join(__dirname)));
     reviews: 500,
     description: "Heavy duty tennis balls for box cricket.",
   },
-
-  // ================= PADS & GUARDS (4 Items) =================
   {
     title: "Kookaburra Batting Pads",
     price: 2999,
@@ -176,8 +174,6 @@ app.use(express.static(path.join(__dirname)));
     reviews: 71,
     description: "Standard pre-shaped thigh guard with soft towel backing.",
   },
-
-  // ================= GLOVES (3 Items) =================
   {
     title: "BAS Vampire Batting Gloves",
     price: 1999,
@@ -188,7 +184,8 @@ app.use(express.static(path.join(__dirname)));
     rating: 5,
     reviews: 145,
     isBestSeller: true,
-    description: "Super soft sheep leather palm with sausage finger protection.",
+    description:
+      "Super soft sheep leather palm with sausage finger protection.",
   },
   {
     title: "Kookaburra Pro Keeper Gloves",
@@ -213,8 +210,6 @@ app.use(express.static(path.join(__dirname)));
     reviews: 40,
     description: "Multi-flex points for unrestricted hand movement.",
   },
-
-  // ================= HELMETS (2 Items) =================
   {
     title: "SG Aerotech Helmet",
     price: 3499,
@@ -238,8 +233,6 @@ app.use(express.static(path.join(__dirname)));
     isNewArrival: true,
     description: "Lightweight titanium grille. Choice of international pros.",
   },
-
-  // ================= SHOES (3 Items) =================
   {
     title: "Kookaburra KC 2.0 Spikes",
     price: 4999,
@@ -249,7 +242,8 @@ app.use(express.static(path.join(__dirname)));
     image: "images/shoes.png",
     rating: 4,
     reviews: 98,
-    description: "Durable spikes for turf wickets with excellent ankle support.",
+    description:
+      "Durable spikes for turf wickets with excellent ankle support.",
   },
   {
     title: "Adidas Vector Mid",
@@ -273,8 +267,6 @@ app.use(express.static(path.join(__dirname)));
     reviews: 65,
     description: "Rubber studs perfect for hard wickets and artificial turf.",
   },
-
-  // ================= BAGS (3 Items) =================
   {
     title: "SG Teampak Wheelie Bag",
     price: 3999,
@@ -308,8 +300,6 @@ app.use(express.static(path.join(__dirname)));
     reviews: 25,
     description: "Heavy duty coffin bag for professional players.",
   },
-
-  // ================= ACCESSORIES (3 Items) =================
   {
     title: "Premium Wooden Stumps",
     price: 799,
@@ -344,8 +334,6 @@ app.use(express.static(path.join(__dirname)));
     reviews: 110,
     description: "Strong fiber tape for bat repair and protection.",
   },
-
-  // ================= KITS (2 Items) =================
   {
     title: "BAS Players Complete Kit",
     price: 12999,
@@ -367,11 +355,12 @@ app.use(express.static(path.join(__dirname)));
     image: "images/junior.png",
     rating: 4.8,
     reviews: 210,
-    description: "Perfect starter kit for ages 10-14. Includes Kashmir willow bat.",
+    description:
+      "Perfect starter kit for ages 10-14. Includes Kashmir willow bat.",
   },
 ];
 
-// --- 2. DATABASE CONNECTION & SCHEMA ---
+// --- 2. SCHEMA & MODEL ---
 const productSchema = new mongoose.Schema({
   title: String,
   price: Number,
@@ -389,8 +378,10 @@ const productSchema = new mongoose.Schema({
 const Product =
   mongoose.models.Product || mongoose.model("Product", productSchema);
 
+let isConnected = false; // Track connection status
+
 const connectDB = async () => {
-  if (mongoose.connections[0].readyState) return;
+  if (isConnected) return;
 
   if (!process.env.MONGO_URI) {
     console.error("❌ MONGO_URI is missing!");
@@ -399,14 +390,17 @@ const connectDB = async () => {
 
   try {
     await mongoose.connect(process.env.MONGO_URI);
+    isConnected = true;
     console.log("✅ MongoDB Connected");
 
-    // Auto-Seed Check
+    // SAFE SEED: Only run if the database is truly empty
     const count = await Product.countDocuments();
     if (count === 0) {
-      console.log("⚠️ Database empty. Seeding...");
+      console.log("⚠️ Database empty. Auto-seeding...");
       await Product.insertMany(seedProducts);
       console.log("✅ Database Refilled!");
+    } else {
+      console.log(`ℹ️ Database has ${count} items. Skipping seed.`);
     }
   } catch (err) {
     console.error("❌ DB Connection Error:", err);
@@ -415,7 +409,7 @@ const connectDB = async () => {
 
 // --- 3. API ROUTES ---
 app.get("/api/products", async (req, res) => {
-  await connectDB(); // Ensure DB is connected before query
+  await connectDB();
   try {
     const products = await Product.find();
     res.json(products);
@@ -440,11 +434,15 @@ app.get("*", (req, res) => {
   res.sendFile(path.join(__dirname, "index.html"));
 });
 
-// --- 5. START SERVER ---
+// --- 5. START SERVER (Safe for Vercel) ---
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, "0.0.0.0", () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-});
 
-// Export for Vercel
+// Only run app.listen if we are NOT on Vercel (Localhost / Render / Railway)
+if (process.env.NODE_ENV !== "production") {
+  app.listen(PORT, "0.0.0.0", () => {
+    console.log(`🚀 Server running on port ${PORT}`);
+  });
+}
+
+// Export for Vercel Serverless
 module.exports = app;
