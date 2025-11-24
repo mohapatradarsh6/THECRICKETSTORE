@@ -1,0 +1,19 @@
+{
+  "name": "09_cricket_store",
+  "version": "1.0.0",
+  "description": "A fully responsive **e-commerce website** for cricket products, built with **HTML, CSS, and JavaScript**. Users can browse products, add items to the cart, and view their selections in a clean and intuitive interface.",
+  "main": "products.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "express": "^5.1.0",
+    "mongoose": "^9.0.0"
+  }
+}
