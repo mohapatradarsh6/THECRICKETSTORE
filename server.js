@@ -1,10 +1,10 @@
+// server.js (Cleaned Up)
 if (process.env.NODE_ENV !== "production") {
   require("dotenv").config();
 }
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
-const path = require("path"); // Added this to handle file paths
 const Product = require("./products");
 
 const app = express();
@@ -13,25 +13,13 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// ---------------------------------------------------------
-// 1. SERVE STATIC FILES (Frontend)
-// ---------------------------------------------------------
-// This tells Express to serve index.html, style.css, etc.
-app.use(express.static(path.join(__dirname)));
-
-// ---------------------------------------------------------
-// 2. CONNECT TO MONGODB
-// ---------------------------------------------------------
+// 1. CONNECT TO MONGODB
 mongoose
   .connect(process.env.MONGO_URI)
   .then(() => console.log("✅ MongoDB Connected"))
   .catch((err) => console.error("❌ MongoDB Connection Error:", err));
 
-// ---------------------------------------------------------
-// 3. API ROUTES (Data)
-// ---------------------------------------------------------
-
-// GET: Fetch all products
+// 2. API ROUTES
 app.get("/api/products", async (req, res) => {
   try {
     const products = await Product.find();
@@ -41,7 +29,6 @@ app.get("/api/products", async (req, res) => {
   }
 });
 
-// POST: Add a new product
 app.post("/api/products", async (req, res) => {
   const product = new Product(req.body);
   try {
@@ -52,23 +39,12 @@ app.post("/api/products", async (req, res) => {
   }
 });
 
-// ---------------------------------------------------------
-// 4. CATCH-ALL ROUTE
-// ---------------------------------------------------------
-// We use /(.*)/ (regex) instead of "*" because "*" is invalid in the new Express
-app.get(/(.*)/, (req, res) => {
-  res.sendFile(path.join(__dirname, "index.html"));
-});
-
 // Start Server
 const PORT = process.env.PORT || 5000;
-
-// Only listen if we are running locally (Vercel handles this automatically in cloud)
 if (require.main === module) {
   app.listen(PORT, () =>
     console.log(`🚀 Website running at http://localhost:${PORT}`)
   );
 }
 
-// Export the app for Vercel Serverless
 module.exports = app;
