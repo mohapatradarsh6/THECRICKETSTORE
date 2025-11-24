@@ -1,18 +1,18 @@
-require("dotenv").config();
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
-const path = require("path");
 
 const app = express();
 
 // Middleware
 app.use(cors());
 app.use(express.json());
-app.use(express.static(path.join(__dirname)));
 
-// --- 1. PRODUCT DATA ---
+// =====================================================
+// 1. FULL PRODUCT DATA (30 Items)
+// =====================================================
 const seedProducts = [
+  // --- BATS ---
   {
     title: "SG HP33 Kashmir Willow",
     price: 4999,
@@ -84,6 +84,8 @@ const seedProducts = [
     reviews: 156,
     description: "Legendary BAS profile with thick edges.",
   },
+
+  // --- BALLS ---
   {
     title: "SG Test Cricket Ball",
     price: 899,
@@ -129,6 +131,8 @@ const seedProducts = [
     reviews: 500,
     description: "Heavy duty tennis balls for box cricket.",
   },
+
+  // --- PADS ---
   {
     title: "Kookaburra Batting Pads",
     price: 2999,
@@ -174,6 +178,8 @@ const seedProducts = [
     reviews: 71,
     description: "Standard pre-shaped thigh guard with soft towel backing.",
   },
+
+  // --- GLOVES ---
   {
     title: "BAS Vampire Batting Gloves",
     price: 1999,
@@ -210,6 +216,8 @@ const seedProducts = [
     reviews: 40,
     description: "Multi-flex points for unrestricted hand movement.",
   },
+
+  // --- HELMETS ---
   {
     title: "SG Aerotech Helmet",
     price: 3499,
@@ -233,6 +241,8 @@ const seedProducts = [
     isNewArrival: true,
     description: "Lightweight titanium grille. Choice of international pros.",
   },
+
+  // --- SHOES ---
   {
     title: "Kookaburra KC 2.0 Spikes",
     price: 4999,
@@ -267,6 +277,8 @@ const seedProducts = [
     reviews: 65,
     description: "Rubber studs perfect for hard wickets and artificial turf.",
   },
+
+  // --- BAGS ---
   {
     title: "SG Teampak Wheelie Bag",
     price: 3999,
@@ -300,6 +312,8 @@ const seedProducts = [
     reviews: 25,
     description: "Heavy duty coffin bag for professional players.",
   },
+
+  // --- ACCESSORIES ---
   {
     title: "Premium Wooden Stumps",
     price: 799,
@@ -334,6 +348,8 @@ const seedProducts = [
     reviews: 110,
     description: "Strong fiber tape for bat repair and protection.",
   },
+
+  // --- KITS ---
   {
     title: "BAS Players Complete Kit",
     price: 12999,
@@ -360,7 +376,9 @@ const seedProducts = [
   },
 ];
 
-// --- 2. SCHEMA & MODEL ---
+// =====================================================
+// 2. DATABASE SCHEMA & CONNECTION
+// =====================================================
 const productSchema = new mongoose.Schema({
   title: String,
   price: Number,
@@ -378,71 +396,61 @@ const productSchema = new mongoose.Schema({
 const Product =
   mongoose.models.Product || mongoose.model("Product", productSchema);
 
-let isConnected = false; // Track connection status
+let cachedDb = null;
 
-const connectDB = async () => {
-  if (isConnected) return;
+async function connectToDatabase() {
+  if (cachedDb) return cachedDb;
 
   if (!process.env.MONGO_URI) {
-    console.error("❌ MONGO_URI is missing!");
-    return;
+    throw new Error("MONGO_URI is missing in Environment Variables");
   }
 
-  try {
-    await mongoose.connect(process.env.MONGO_URI);
-    isConnected = true;
-    console.log("✅ MongoDB Connected");
+  const db = await mongoose.connect(process.env.MONGO_URI);
+  console.log("✅ MongoDB Connected");
 
-    // SAFE SEED: Only run if the database is truly empty
+  cachedDb = db;
+  return db;
+}
+
+// =====================================================
+// 3. API HANDLER (Vercel Entry Point)
+// =====================================================
+
+// We create a wrapper function for routes to handle connection & seeding
+const handleRequest = async (req, res) => {
+  try {
+    await connectToDatabase();
+
+    // AUTO-SEED CHECK
+    // If the DB is empty, fill it with the 30 items
     const count = await Product.countDocuments();
     if (count === 0) {
-      console.log("⚠️ Database empty. Auto-seeding...");
+      console.log("⚠️ Database empty. Auto-seeding 30 items...");
       await Product.insertMany(seedProducts);
       console.log("✅ Database Refilled!");
-    } else {
-      console.log(`ℹ️ Database has ${count} items. Skipping seed.`);
     }
+
+    if (req.method === "GET") {
+      const products = await Product.find();
+      return res.json(products);
+    }
+
+    if (req.method === "POST") {
+      const product = new Product(req.body);
+      await product.save();
+      return res.status(201).json(product);
+    }
+
+    return res.status(405).json({ message: "Method Not Allowed" });
   } catch (err) {
-    console.error("❌ DB Connection Error:", err);
+    console.error(err);
+    return res.status(500).json({ error: err.message });
   }
 };
 
-// --- 3. API ROUTES ---
-app.get("/api/products", async (req, res) => {
-  await connectDB();
-  try {
-    const products = await Product.find();
-    res.json(products);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
+// Route Handling: Supports both /api/products and /products
+app.all("/api/products", handleRequest);
+app.all("/products", handleRequest);
 
-app.post("/api/products", async (req, res) => {
-  await connectDB();
-  try {
-    const product = new Product(req.body);
-    await product.save();
-    res.status(201).json(product);
-  } catch (err) {
-    res.status(400).json({ error: err.message });
-  }
-});
-
-// --- 4. SERVE FRONTEND ---
-app.get("*", (req, res) => {
-  res.sendFile(path.join(__dirname, "index.html"));
-});
-
-// --- 5. START SERVER (Safe for Vercel) ---
-const PORT = process.env.PORT || 3000;
-
-// Only run app.listen if we are NOT on Vercel (Localhost / Render / Railway)
-if (process.env.NODE_ENV !== "production") {
-  app.listen(PORT, "0.0.0.0", () => {
-    console.log(`🚀 Server running on port ${PORT}`);
-  });
-}
-
-// Export for Vercel Serverless
+// Export the Express App for Vercel
 module.exports = app;
