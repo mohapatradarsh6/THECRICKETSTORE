@@ -7,11 +7,14 @@ const userSchema = new mongoose.Schema({
   name: { type: String, required: true },
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
+  // ADD THESE TWO FIELDS
+  resetPasswordToken: String,
+  resetPasswordExpires: Date,
+  // END ADD
   createdAt: { type: Date, default: Date.now },
 });
 
 const User = mongoose.models.User || mongoose.model("User", userSchema);
-
 // 2. Database Connection
 let cachedDb = null;
 async function connectToDatabase() {

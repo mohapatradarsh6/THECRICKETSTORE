@@ -7,6 +7,10 @@ const userSchema = new mongoose.Schema({
   name: { type: String, required: true },
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true }, // This will store the HASH, not plain text
+  // ADD THESE TWO FIELDS
+  resetPasswordToken: String,
+  resetPasswordExpires: Date,
+  // END ADD
   createdAt: { type: Date, default: Date.now },
 });
 
