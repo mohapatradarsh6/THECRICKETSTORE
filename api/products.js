@@ -1,7 +1,6 @@
-// File: api/products.js
 const mongoose = require("mongoose");
 
-// 1. Define Schema Inline (Best for Vercel Serverless isolation)
+// 1. Define Schema
 const productSchema = new mongoose.Schema({
   title: { type: String, required: true },
   price: { type: Number, required: true },
@@ -16,11 +15,11 @@ const productSchema = new mongoose.Schema({
   isBestSeller: { type: Boolean, default: false },
 });
 
-// Prevent "OverwriteModelError" during hot reloads
+// Prevent model overwrite error
 const Product =
   mongoose.models.Product || mongoose.model("Product", productSchema);
 
-// 2. Cached Connection (Critical for Serverless)
+// 2. Connect to Database (Clean Version)
 let cachedDb = null;
 
 async function connectToDatabase() {
@@ -32,17 +31,16 @@ async function connectToDatabase() {
     throw new Error("MONGO_URI is missing in Environment Variables");
   }
 
-  // FIXED: Removed deprecated options (useNewUrlParser, useUnifiedTopology)
-  // because they crash Mongoose v8+
+  // FIXED: Removed deprecated options that cause crash in Mongoose v8+
   const db = await mongoose.connect(process.env.MONGO_URI);
 
   cachedDb = db;
   return db;
 }
 
-// 3. The Handler
+// 3. API Handler
 module.exports = async (req, res) => {
-  // Handle CORS
+  // Enable CORS
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
@@ -67,7 +65,7 @@ module.exports = async (req, res) => {
 
     return res.status(405).json({ message: "Method not allowed" });
   } catch (error) {
-    console.error("Database Error:", error);
+    console.error("API Error:", error);
     return res.status(500).json({
       message: "Internal Server Error",
       error: error.message,
