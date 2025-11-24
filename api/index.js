@@ -20,7 +20,8 @@ mongoose
   .catch((err) => console.error("❌ MongoDB Connection Error:", err));
 
 // 2. API ROUTES
-app.get("/api/products", async (req, res) => {
+// ✅ NEW (Correct for Vercel Serverless)
+app.get("/products", async (req, res) => {
   try {
     const products = await Product.find();
     res.json(products);
@@ -29,7 +30,7 @@ app.get("/api/products", async (req, res) => {
   }
 });
 
-app.post("/api/products", async (req, res) => {
+app.post("/products", async (req, res) => {
   const product = new Product(req.body);
   try {
     const newProduct = await product.save();
