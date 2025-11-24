@@ -1,7 +1,7 @@
-// api/index.js (Serverless Function)
+// File: api/products.js
 const mongoose = require("mongoose");
 
-// Define Product Schema inline (since we can't import from parent directory easily)
+// 1. Define Schema Inline (Best for Vercel Serverless isolation)
 const productSchema = new mongoose.Schema({
   title: { type: String, required: true },
   price: { type: Number, required: true },
@@ -16,10 +16,11 @@ const productSchema = new mongoose.Schema({
   isBestSeller: { type: Boolean, default: false },
 });
 
+// Prevent "OverwriteModelError" during hot reloads
 const Product =
   mongoose.models.Product || mongoose.model("Product", productSchema);
 
-// MongoDB connection
+// 2. Cached Connection (Critical for Serverless)
 let cachedDb = null;
 
 async function connectToDatabase() {
@@ -27,18 +28,21 @@ async function connectToDatabase() {
     return cachedDb;
   }
 
-  const db = await mongoose.connect(process.env.MONGO_URI, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  });
+  if (!process.env.MONGO_URI) {
+    throw new Error("MONGO_URI is missing in Environment Variables");
+  }
+
+  // FIXED: Removed deprecated options (useNewUrlParser, useUnifiedTopology)
+  // because they crash Mongoose v8+
+  const db = await mongoose.connect(process.env.MONGO_URI);
 
   cachedDb = db;
   return db;
 }
 
-// Serverless Function Handler
+// 3. The Handler
 module.exports = async (req, res) => {
-  // Enable CORS
+  // Handle CORS
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
@@ -63,7 +67,10 @@ module.exports = async (req, res) => {
 
     return res.status(405).json({ message: "Method not allowed" });
   } catch (error) {
-    console.error("API Error:", error);
-    return res.status(500).json({ message: error.message });
+    console.error("Database Error:", error);
+    return res.status(500).json({
+      message: "Internal Server Error",
+      error: error.message,
+    });
   }
 };
