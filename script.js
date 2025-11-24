@@ -317,7 +317,21 @@ class ProductManager {
     try {
       // Use relative path so it works on both localhost and deployed site
       const response = await fetch("/api/products");
+
+      // Check if response is OK
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
       const data = await response.json();
+
+      // Ensure data is an array before using it
+      if (!Array.isArray(data)) {
+        console.error("API returned non-array data:", data);
+        this.products = [];
+        this.filteredProducts = [];
+        return;
+      }
 
       this.products = data;
       this.filteredProducts = [...this.products];
@@ -325,6 +339,20 @@ class ProductManager {
       this.renderProductCards();
     } catch (error) {
       console.error("Failed to fetch products:", error);
+      // Set empty arrays so the app doesn't crash
+      this.products = [];
+      this.filteredProducts = [];
+
+      // Show error message to user
+      const container = document.getElementById("products-container");
+      if (container) {
+        container.innerHTML = `
+        <div style="grid-column: 1 / -1; text-align: center; padding: 40px;">
+          <h3>Failed to load products</h3>
+          <p>Please try refreshing the page. Error: ${error.message}</p>
+        </div>
+      `;
+      }
     }
   }
 
