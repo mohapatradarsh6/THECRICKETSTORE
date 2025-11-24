@@ -1,26 +1,48 @@
 require("dotenv").config();
 const mongoose = require("mongoose");
-const Product = require("./products");
 
-// ✅ CORRECTED CLOUD URL (With %40 handling the @ symbol in your password)
+// --- 1. Define Schema Inline (So we don't need an external file) ---
+const productSchema = new mongoose.Schema({
+  title: { type: String, required: true },
+  price: { type: Number, required: true },
+  originalPrice: { type: Number },
+  category: { type: String, required: true },
+  brand: { type: String, required: true },
+  image: { type: String, required: true },
+  rating: { type: Number, default: 4.5 },
+  reviews: { type: Number, default: 0 },
+  description: { type: String },
+  isNewArrival: { type: Boolean, default: false },
+  isBestSeller: { type: Boolean, default: false },
+});
+
+// Create Model
+const Product =
+  mongoose.models.Product || mongoose.model("Product", productSchema);
+
+// --- 2. Database Connection ---
 const MONGO_URL = process.env.MONGO_URI;
 
 const runSeed = async () => {
   try {
-    // Wait for connection FIRST
+    if (!MONGO_URL) {
+      throw new Error("MONGO_URI is missing in .env file");
+    }
+
+    // Connect to Cloud DB
     await mongoose.connect(MONGO_URL);
     console.log("✅ Connected to Cloud Database for Seeding");
 
-    // THEN run the seed logic
+    // Run the seed logic
     await seedDB();
   } catch (err) {
     console.error("❌ Connection Error:", err);
   }
 };
 
-// The Curated Data (30 Items)
+// --- 3. The Product Data ---
 const seedProducts = [
-  // ================= BATS (6 Items) =================
+  // ================= BATS =================
   {
     title: "SG HP33 Kashmir Willow",
     price: 4999,
@@ -93,7 +115,7 @@ const seedProducts = [
     description: "Legendary BAS profile with thick edges.",
   },
 
-  // ================= BALLS (4 Items) =================
+  // ================= BALLS =================
   {
     title: "SG Test Cricket Ball",
     price: 899,
@@ -140,7 +162,7 @@ const seedProducts = [
     description: "Heavy duty tennis balls for box cricket.",
   },
 
-  // ================= PADS & GUARDS (4 Items) =================
+  // ================= PADS & GUARDS =================
   {
     title: "Kookaburra Batting Pads",
     price: 2999,
@@ -187,7 +209,7 @@ const seedProducts = [
     description: "Standard pre-shaped thigh guard with soft towel backing.",
   },
 
-  // ================= GLOVES (3 Items) =================
+  // ================= GLOVES =================
   {
     title: "BAS Vampire Batting Gloves",
     price: 1999,
@@ -225,7 +247,7 @@ const seedProducts = [
     description: "Multi-flex points for unrestricted hand movement.",
   },
 
-  // ================= HELMETS (2 Items) =================
+  // ================= HELMETS =================
   {
     title: "SG Aerotech Helmet",
     price: 3499,
@@ -250,7 +272,7 @@ const seedProducts = [
     description: "Lightweight titanium grille. Choice of international pros.",
   },
 
-  // ================= SHOES (3 Items) =================
+  // ================= SHOES =================
   {
     title: "Kookaburra KC 2.0 Spikes",
     price: 4999,
@@ -286,7 +308,7 @@ const seedProducts = [
     description: "Rubber studs perfect for hard wickets and artificial turf.",
   },
 
-  // ================= BAGS (3 Items) =================
+  // ================= BAGS =================
   {
     title: "SG Teampak Wheelie Bag",
     price: 3999,
@@ -321,7 +343,7 @@ const seedProducts = [
     description: "Heavy duty coffin bag for professional players.",
   },
 
-  // ================= ACCESSORIES (3 Items) =================
+  // ================= ACCESSORIES =================
   {
     title: "Premium Wooden Stumps",
     price: 799,
@@ -357,7 +379,7 @@ const seedProducts = [
     description: "Strong fiber tape for bat repair and protection.",
   },
 
-  // ================= KITS (2 Items) =================
+  // ================= KITS =================
   {
     title: "BAS Players Complete Kit",
     price: 12999,
@@ -384,14 +406,12 @@ const seedProducts = [
   },
 ];
 
-// Function to Insert Data
+// --- 4. Function to Insert Data ---
 const seedDB = async () => {
   try {
     await Product.deleteMany({}); // Clears any existing products
     await Product.insertMany(seedProducts);
-    console.log(
-      "✅ Database Seeded with " + seedProducts.length + " products!"
-    );
+    console.log("✅ Database Seeded Successfully!");
   } catch (err) {
     console.log("❌ Seeding Error:", err);
   } finally {
