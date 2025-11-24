@@ -1,51 +1,69 @@
-// server.js (Cleaned Up)
-if (process.env.NODE_ENV !== "production") {
-  require("dotenv").config();
-}
-const express = require("express");
+// api/index.js (Serverless Function)
 const mongoose = require("mongoose");
-const cors = require("cors");
-const Product = require("./products");
 
-const app = express();
-
-// Middleware
-app.use(cors());
-app.use(express.json());
-
-// 1. CONNECT TO MONGODB
-mongoose
-  .connect(process.env.MONGO_URI)
-  .then(() => console.log("✅ MongoDB Connected"))
-  .catch((err) => console.error("❌ MongoDB Connection Error:", err));
-
-// 2. API ROUTES
-// ✅ NEW (Correct for Vercel Serverless)
-app.get("/products", async (req, res) => {
-  try {
-    const products = await Product.find();
-    res.json(products);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
+// Define Product Schema inline (since we can't import from parent directory easily)
+const productSchema = new mongoose.Schema({
+  title: { type: String, required: true },
+  price: { type: Number, required: true },
+  originalPrice: { type: Number },
+  category: { type: String, required: true },
+  brand: { type: String, required: true },
+  image: { type: String, required: true },
+  rating: { type: Number, default: 4.5 },
+  reviews: { type: Number, default: 0 },
+  description: { type: String },
+  isNewArrival: { type: Boolean, default: false },
+  isBestSeller: { type: Boolean, default: false },
 });
 
-app.post("/products", async (req, res) => {
-  const product = new Product(req.body);
-  try {
-    const newProduct = await product.save();
-    res.status(201).json(newProduct);
-  } catch (err) {
-    res.status(400).json({ message: err.message });
-  }
-});
+const Product =
+  mongoose.models.Product || mongoose.model("Product", productSchema);
 
-// Start Server
-const PORT = process.env.PORT || 5000;
-/*if (require.main === module) {
-  app.listen(PORT, () =>
-    console.log(`🚀 Website running at http://localhost:${PORT}`)
-  );
+// MongoDB connection
+let cachedDb = null;
+
+async function connectToDatabase() {
+  if (cachedDb) {
+    return cachedDb;
+  }
+
+  const db = await mongoose.connect(process.env.MONGO_URI, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+  });
+
+  cachedDb = db;
+  return db;
 }
-*/
-module.exports = app;
+
+// Serverless Function Handler
+module.exports = async (req, res) => {
+  // Enable CORS
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+
+  if (req.method === "OPTIONS") {
+    return res.status(200).end();
+  }
+
+  try {
+    await connectToDatabase();
+
+    if (req.method === "GET") {
+      const products = await Product.find();
+      return res.status(200).json(products);
+    }
+
+    if (req.method === "POST") {
+      const product = new Product(req.body);
+      const newProduct = await product.save();
+      return res.status(201).json(newProduct);
+    }
+
+    return res.status(405).json({ message: "Method not allowed" });
+  } catch (error) {
+    console.error("API Error:", error);
+    return res.status(500).json({ message: error.message });
+  }
+};
