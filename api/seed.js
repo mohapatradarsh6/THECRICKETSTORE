@@ -1,18 +1,7 @@
-const express = require("express");
 const mongoose = require("mongoose");
-const cors = require("cors");
 
-const app = express();
-
-// Middleware
-app.use(cors());
-app.use(express.json());
-
-// =====================================================
-// 1. FULL PRODUCT DATA (30 Items)
-// =====================================================
+// 1. Product Data
 const seedProducts = [
-  // --- BATS ---
   {
     title: "SG HP33 Kashmir Willow",
     price: 4999,
@@ -23,8 +12,18 @@ const seedProducts = [
     rating: 4.5,
     reviews: 125,
     isBestSeller: true,
-    description:
-      "Hand-crafted Kashmir Willow bat with excellent balance. Hardik Pandya Edition.",
+    description: "Hand-crafted Kashmir Willow bat.",
+  },
+  {
+    title: "Kookaburra Kahuna Pro",
+    price: 8999,
+    originalPrice: 10999,
+    category: "bats",
+    brand: "kookaburra",
+    image: "images/Kookabura.png",
+    rating: 5,
+    isNewArrival: true,
+    description: "The iconic Kahuna.",
   },
   {
     title: "Kookaburra Kahuna Pro",
@@ -376,9 +375,7 @@ const seedProducts = [
   },
 ];
 
-// =====================================================
-// 2. DATABASE SCHEMA & CONNECTION
-// =====================================================
+// 2. Schema
 const productSchema = new mongoose.Schema({
   title: String,
   price: Number,
@@ -396,61 +393,21 @@ const productSchema = new mongoose.Schema({
 const Product =
   mongoose.models.Product || mongoose.model("Product", productSchema);
 
-let cachedDb = null;
-
-async function connectToDatabase() {
-  if (cachedDb) return cachedDb;
-
-  if (!process.env.MONGO_URI) {
-    throw new Error("MONGO_URI is missing in Environment Variables");
-  }
-
-  const db = await mongoose.connect(process.env.MONGO_URI);
-  console.log("✅ MongoDB Connected");
-
-  cachedDb = db;
-  return db;
-}
-
-// =====================================================
-// 3. API HANDLER (Vercel Entry Point)
-// =====================================================
-
-// We create a wrapper function for routes to handle connection & seeding
-const handleRequest = async (req, res) => {
+// 3. The Handler
+module.exports = async (req, res) => {
   try {
-    await connectToDatabase();
+    if (!process.env.MONGO_URI) throw new Error("MONGO_URI missing");
+    await mongoose.connect(process.env.MONGO_URI);
 
-    // AUTO-SEED CHECK
-    // If the DB is empty, fill it with the 30 items
-    const count = await Product.countDocuments();
-    if (count === 0) {
-      console.log("⚠️ Database empty. Auto-seeding 30 items...");
-      await Product.insertMany(seedProducts);
-      console.log("✅ Database Refilled!");
-    }
+    // DELETE OLD & INSERT NEW
+    await Product.deleteMany({});
+    await Product.insertMany(seedProducts);
 
-    if (req.method === "GET") {
-      const products = await Product.find();
-      return res.json(products);
-    }
-
-    if (req.method === "POST") {
-      const product = new Product(req.body);
-      await product.save();
-      return res.status(201).json(product);
-    }
-
-    return res.status(405).json({ message: "Method Not Allowed" });
-  } catch (err) {
-    console.error(err);
-    return res.status(500).json({ error: err.message });
+    res
+      .status(200)
+      .json({ message: "✅ Database successfully filled with products!" });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: error.message });
   }
 };
-
-// Route Handling: Supports both /api/products and /products
-app.all("/api/products", handleRequest);
-app.all("/products", handleRequest);
-
-// Export the Express App for Vercel
-module.exports = app;
