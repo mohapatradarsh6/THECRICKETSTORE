@@ -1534,27 +1534,54 @@ function formatDate(isoString) {
   });
 }
 
+// New function to switch to the Forgot Password form
+function openForgotPasswordForm() {
+  document.getElementById("login-form")?.classList.remove("active");
+  document.getElementById("signup-form")?.classList.remove("active");
+  
+  // Hide tabs since they don't apply here
+  document.getElementById("login-tab")?.style.display = 'none';
+  document.getElementById("signup-tab")?.style.display = 'none';
+  
+  // Show the new form
+  const forgotForm = document.getElementById("forgot-password-form");
+  if (forgotForm) {
+    forgotForm.classList.add("active");
+  }
+}
+
+// Corrected and updated openAuthModal (moved from inside DOMContentLoaded)
 function openAuthModal(mode = "login") {
   const modal = document.getElementById("auth-modal");
   const loginTab = document.getElementById("login-tab");
   const signupTab = document.getElementById("signup-tab");
   const loginForm = document.getElementById("login-form");
   const signupForm = document.getElementById("signup-form");
+  const forgotForm = document.getElementById("forgot-password-form"); // New
 
   if (modal) {
     document.getElementById("login-form")?.reset();
     document.getElementById("signup-form")?.reset();
+    document.getElementById("forgot-password-form")?.reset(); // New Reset
 
+    // Show tabs again
+    if (loginTab) loginTab.style.display = 'block';
+    if (signupTab) signupTab.style.display = 'block';
+    
+    // Hide all forms initially
+    loginForm?.classList.remove("active");
+    signupForm?.classList.remove("active");
+    forgotForm?.classList.remove("active"); // New Hide
+    
+    // Set the active form based on mode
     if (mode === "signup") {
       loginTab?.classList.remove("active");
       signupTab?.classList.add("active");
-      loginForm?.classList.remove("active");
       signupForm?.classList.add("active");
-    } else {
+    } else { // default to login
       loginTab?.classList.add("active");
       signupTab?.classList.remove("active");
       loginForm?.classList.add("active");
-      signupForm?.classList.remove("active");
     }
 
     modal.style.display = "flex";
@@ -1752,6 +1779,56 @@ document.addEventListener("DOMContentLoaded", () => {
   window.heroCarousel = new HeroCarousel();
   console.log("✓ HeroCarousel initialized");
 
+  // --- FORGOT PASSWORD EVENT LISTENERS ---
+
+  // Link to open Forgot Password form
+  document.getElementById("forgot-password-link")?.addEventListener("click", (e) => {
+    e.preventDefault();
+    openForgotPasswordForm();
+  });
+
+  // Link to go back to Login form
+  document.getElementById("back-to-login-link")?.addEventListener("click", (e) => {
+    e.preventDefault();
+    openAuthModal("login"); // Reuses existing function to show login form
+  });
+  // --- REAL FORGOT PASSWORD LOGIC ---
+  document.getElementById("forgot-password-form")?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const email = document.getElementById("forgot-email").value;
+    const submitBtn = e.target.querySelector("button");
+
+    submitBtn.textContent = "Sending...";
+    submitBtn.disabled = true;
+
+    try {
+      
+      const res = await fetch("/api/forgot-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await res.json();
+       if (res.ok) {
+        window.cartManager.showToast(data.message, "success");
+        e.target.reset();
+        openAuthModal("login"); 
+      } else {
+       
+        window.cartManager.showToast(data.error || "Reset failed. Please try again.", "danger");
+      }
+      
+    } catch (error) {
+      console.error("Forgot password frontend error:", error);
+      window.cartManager.showToast("Connection failed. Check your network.", "error");
+    } finally {
+      submitBtn.textContent = "Send Reset Link";
+      submitBtn.disabled = false;
+    }
+  });
+
+ 
   // Home button click - Reset to default state
   document.querySelectorAll('a[href="#home"]').forEach((homeLink) => {
     homeLink.addEventListener("click", (e) => {
