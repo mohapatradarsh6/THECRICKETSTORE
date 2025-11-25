@@ -317,87 +317,88 @@ class ProductManager {
     }
   }
 
+  // 1. CHANGED: Now delegates to Pagination instead of rendering all
   renderProductCards() {
-    const container = document.getElementById("products-container");
-    if (!container) return;
+    if (window.productPagination) {
+      window.productPagination.updateProducts(this.filteredProducts);
+    } else {
+      // Fallback if pagination missing
+      const container = document.getElementById("products-container");
+      if (!container) return;
+      container.innerHTML = "";
+      this.filteredProducts.forEach((p) =>
+        container.appendChild(this.createProductCard(p))
+      );
+      this.attachCardListeners(container);
+    }
+  }
 
-    container.innerHTML = "";
+  // 2. NEW: Helper function required by ProductPagination
+  createProductCard(product) {
+    const card = document.createElement("div");
+    card.className = "product-card";
+    card.setAttribute("data-title", product.title);
+    card.setAttribute("data-price", product.price);
+    card.setAttribute("data-category", product.category);
+    card.setAttribute("data-brand", product.brand);
 
-    this.filteredProducts.forEach((product) => {
-      const card = document.createElement("div");
-      card.className = "product-card";
-      card.setAttribute("data-title", product.title);
-      card.setAttribute("data-price", product.price);
-      card.setAttribute("data-category", product.category);
-      card.setAttribute("data-brand", product.brand);
+    let ratingHTML = '<div class="stars"><i class="fas fa-star"></i></div>';
+    if (
+      window.cartManager &&
+      typeof window.cartManager.generateRatingHTML === "function"
+    ) {
+      ratingHTML = window.cartManager.generateRatingHTML(product.rating || 4.5);
+    }
 
-      let ratingHTML = '<div class="stars"><i class="fas fa-star"></i></div>';
-      if (
-        window.cartManager &&
-        typeof window.cartManager.generateRatingHTML === "function"
-      ) {
-        ratingHTML = window.cartManager.generateRatingHTML(
-          product.rating || 4.5
-        );
-      }
+    let discountBadge = "";
+    if (product.originalPrice && product.originalPrice > product.price) {
+      const percent = Math.round(
+        ((product.originalPrice - product.price) / product.originalPrice) * 100
+      );
+      discountBadge = `<span class="price-discount">-${percent}%</span>`;
+    }
 
-      let discountBadge = "";
-      if (product.originalPrice && product.originalPrice > product.price) {
-        const percent = Math.round(
-          ((product.originalPrice - product.price) / product.originalPrice) *
-            100
-        );
-        discountBadge = `<span class="price-discount">-${percent}%</span>`;
-      }
-
-      card.innerHTML = `
-        <div class="product-badge">${
-          product.isBestSeller
-            ? "Bestseller"
-            : product.isNewArrival
-            ? "New"
-            : ""
-        }</div>
-        <div class="product-image-wrapper">
-          <img class="product-image" src="${product.image}" alt="${
-        product.title
-      }" />
-          <div class="product-overlay">
-            <button class="btn-quick-view">Quick View</button>
-          </div>
+    card.innerHTML = `
+      <div class="product-badge">${
+        product.isBestSeller ? "Bestseller" : product.isNewArrival ? "New" : ""
+      }</div>
+      <div class="product-image-wrapper">
+        <img class="product-image" src="${product.image}" alt="${
+      product.title
+    }" />
+        <div class="product-overlay">
+          <button class="btn-quick-view">Quick View</button>
         </div>
-        <div class="product-info">
-          <div class="product-brand">${product.brand}</div>
-          <h3 class="product-title">${product.title}</h3>
-          <div class="product-rating">${ratingHTML}</div>
-          <p class="product-description" style="display:none;">${
-            product.description || ""
-          }</p>
-          <div class="product-price">
-            <span class="price-current">₹${product.price}</span>
-            ${
-              product.originalPrice
-                ? `<span class="price-original">₹${product.originalPrice}</span>`
-                : ""
-            }
-            ${discountBadge}
-          </div>
-          <div class="product-actions">
-            <button class="btn-wishlist"><i class="far fa-heart"></i></button>
-            <button class="btn-add-cart">Add to Cart</button>
-          </div>
+      </div>
+      <div class="product-info">
+        <div class="product-brand">${product.brand}</div>
+        <h3 class="product-title">${product.title}</h3>
+        <div class="product-rating">${ratingHTML}</div>
+        <p class="product-description" style="display:none;">${
+          product.description || ""
+        }</p>
+        <div class="product-price">
+          <span class="price-current">₹${product.price}</span>
+          ${
+            product.originalPrice
+              ? `<span class="price-original">₹${product.originalPrice}</span>`
+              : ""
+          }
+          ${discountBadge}
         </div>
-      `;
+        <div class="product-actions">
+          <button class="btn-wishlist"><i class="far fa-heart"></i></button>
+          <button class="btn-add-cart">Add to Cart</button>
+        </div>
+      </div>
+    `;
 
-      if (!product.isBestSeller && !product.isNewArrival) {
-        const badge = card.querySelector(".product-badge");
-        if (badge) badge.style.display = "none";
-      }
+    if (!product.isBestSeller && !product.isNewArrival) {
+      const badge = card.querySelector(".product-badge");
+      if (badge) badge.style.display = "none";
+    }
 
-      container.appendChild(card);
-    });
-
-    this.attachCardListeners(container);
+    return card;
   }
 
   attachCardListeners(container) {
@@ -501,7 +502,6 @@ class ProductManager {
     this.renderProductCards();
   }
 }
-
 // --- 3. Quick View Modal ---
 class QuickViewModal {
   constructor() {
@@ -630,6 +630,112 @@ class HeroCarousel {
 }
 
 // ====================================================================
+// PAGINATION SYSTEM
+// ====================================================================
+
+class ProductPagination {
+  constructor() {
+    this.currentPage = 1;
+    this.productsPerPage = 6; // Set to 6 as requested
+    this.currentProducts = [];
+  }
+
+  updateProducts(products) {
+    this.currentProducts = products;
+    this.currentPage = 1;
+    this.render();
+    this.setupPaginationControls();
+  }
+
+  render() {
+    const container = document.getElementById("products-container");
+    if (!container) return;
+
+    container.innerHTML = "";
+
+    const startIndex = (this.currentPage - 1) * this.productsPerPage;
+    const endIndex = startIndex + this.productsPerPage;
+    const productsToShow = this.currentProducts.slice(startIndex, endIndex);
+
+    productsToShow.forEach((product) => {
+      // Use the existing card generation logic from ProductManager
+      if (window.productManager) {
+        container.appendChild(window.productManager.createProductCard(product));
+      }
+    });
+
+    if (window.productManager) {
+      window.productManager.attachCardListeners(container);
+    }
+
+    // Scroll to top of products
+    const productsSection = document.querySelector(".products-section");
+    if (productsSection && this.currentPage > 1) {
+      productsSection.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }
+
+  setupPaginationControls() {
+    const container = document.getElementById("products-container");
+    if (!container) return;
+
+    // Remove existing pagination wrapper if any
+    const existingWrapper = document.querySelector(".pagination-wrapper");
+    if (existingWrapper) existingWrapper.remove();
+
+    const totalPages = Math.ceil(
+      this.currentProducts.length / this.productsPerPage
+    );
+    if (totalPages <= 1) return;
+
+    const paginationWrapper = document.createElement("div");
+    paginationWrapper.className = "pagination-wrapper";
+    paginationWrapper.style.gridColumn = "1 / -1";
+    paginationWrapper.style.display = "flex";
+    paginationWrapper.style.justifyContent = "center";
+    paginationWrapper.style.gap = "10px";
+    paginationWrapper.style.marginTop = "30px";
+
+    // Prev Button
+    const prevBtn = document.createElement("button");
+    prevBtn.className = "btn-secondary pagination-btn";
+    prevBtn.innerHTML = '<i class="fas fa-chevron-left"></i> Prev';
+    prevBtn.disabled = this.currentPage === 1;
+    prevBtn.addEventListener("click", () => {
+      if (this.currentPage > 1) {
+        this.currentPage--;
+        this.render();
+        this.setupPaginationControls();
+      }
+    });
+
+    // Next Button
+    const nextBtn = document.createElement("button");
+    nextBtn.className = "btn-secondary pagination-btn";
+    nextBtn.innerHTML = 'Next <i class="fas fa-chevron-right"></i>';
+    nextBtn.disabled = this.currentPage === totalPages;
+    nextBtn.addEventListener("click", () => {
+      if (this.currentPage < totalPages) {
+        this.currentPage++;
+        this.render();
+        this.setupPaginationControls();
+      }
+    });
+
+    // Page Info
+    const pageInfo = document.createElement("span");
+    pageInfo.innerText = `Page ${this.currentPage} of ${totalPages}`;
+    pageInfo.style.alignSelf = "center";
+
+    paginationWrapper.appendChild(prevBtn);
+    paginationWrapper.appendChild(pageInfo);
+    paginationWrapper.appendChild(nextBtn);
+
+    container.parentNode.insertBefore(paginationWrapper, container.nextSibling);
+  }
+}
+
+// ====================================================================
 // AUTHENTICATION LOGIC
 // ====================================================================
 
@@ -752,6 +858,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   window.cartManager = new CartManager();
   window.productManager = new ProductManager();
+  window.productPagination = new ProductPagination();
   window.quickViewModal = new QuickViewModal();
   window.heroCarousel = new HeroCarousel();
 
@@ -974,6 +1081,24 @@ function openPaymentModal(items) {
 
   if (!modal || !paymentItems) return;
 
+  // --- PAYMENT TOGGLE LOGIC ---
+  const paymentRadios = modal.querySelectorAll('input[name="payment"]');
+  const cardForm = modal.querySelector("#card-form");
+  const upiForm = modal.querySelector("#upi-form");
+
+  const updatePaymentForms = () => {
+    const selected = modal.querySelector('input[name="payment"]:checked').value;
+    if (cardForm)
+      cardForm.style.display = selected === "card" ? "block" : "none";
+    if (upiForm) upiForm.style.display = selected === "upi" ? "block" : "none";
+  };
+
+  paymentRadios.forEach((radio) => {
+    radio.addEventListener("change", updatePaymentForms);
+  });
+  updatePaymentForms(); // Run once on open
+  // -----------------------------
+
   paymentItems.innerHTML = items
     .map(
       (item) => `
@@ -993,6 +1118,7 @@ function openPaymentModal(items) {
 
   modal.style.display = "flex";
 
+  // Listeners
   const closeBtn = modal.querySelector(".close");
   const newCloseBtn = closeBtn.cloneNode(true);
   closeBtn.parentNode.replaceChild(newCloseBtn, closeBtn);
@@ -1015,6 +1141,28 @@ function openPaymentModal(items) {
       openAuthModal("login");
       return;
     }
+
+    // --- VALIDATION LOGIC ---
+    const selectedMethod = modal.querySelector(
+      'input[name="payment"]:checked'
+    ).value;
+
+    if (selectedMethod === "card") {
+      const cardInput = cardForm.querySelector("input");
+      if (!cardInput || !cardInput.value.trim()) {
+        window.cartManager.showToast("Please enter card details", "error");
+        return;
+      }
+    } else if (selectedMethod === "upi") {
+      const upiInput = upiForm.querySelector("input");
+      if (!upiInput || !upiInput.value.trim()) {
+        window.cartManager.showToast("Please enter UPI ID", "error");
+        return;
+      }
+    }
+    // COD and NetBanking pass automatically
+    // ------------------------
+
     window.cartManager.showToast("Order placed successfully!", "success");
     window.cartManager.clearCart();
     closePaymentModal();
