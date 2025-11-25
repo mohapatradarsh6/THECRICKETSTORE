@@ -224,6 +224,32 @@ class CartManager {
     }, 3000);
   }
 
+  // In class CartManager
+  generateRatingHTML(rating) {
+    const fullStars = Math.floor(rating);
+    const hasHalfStar = rating % 1 !== 0;
+    let html = '<div class="stars" style="color: #ffc107; font-size: 0.8rem;">';
+
+    // Add full stars
+    for (let i = 0; i < fullStars; i++) {
+      html += '<i class="fas fa-star"></i>';
+    }
+    // Add half star if needed
+    if (hasHalfStar) {
+      html += '<i class="fas fa-star-half-alt"></i>';
+    }
+    // Fill remaining with empty stars
+    const emptyStars = 5 - Math.ceil(rating);
+    for (let i = 0; i < emptyStars; i++) {
+      html += '<i class="far fa-star"></i>';
+    }
+
+    html += `</div><span class="rating-count" style="font-size: 0.7rem; color: #666; margin-left: 4px;">(${
+      Math.floor(Math.random() * 200) + 50
+    })</span>`;
+    return html;
+  }
+
   initializeEventListeners() {
     const cartBtn = document.getElementById("cart-btn");
     const cartDropdown = document.getElementById("cart-dropdown");
@@ -386,10 +412,10 @@ class ProductManager {
           }
           ${discountBadge}
         </div>
-        <div class="product-actions">
+      <div class="product-actions">
           <button class="btn-wishlist"><i class="far fa-heart"></i></button>
           <button class="btn-add-cart">Add to Cart</button>
-        </div>
+          <button class="btn-buy-now">Buy Now</button> </div>
       </div>
     `;
 
@@ -423,6 +449,19 @@ class ProductManager {
           price: card.getAttribute("data-price"),
         };
         window.cartManager.toggleWishlist(product);
+      });
+    });
+
+    container.querySelectorAll(".btn-buy-now").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const card = btn.closest(".product-card");
+        const product = {
+          title: card.getAttribute("data-title"),
+          price: parseFloat(card.getAttribute("data-price")),
+          quantity: 1,
+        };
+        // Open checkout immediately
+        openPaymentModal([product]);
       });
     });
 
@@ -679,7 +718,6 @@ class ProductPagination {
     const container = document.getElementById("products-container");
     if (!container) return;
 
-    // Remove existing pagination wrapper if any
     const existingWrapper = document.querySelector(".pagination-wrapper");
     if (existingWrapper) existingWrapper.remove();
 
@@ -690,17 +728,24 @@ class ProductPagination {
 
     const paginationWrapper = document.createElement("div");
     paginationWrapper.className = "pagination-wrapper";
-    paginationWrapper.style.gridColumn = "1 / -1";
+    // Add centering styles directly here to be safe
     paginationWrapper.style.display = "flex";
     paginationWrapper.style.justifyContent = "center";
-    paginationWrapper.style.gap = "10px";
-    paginationWrapper.style.marginTop = "30px";
+    paginationWrapper.style.alignItems = "center";
+    paginationWrapper.style.gap = "15px";
+    paginationWrapper.style.marginTop = "40px";
+    paginationWrapper.style.gridColumn = "1 / -1";
 
     // Prev Button
     const prevBtn = document.createElement("button");
     prevBtn.className = "btn-secondary pagination-btn";
     prevBtn.innerHTML = '<i class="fas fa-chevron-left"></i> Prev';
-    prevBtn.disabled = this.currentPage === 1;
+    
+    // HIDE if on page 1
+    if (this.currentPage === 1) {
+        prevBtn.style.visibility = "hidden"; 
+    }
+    
     prevBtn.addEventListener("click", () => {
       if (this.currentPage > 1) {
         this.currentPage--;
@@ -713,7 +758,12 @@ class ProductPagination {
     const nextBtn = document.createElement("button");
     nextBtn.className = "btn-secondary pagination-btn";
     nextBtn.innerHTML = 'Next <i class="fas fa-chevron-right"></i>';
-    nextBtn.disabled = this.currentPage === totalPages;
+    
+    // HIDE if on last page
+    if (this.currentPage === totalPages) {
+        nextBtn.style.visibility = "hidden";
+    }
+
     nextBtn.addEventListener("click", () => {
       if (this.currentPage < totalPages) {
         this.currentPage++;
@@ -725,7 +775,7 @@ class ProductPagination {
     // Page Info
     const pageInfo = document.createElement("span");
     pageInfo.innerText = `Page ${this.currentPage} of ${totalPages}`;
-    pageInfo.style.alignSelf = "center";
+    pageInfo.style.fontWeight = "600";
 
     paginationWrapper.appendChild(prevBtn);
     paginationWrapper.appendChild(pageInfo);
@@ -733,8 +783,6 @@ class ProductPagination {
 
     container.parentNode.insertBefore(paginationWrapper, container.nextSibling);
   }
-}
-
 // ====================================================================
 // AUTHENTICATION LOGIC
 // ====================================================================
