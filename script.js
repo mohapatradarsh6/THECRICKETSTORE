@@ -994,72 +994,6 @@ class ProductPagination {
   }
 }
 
-// --- 4. Payment Modal Functions ---
-
-function closePaymentModal() {
-  const modal = document.getElementById("demo-payment-modal");
-  if (modal) {
-    modal.style.display = "none";
-  }
-}
-
-function openPaymentModal(items) {
-  const modal = document.getElementById("demo-payment-modal");
-  const paymentItems = document.getElementById("payment-items");
-  const paymentSubtotal = document.getElementById("payment-subtotal");
-  const paymentShipping = document.getElementById("payment-shipping");
-  const paymentTax = document.getElementById("payment-tax");
-  const paymentTotal = document.getElementById("payment-total");
-
-  if (!modal || !paymentItems) return;
-
-  paymentItems.innerHTML = items
-    .map(
-      (item) => `
-    <div class="payment-item">
-      <span>${item.title} (×${item.quantity})</span>
-      <span>₹${(item.price * item.quantity).toFixed(2)}</span>
-    </div>
-  `
-    )
-    .join("");
-
-  const subtotal = items.reduce(
-    (total, item) => total + item.price * item.quantity,
-    0
-  );
-  const shipping = subtotal > 2000 ? 0 : 150;
-  const tax = subtotal * 0.18;
-  const total = subtotal + shipping + tax;
-
-  if (paymentSubtotal) paymentSubtotal.textContent = subtotal.toFixed(2);
-  if (paymentShipping) paymentShipping.textContent = shipping.toFixed(2);
-  if (paymentTax) paymentTax.textContent = tax.toFixed(2);
-  if (paymentTotal) paymentTotal.textContent = total.toFixed(2);
-
-  modal.style.display = "flex";
-
-  const paymentRadios = document.querySelectorAll('input[name="payment"]');
-  const cardForm = document.getElementById("card-form");
-  const upiForm = document.getElementById("upi-form");
-
-  paymentRadios.forEach((radio) => {
-    radio.addEventListener("change", (e) => {
-      if (cardForm) cardForm.style.display = "none";
-      if (upiForm) upiForm.style.display = "none";
-
-      switch (e.target.value) {
-        case "card":
-          if (cardForm) cardForm.style.display = "block";
-          break;
-        case "upi":
-          if (upiForm) upiForm.style.display = "block";
-          break;
-      }
-    });
-  });
-}
-
 // --- 5. Enhanced Mobile Navigation ---
 class MobileNav {
   constructor() {
@@ -1455,6 +1389,7 @@ function saveUser(user) {
   localStorage.setItem(AUTH_KEY, JSON.stringify(user));
 }
 
+// SAFETY FIX: Wrap getUser in try/catch to prevent crash on bad data
 function getUser() {
   try {
     const user = localStorage.getItem(AUTH_KEY);
@@ -1468,13 +1403,11 @@ function getUser() {
 
 function logoutUser() {
   localStorage.removeItem(AUTH_KEY);
-
   if (typeof cartManager !== "undefined") {
     cartManager.clearCart();
     cartManager.clearWishlist();
     cartManager.showToast("Logged out successfully!", "success");
   }
-
   updateAccountUI();
 }
 
@@ -1540,65 +1473,79 @@ function formatDate(isoString) {
   });
 }
 
-// New function to switch to the Forgot Password form (Hoisted to global scope)
-function openForgotPasswordForm() {
-  document.getElementById("login-form")?.classList.remove("active");
-  document.getElementById("signup-form")?.classList.remove("active");
-  
-  // Hide tabs since they don't apply here
-  document.getElementById("login-tab")?.style.display = 'none';
-  document.getElementById("signup-tab")?.style.display = 'none';
-  
-  // Show the new form
-  const forgotForm = document.getElementById("forgot-password-form");
-  if (forgotForm) {
-    forgotForm.classList.add("active");
+// GLOBAL: Update UI text based on login state
+function updateAccountUI() {
+  const user = getUser();
+  const accountName = document.querySelector(".user-btn span");
+  const accountMenu = document.querySelector(".account-menu");
+
+  if (!accountName || !accountMenu) return;
+
+  // Just update the visual text/HTML.
+  // We DO NOT attach event listeners here anymore. We use Delegation (see below).
+  if (user) {
+    accountName.textContent = user.name.split(" ")[0];
+    accountMenu.innerHTML = `
+      <a href="#" class="auth-action" data-action="orders">My Orders</a>
+      <a href="#" class="auth-action" data-action="logout">Logout</a>
+    `;
+  } else {
+    accountName.textContent = "Account";
+    accountMenu.innerHTML = `
+      <a href="#" class="auth-action" data-action="login">Login</a>
+      <a href="#" class="auth-action" data-action="signup">Sign Up</a>
+    `;
   }
 }
 
-// Corrected and updated openAuthModal (Hoisted to global scope)
+// GLOBAL: Auth Modal Controls
 function openAuthModal(mode = "login") {
   const modal = document.getElementById("auth-modal");
   const loginTab = document.getElementById("login-tab");
   const signupTab = document.getElementById("signup-tab");
   const loginForm = document.getElementById("login-form");
   const signupForm = document.getElementById("signup-form");
-  const forgotForm = document.getElementById("forgot-password-form"); // New
+  const forgotForm = document.getElementById("forgot-password-form");
 
   if (modal) {
-    document.getElementById("login-form")?.reset();
-    document.getElementById("signup-form")?.reset();
-    document.getElementById("forgot-password-form")?.reset(); // New Reset
+    loginForm?.reset();
+    signupForm?.reset();
+    forgotForm?.reset();
 
-    // Show tabs again
-    if (loginTab) loginTab.style.display = 'block';
-    if (signupTab) signupTab.style.display = 'block';
-    
-    // Hide all forms initially
+    // Reset visibility
     loginForm?.classList.remove("active");
     signupForm?.classList.remove("active");
-    forgotForm?.classList.remove("active"); // New Hide
-    
-    // Set the active form based on mode
+    forgotForm?.classList.remove("active");
+
+    if (loginTab) loginTab.style.display = "block";
+    if (signupTab) signupTab.style.display = "block";
+
     if (mode === "signup") {
-      loginTab?.classList.remove("active");
       signupTab?.classList.add("active");
+      loginTab?.classList.remove("active");
       signupForm?.classList.add("active");
-    } else { // default to login
+    } else {
       loginTab?.classList.add("active");
       signupTab?.classList.remove("active");
       loginForm?.classList.add("active");
     }
-
     modal.style.display = "flex";
   }
 }
 
+function openForgotPasswordForm() {
+  document.getElementById("login-form")?.classList.remove("active");
+  document.getElementById("signup-form")?.classList.remove("active");
+  document.getElementById("login-tab")?.style.display = "none";
+  document.getElementById("signup-tab")?.style.display = "none";
+
+  const forgotForm = document.getElementById("forgot-password-form");
+  if (forgotForm) forgotForm.classList.add("active");
+}
+
 function closeAuthModal() {
   const modal = document.getElementById("auth-modal");
-  if (modal) {
-    modal.style.display = "none";
-  }
+  if (modal) modal.style.display = "none";
 }
 
 function openOrdersModal() {
@@ -1712,68 +1659,209 @@ function closeOrdersModal() {
     modal.style.display = "none";
   }
 }
-function updateAccountUI() {
-  const user = getUser();
-  const accountName = document.querySelector(".user-btn span");
-  const accountMenu = document.querySelector(".account-menu");
-
-  if (!accountName || !accountMenu) return;
-
-  // Just update the visual text/HTML. 
-  // We DO NOT attach event listeners here anymore. We use Delegation (see below).
-  if (user) {
-    accountName.textContent = user.name.split(" ")[0];
-    accountMenu.innerHTML = `
-      <a href="#" class="auth-action" data-action="orders">My Orders</a>
-      <a href="#" class="auth-action" data-action="logout">Logout</a>
-    `;
-  } else {
-    accountName.textContent = "Account";
-    accountMenu.innerHTML = `
-      <a href="#" class="auth-action" data-action="login">Login</a>
-      <a href="#" class="auth-action" data-action="signup">Sign Up</a>
-    `;
-  }
-}
 
 // ====================================================================
-// INITIALIZATION AND GENERAL EVENT LISTENERS
+// INITIALIZATION
 // ====================================================================
 
 document.addEventListener("DOMContentLoaded", () => {
-  console.log("DOM Content Loaded - Initializing...");
+  console.log("Initializing App...");
 
   window.cartManager = new CartManager();
-  console.log("✓ CartManager initialized");
-
-  window.productPagination = new ProductPagination();
-  console.log("✓ ProductPagination initialized");
-
   window.productManager = new ProductManager();
-  console.log("✓ ProductManager initialized");
-
-  window.quickViewModal = new QuickViewModal();
-  console.log("✓ QuickViewModal initialized");
-
-  window.mobileNav = new MobileNav();
-  console.log("✓ MobileNav initialized");
-
   window.heroCarousel = new HeroCarousel();
-  console.log("✓ HeroCarousel initialized");
+  window.mobileNav = new MobileNav(); // Ensure Mobile Nav is initialized
+  window.productPagination = new ProductPagination(); // Ensure Pagination is initialized
+  window.quickViewModal = new QuickViewModal(); // Ensure Quick View is initialized
 
-  // --- FORGOT PASSWORD EVENT LISTENERS ---
+  // --- Account Dropdown Logic (Event Delegation) ---
+  const accountDropdown = document.querySelector(".account-dropdown");
+  const accountBtn = document.getElementById("account-btn");
+  const accountMenu = document.querySelector(".account-menu");
 
-  // Link to open Forgot Password form
-  document.getElementById("forgot-password-link")?.addEventListener("click", (e) => {
-    e.preventDefault();
-    openForgotPasswordForm();
-  });
+  if (accountBtn && accountDropdown && accountMenu) {
+    // Toggle Menu
+    accountBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      updateAccountUI(); // Refresh content
+      accountDropdown.classList.toggle("active");
+    });
 
-  // Link to go back to Login form
-  document.getElementById("back-to-login-link")?.addEventListener("click", (e) => {
-    e.preventDefault();
-    openAuthModal("login"); // Reuses existing function to show login form
-  });
+    // Handle Clicks on Login/Signup/Logout (Delegation)
+    accountMenu.addEventListener("click", (e) => {
+      if (e.target.classList.contains("auth-action")) {
+        e.preventDefault();
+        const action = e.target.getAttribute("data-action");
+
+        if (action === "login") openAuthModal("login");
+        if (action === "signup") openAuthModal("signup");
+        if (action === "orders") openOrdersModal();
+        if (action === "logout") logoutUser();
+
+        accountDropdown.classList.remove("active");
+      }
+    });
+
+    // Close when clicking outside
+    document.addEventListener("click", (e) => {
+      if (
+        accountDropdown &&
+        !accountDropdown.contains(e.target) &&
+        !accountBtn.contains(e.target)
+      ) {
+        accountDropdown.classList.remove("active");
+      }
+    });
+  }
+
+  // --- Auth Modal Events ---
+  const closeAuth = document.querySelector(".close-auth");
+  if (closeAuth) closeAuth.addEventListener("click", closeAuthModal);
+
+  const authModal = document.getElementById("auth-modal");
+  if (authModal) {
+    authModal.addEventListener("click", (e) => {
+      if (e.target === authModal) closeAuthModal();
+    });
+  }
+
+  document
+    .getElementById("login-tab")
+    ?.addEventListener("click", () => openAuthModal("login"));
+  document
+    .getElementById("signup-tab")
+    ?.addEventListener("click", () => openAuthModal("signup"));
+
+  document
+    .getElementById("forgot-password-link")
+    ?.addEventListener("click", (e) => {
+      e.preventDefault();
+      openForgotPasswordForm();
+    });
+
+  document
+    .getElementById("back-to-login-link")
+    ?.addEventListener("click", (e) => {
+      e.preventDefault();
+      openAuthModal("login");
+    });
+
+  // --- Login Form Submission ---
+  document
+    .getElementById("login-form")
+    ?.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const email = document.getElementById("login-email").value;
+      const password = document.getElementById("login-password").value;
+      const submitBtn = e.target.querySelector("button");
+
+      try {
+        submitBtn.textContent = "Logging in...";
+        submitBtn.disabled = true;
+
+        const res = await fetch("/api/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password }),
+        });
+        const data = await res.json();
+
+        if (res.ok) {
+          saveUser(data.user);
+          localStorage.setItem("authToken", data.token); // Store JWT
+          closeAuthModal();
+          updateAccountUI();
+          window.cartManager.showToast(
+            `Welcome back, ${data.user.name}!`,
+            "success"
+          );
+        } else {
+          window.cartManager.showToast(data.error, "danger");
+        }
+      } catch (error) {
+        window.cartManager.showToast("Login failed.", "error");
+      } finally {
+        submitBtn.textContent = "Login";
+        submitBtn.disabled = false;
+      }
+    });
+
+  // --- Signup Form Submission ---
+  document
+    .getElementById("signup-form")
+    ?.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const name = document.getElementById("signup-name").value;
+      const email = document.getElementById("signup-email").value;
+      const password = document.getElementById("signup-password").value;
+      const submitBtn = e.target.querySelector("button");
+
+      try {
+        submitBtn.textContent = "Signing up...";
+        submitBtn.disabled = true;
+
+        const res = await fetch("/api/register", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name, email, password }),
+        });
+        const data = await res.json();
+
+        if (res.ok) {
+          window.cartManager.showToast(
+            "Account created! Please login.",
+            "success"
+          );
+          // Clear the signup form
+          e.target.reset();
+          // Switch to login tab
+          document.getElementById("login-tab")?.click();
+        } else {
+          window.cartManager.showToast(data.error, "danger");
+        }
+      } catch (error) {
+        window.cartManager.showToast("Signup failed.", "error");
+      } finally {
+        submitBtn.textContent = "Sign Up";
+        submitBtn.disabled = false;
+      }
+    });
+
+  // --- Forgot Password Submission ---
+  document
+    .getElementById("forgot-password-form")
+    ?.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const email = document.getElementById("forgot-email").value;
+      const submitBtn = e.target.querySelector("button");
+
+      try {
+        submitBtn.textContent = "Sending...";
+        submitBtn.disabled = true;
+
+        const res = await fetch("/api/forgot-password", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email }),
+        });
+        const data = await res.json();
+
+        if (res.ok) {
+          window.cartManager.showToast(data.message, "success");
+          e.target.reset();
+          openAuthModal("login");
+        } else {
+          window.cartManager.showToast(data.error, "danger");
+        }
+      } catch (error) {
+        window.cartManager.showToast("Request failed.", "error");
+      } finally {
+        submitBtn.textContent = "Send Reset Link";
+        submitBtn.disabled = false;
+      }
+    });
+
   // Home button click - Reset to default state
   document.querySelectorAll('a[href="#home"]').forEach((homeLink) => {
     homeLink.addEventListener("click", (e) => {
@@ -1805,374 +1893,6 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       window.scrollTo({ top: 0, behavior: "smooth" });
-    });
-  });
-
-  const authModal = document.getElementById("auth-modal");
-  const closeAuth = document.querySelector(".close-auth");
-
-  if (closeAuth) closeAuth.addEventListener("click", closeAuthModal);
-
-  if (authModal) {
-    authModal.addEventListener("click", (e) => {
-      if (e.target === authModal) closeAuthModal();
-    });
-  }
-
-  document.getElementById("login-tab")?.addEventListener("click", () => {
-    document.getElementById("login-form")?.classList.add("active");
-    document.getElementById("signup-form")?.classList.remove("active");
-    document.getElementById("login-tab")?.classList.add("active");
-    document.getElementById("signup-tab")?.classList.remove("active");
-  });
-
-  document.getElementById("signup-tab")?.addEventListener("click", () => {
-    document.getElementById("signup-form")?.classList.add("active");
-    document.getElementById("login-form")?.classList.remove("active");
-    document.getElementById("signup-tab")?.classList.add("active");
-    document.getElementById("login-tab")?.classList.remove("active");
-  });
-
-  // --- REAL LOGIN LOGIC ---
-  document
-    .getElementById("login-form")
-    ?.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const email = document.getElementById("login-email").value;
-      const password = document.getElementById("login-password").value;
-      const submitBtn = e.target.querySelector("button");
-
-      try {
-        submitBtn.textContent = "Logging in...";
-        submitBtn.disabled = true;
-
-        const res = await fetch("/api/login", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, password }),
-        });
-
-        const data = await res.json();
-
-        if (res.ok) {
-          // Save the Token and User Info
-          saveUser(data.user);
-          localStorage.setItem("authToken", data.token); // Store JWT
-
-          closeAuthModal();
-          updateAccountUI();
-          cartManager.showToast(`Welcome back, ${data.user.name}!`, "success");
-        } else {
-          cartManager.showToast(data.error, "danger");
-        }
-      } catch (error) {
-        cartManager.showToast("Login failed. Check connection.", "error");
-      } finally {
-        submitBtn.textContent = "Login";
-        submitBtn.disabled = false;
-      }
-    });
-
-  // --- REAL SIGNUP LOGIC (CORRECTED) ---
-  document
-    .getElementById("signup-form")
-    ?.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const name = document.getElementById("signup-name").value;
-      const email = document.getElementById("signup-email").value;
-      const password = document.getElementById("signup-password").value;
-      const submitBtn = e.target.querySelector("button");
-
-      try {
-        submitBtn.textContent = "Signing up...";
-        submitBtn.disabled = true;
-
-        const res = await fetch("/api/register", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name, email, password }),
-        });
-
-        const data = await res.json();
-
-        if (res.ok) {
-          // Show success toast and switch to login tab
-          cartManager.showToast("Account created! Please login.", "success");
-          document.getElementById("login-tab")?.click();
-
-          // Clear the signup form
-          e.target.reset();
-        } else {
-          // Correct error handling
-          cartManager.showToast(data.error, "danger");
-        }
-      } catch (error) {
-        console.error("Signup failed:", error);
-        cartManager.showToast("Signup failed. Check connection.", "error");
-      } finally {
-        submitBtn.textContent = "Sign Up";
-        submitBtn.disabled = false;
-      }
-    });
-
-
-// --- ROBUST ACCOUNT & MENU LOGIC (Event Delegation) ---
-  const accountDropdown = document.querySelector(".account-dropdown");
-  const accountBtn = document.getElementById("account-btn");
-  const accountMenu = document.querySelector(".account-menu");
-
-  if (accountBtn && accountDropdown && accountMenu) {
-    // 1. Toggle Menu on Click
-    accountBtn.addEventListener("click", (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      updateAccountUI(); // Refresh content state
-      accountDropdown.classList.toggle("active");
-    });
-
-    // 2. EVENT DELEGATION: Handle ALL menu clicks here
-    // This works even if the HTML inside accountMenu is replaced!
-    accountMenu.addEventListener("click", (e) => {
-      if (e.target.classList.contains("auth-action")) {
-        e.preventDefault();
-        const action = e.target.getAttribute("data-action");
-
-        // Route to the correct function
-        if (action === "login") openAuthModal("login");
-        if (action === "signup") openAuthModal("signup");
-        if (action === "orders") openOrdersModal();
-        if (action === "logout") logoutUser();
-
-        // Close dropdown after selection
-        accountDropdown.classList.remove("active");
-      }
-    });
-
-    // 3. Close Menu when clicking outside
-    document.addEventListener("click", (e) => {
-      if (!accountDropdown.contains(e.target) && !accountBtn.contains(e.target)) {
-        accountDropdown.classList.remove("active");
-      }
-    });
-  }
-
-  document.querySelectorAll(".btn-add-cart").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const card = btn.closest(".product-card");
-      if (card) {
-        const product = {
-          title: card.getAttribute("data-title"),
-          price: card.getAttribute("data-price"),
-        };
-        cartManager.addToCart(product);
-      }
-    });
-  });
-
-  document.querySelectorAll(".btn-buy-now").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const card = btn.closest(".product-card");
-      if (card) {
-        const product = {
-          title: card.getAttribute("data-title"),
-          price: card.getAttribute("data-price"),
-        };
-        const priceNum = parseFloat(product.price) || 0;
-        openPaymentModal([
-          { title: product.title, price: priceNum, quantity: 1 },
-        ]);
-      }
-    });
-  });
-
-  document.querySelectorAll(".btn-wishlist").forEach((btn) => {
-    btn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      const card = btn.closest(".product-card");
-      if (card) {
-        const product = {
-          title: card.getAttribute("data-title"),
-          price: card.getAttribute("data-price"),
-        };
-        cartManager.toggleWishlist(product);
-      }
-    });
-  });
-
-  const modalClose = document.querySelector("#demo-payment-modal .close");
-  const cancelBtn = document.getElementById("cancel-payment");
-  const paymentModal = document.getElementById("demo-payment-modal");
-
-  if (modalClose) {
-    modalClose.addEventListener("click", closePaymentModal);
-  }
-
-  if (cancelBtn) {
-    cancelBtn.addEventListener("click", closePaymentModal);
-  }
-
-  if (paymentModal) {
-    paymentModal.addEventListener("click", (e) => {
-      if (e.target === paymentModal) {
-        closePaymentModal();
-      }
-    });
-  }
-
-  const payNowBtn = document.getElementById("pay-now");
-  if (payNowBtn) {
-    payNowBtn.addEventListener("click", () => {
-      const user = getUser();
-
-      if (!user) {
-        closePaymentModal();
-        cartManager.showToast("Please login to place an order", "warning");
-        setTimeout(() => openAuthModal("login"), 500);
-        return;
-      }
-
-      const selectedMethod = document.querySelector(
-        'input[name="payment"]:checked'
-      )?.value;
-
-      if (selectedMethod === "card") {
-        const inputs = document.querySelectorAll("#card-form input");
-        for (let input of inputs) {
-          if (!input.value.trim()) {
-            cartManager.showToast("Please fill in all card details", "error");
-            return;
-          }
-        }
-      } else if (selectedMethod === "upi") {
-        const upiInput = document.querySelector("#upi-form input");
-        if (upiInput && !upiInput.value.trim()) {
-          cartManager.showToast("Please enter UPI ID", "error");
-          return;
-        }
-      }
-
-      const subtotal = parseFloat(
-        document.getElementById("payment-subtotal").textContent
-      );
-      const shipping = parseFloat(
-        document.getElementById("payment-shipping").textContent
-      );
-      const tax = parseFloat(
-        document.getElementById("payment-tax").textContent
-      );
-      const total = parseFloat(
-        document.getElementById("payment-total").textContent
-      );
-
-      const items = cartManager.cart.map((item) => ({
-        title: item.title,
-        price: item.price,
-        quantity: item.quantity,
-      }));
-
-      const paymentMethodNames = {
-        card: "Credit/Debit Card",
-        upi: "UPI",
-        netbanking: "Net Banking",
-        cod: "Cash on Delivery",
-      };
-
-      const order = saveOrder({
-        items: items,
-        subtotal: subtotal,
-        shipping: shipping,
-        tax: tax,
-        total: total,
-        paymentMethod: paymentMethodNames[selectedMethod] || selectedMethod,
-      });
-
-      if (order) {
-        cartManager.showToast(
-          `Order #${order.orderId} placed successfully! Check "My Orders" for details.`,
-          "success"
-        );
-        cartManager.clearCart();
-        closePaymentModal();
-      } else {
-        cartManager.showToast(
-          "Failed to place order. Please try again.",
-          "error"
-        );
-      }
-    });
-  }
-
-  const newsletterForm = document.querySelector(".newsletter-form");
-  if (newsletterForm) {
-    newsletterForm.addEventListener("submit", (e) => {
-      e.preventDefault();
-      cartManager.showToast(
-        "Successfully subscribed to newsletter!",
-        "success"
-      );
-      newsletterForm.reset();
-    });
-  }
-
-  const heroBtn = document.querySelector(".btn-hero");
-  if (heroBtn) {
-    heroBtn.addEventListener("click", () => {
-      document
-        .querySelector(".products-section")
-        ?.scrollIntoView({ behavior: "smooth" });
-    });
-  }
-
-  document.querySelectorAll(".category-card").forEach((card) => {
-    card.addEventListener("click", () => {
-      const categoryName = card.querySelector("h3")?.textContent;
-      if (categoryName) {
-        const categoryMap = {
-          "Cricket Bats": "bats",
-          "Cricket Balls": "balls",
-          "Protective Gear": "pads",
-          Gloves: "gloves",
-        };
-
-        const categoryFilter = document.getElementById("category-filter");
-        if (categoryFilter && categoryMap[categoryName]) {
-          categoryFilter.value = categoryMap[categoryName];
-          productManager.applyFilters();
-          document
-            .querySelector(".products-section")
-            ?.scrollIntoView({ behavior: "smooth" });
-        }
-      }
-    });
-  });
-
-  document
-    .querySelectorAll(".dropdown-content a[data-category]")
-    .forEach((link) => {
-      link.addEventListener("click", (e) => {
-        e.preventDefault();
-        const category = link.getAttribute("data-category");
-        const categoryFilter = document.getElementById("category-filter");
-
-        if (categoryFilter) {
-          categoryFilter.value = category;
-          productManager.applyFilters();
-
-          document.querySelector(".products-section")?.scrollIntoView({
-            behavior: "smooth",
-            block: "start",
-          });
-        }
-      });
-    });
-
-  document.querySelectorAll('a[href^="#"]').forEach((anchor) => {
-    anchor.addEventListener("click", function (e) {
-      e.preventDefault();
-      const target = document.querySelector(this.getAttribute("href"));
-      if (target) {
-        target.scrollIntoView({ behavior: "smooth" });
-      }
     });
   });
 
@@ -2210,55 +1930,31 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  updateAccountUI();
-
-  const isMobile = window.innerWidth <= 768;
-  if (!isMobile) {
-    window.addEventListener("scroll", () => {
-      const heroSection = document.querySelector(".hero-section");
-      if (!heroSection) return;
-      const scrolled = window.pageYOffset;
-      const heroHeight = heroSection.offsetHeight;
-
-      if (scrolled <= heroHeight) {
-        const heroContent = document.querySelector(
-          ".hero-slide.active .hero-content"
-        );
-        const heroImage = document.querySelector(
-          ".hero-slide.active .hero-image"
-        );
-
-        if (heroContent) {
-          heroContent.style.transform = `translateY(${scrolled * 0.3}px)`;
-          heroContent.style.opacity = 1 - (scrolled / heroHeight) * 0.8;
-        }
-
-        if (heroImage) {
-          heroImage.style.transform = `translateY(${scrolled * 0.2}px) scale(${
-            1 - (scrolled / heroHeight) * 0.1
-          })`;
-        }
-      }
+  const newsletterForm = document.querySelector(".newsletter-form");
+  if (newsletterForm) {
+    newsletterForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      cartManager.showToast(
+        "Successfully subscribed to newsletter!",
+        "success"
+      );
+      newsletterForm.reset();
     });
   }
 
-  setTimeout(() => {
-    const heroSection = document.querySelector(".hero-section");
-    if (heroSection) {
-      heroSection.style.opacity = "1";
-    }
-  }, 100);
+  const heroBtn = document.querySelector(".btn-hero");
+  if (heroBtn) {
+    heroBtn.addEventListener("click", () => {
+      document
+        .querySelector(".products-section")
+        ?.scrollIntoView({ behavior: "smooth" });
+    });
+  }
 
-  document.addEventListener("visibilitychange", () => {
-    if (window.heroCarousel) {
-      if (document.hidden) {
-        window.heroCarousel.pauseAutoPlay();
-      } else {
-        window.heroCarousel.resumeAutoPlay();
-      }
-    }
-  });
+  // Update UI on load
+  updateAccountUI();
 
+  // Window Resize Handler for Mobile Nav
   window.addEventListener("resize", () => {
     if (window.innerWidth > 768) {
       const mobileNav = document.getElementById("mobile-nav");
@@ -2268,7 +1964,171 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  if (window.history.replaceState) {
-    window.history.replaceState(null, null, window.location.href);
-  }
+  // Mobile dropdown toggles
+  const mobileDropdownToggles = document.querySelectorAll(
+    ".mobile-dropdown-toggle"
+  );
+  mobileDropdownToggles.forEach((toggle) => {
+    toggle.addEventListener("click", (e) => {
+      e.preventDefault();
+      const parent = toggle.closest(".mobile-dropdown");
+      parent.classList.toggle("active");
+    });
+  });
 });
+
+// Payment Modal Functions (Global)
+function closePaymentModal() {
+  const modal = document.getElementById("demo-payment-modal");
+  if (modal) modal.style.display = "none";
+}
+
+function openPaymentModal(items) {
+  const modal = document.getElementById("demo-payment-modal");
+  const paymentItems = document.getElementById("payment-items");
+  const paymentTotal = document.getElementById("payment-total");
+  const paymentSubtotal = document.getElementById("payment-subtotal");
+  const paymentShipping = document.getElementById("payment-shipping");
+  const paymentTax = document.getElementById("payment-tax");
+
+  if (!modal || !paymentItems) return;
+
+  paymentItems.innerHTML = items
+    .map(
+      (item) => `
+    <div class="payment-item">
+      <span>${item.title} (x${item.quantity})</span>
+      <span>₹${(item.price * item.quantity).toFixed(2)}</span>
+    </div>
+  `
+    )
+    .join("");
+
+  const subtotal = items.reduce(
+    (sum, item) => sum + item.price * item.quantity,
+    0
+  );
+  const shipping = subtotal > 2000 ? 0 : 150;
+  const tax = subtotal * 0.18;
+  const total = subtotal + shipping + tax;
+
+  if (paymentSubtotal) paymentSubtotal.textContent = subtotal.toFixed(2);
+  if (paymentShipping) paymentShipping.textContent = shipping.toFixed(2);
+  if (paymentTax) paymentTax.textContent = tax.toFixed(2);
+  if (paymentTotal) paymentTotal.textContent = total.toFixed(2);
+
+  modal.style.display = "flex";
+
+  // Close button inside modal
+  const closeBtn = modal.querySelector(".close");
+  if (closeBtn) {
+    // Remove existing listener to prevent duplicates if opened multiple times
+    const newCloseBtn = closeBtn.cloneNode(true);
+    closeBtn.parentNode.replaceChild(newCloseBtn, closeBtn);
+    newCloseBtn.addEventListener("click", closePaymentModal);
+  }
+
+  // Cancel button
+  const cancelBtn = document.getElementById("cancel-payment");
+  if (cancelBtn) {
+    const newCancelBtn = cancelBtn.cloneNode(true);
+    cancelBtn.parentNode.replaceChild(newCancelBtn, cancelBtn);
+    newCancelBtn.addEventListener("click", closePaymentModal);
+  }
+
+  // Pay Now Button Logic
+  const payNowBtn = document.getElementById("pay-now");
+  if (payNowBtn) {
+    // Clone to remove old listeners
+    const newPayNowBtn = payNowBtn.cloneNode(true);
+    payNowBtn.parentNode.replaceChild(newPayNowBtn, payNowBtn);
+
+    newPayNowBtn.addEventListener("click", () => {
+      const user = getUser();
+
+      if (!user) {
+        closePaymentModal();
+        window.cartManager.showToast(
+          "Please login to place an order",
+          "warning"
+        );
+        setTimeout(() => openAuthModal("login"), 500);
+        return;
+      }
+
+      const selectedMethod = document.querySelector(
+        'input[name="payment"]:checked'
+      )?.value;
+
+      if (selectedMethod === "card") {
+        const inputs = document.querySelectorAll("#card-form input");
+        for (let input of inputs) {
+          if (!input.value.trim()) {
+            window.cartManager.showToast(
+              "Please fill in all card details",
+              "error"
+            );
+            return;
+          }
+        }
+      } else if (selectedMethod === "upi") {
+        const upiInput = document.querySelector("#upi-form input");
+        if (upiInput && !upiInput.value.trim()) {
+          window.cartManager.showToast("Please enter UPI ID", "error");
+          return;
+        }
+      }
+
+      const paymentMethodNames = {
+        card: "Credit/Debit Card",
+        upi: "UPI",
+        netbanking: "Net Banking",
+        cod: "Cash on Delivery",
+      };
+
+      const order = saveOrder({
+        items: items,
+        subtotal: subtotal,
+        shipping: shipping,
+        tax: tax,
+        total: total,
+        paymentMethod: paymentMethodNames[selectedMethod] || selectedMethod,
+      });
+
+      if (order) {
+        window.cartManager.showToast(
+          `Order #${order.orderId} placed successfully!`,
+          "success"
+        );
+        window.cartManager.clearCart();
+        closePaymentModal();
+      } else {
+        window.cartManager.showToast(
+          "Failed to place order. Please try again.",
+          "error"
+        );
+      }
+    });
+  }
+
+  // Payment method toggle logic
+  const paymentRadios = document.querySelectorAll('input[name="payment"]');
+  const cardForm = document.getElementById("card-form");
+  const upiForm = document.getElementById("upi-form");
+
+  paymentRadios.forEach((radio) => {
+    radio.addEventListener("change", (e) => {
+      if (cardForm) cardForm.style.display = "none";
+      if (upiForm) upiForm.style.display = "none";
+
+      switch (e.target.value) {
+        case "card":
+          if (cardForm) cardForm.style.display = "block";
+          break;
+        case "upi":
+          if (upiForm) upiForm.style.display = "block";
+          break;
+      }
+    });
+  });
+}
