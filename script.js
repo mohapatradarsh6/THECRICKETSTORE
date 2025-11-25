@@ -51,24 +51,29 @@ class CartManager {
     const price = parseFloat(product.price) || 0;
 
     if (existingItem) {
-      // Check if adding more would exceed stock
-      if (
-        product.stock !== undefined &&
-        existingItem.quantity + quantity > product.stock
-      ) {
-        this.showToast(
-          `Cannot add more! You have ${existingItem.quantity} in cart.`,
-          "warning"
-        );
+      // UPDATED: Check if adding more would exceed stock
+      const newQuantity = existingItem.quantity + quantity;
+      if (product.stock !== undefined && newQuantity > product.stock) {
+        const canAdd = product.stock - existingItem.quantity;
+        if (canAdd <= 0) {
+          this.showToast(
+            `You already have the maximum stock (${existingItem.quantity}) in cart.`,
+            "warning"
+          );
+        } else {
+          this.showToast(
+            `Can only add ${canAdd} more. You have ${existingItem.quantity} in cart.`,
+            "warning"
+          );
+        }
         return;
       }
-      existingItem.quantity += quantity;
+      existingItem.quantity = newQuantity;
     } else {
       this.cart.push({
         ...product,
         price: price,
         quantity: quantity,
-        // Store selected variants if passed
         selectedSize: product.selectedSize || null,
         selectedColor: product.selectedColor || null,
       });
@@ -699,13 +704,36 @@ class QuickViewModal {
         newBtn.addEventListener("click", () => {
           const quantity = parseInt(qtyInput?.value || 1);
 
-          // NEW: Block if requesting more than stock
-          if (quantity > product.stock) {
+          // Check stock
+          if (product.stock !== undefined && quantity > product.stock) {
             window.cartManager.showToast(
               `Cannot add ${quantity}. Only ${product.stock} left!`,
               "error"
             );
             return;
+          }
+
+          // NEW: Check what's already in cart
+          const existingItem = window.cartManager.cart.find(
+            (item) => item.title === product.title
+          );
+          if (existingItem) {
+            const totalQuantity = existingItem.quantity + quantity;
+            if (product.stock !== undefined && totalQuantity > product.stock) {
+              const canAdd = product.stock - existingItem.quantity;
+              if (canAdd <= 0) {
+                window.cartManager.showToast(
+                  `You already have ${existingItem.quantity} in cart (max stock).`,
+                  "warning"
+                );
+              } else {
+                window.cartManager.showToast(
+                  `Can only add ${canAdd} more. You have ${existingItem.quantity} in cart.`,
+                  "warning"
+                );
+              }
+              return;
+            }
           }
 
           const sizeSelect = this.modal.querySelector("#qv-size");
@@ -1157,11 +1185,21 @@ async function openProfileModal() {
   modal.style.display = "flex";
 
   // Close button logic
-  modal.querySelector(".close").onclick = () => (modal.style.display = "none");
+  const closeBtn = modal.querySelector(".close");
+  if (closeBtn) {
+    const newCloseBtn = closeBtn.cloneNode(true);
+    closeBtn.parentNode.replaceChild(newCloseBtn, closeBtn);
+    newCloseBtn.addEventListener("click", () => (modal.style.display = "none"));
+  }
 
   // Load data from API
   try {
     const token = localStorage.getItem("authToken");
+    if (!token) {
+      openAuthModal("login");
+      return;
+    }
+
     const res = await fetch("/api/user", {
       headers: { Authorization: `Bearer ${token}` },
     });
@@ -1170,22 +1208,27 @@ async function openProfileModal() {
       const userData = await res.json();
 
       // Populate Info
-      document.getElementById("profile-name").value = userData.name || "";
-      document.getElementById("profile-email").value = userData.email || "";
+      const nameInput = document.getElementById("profile-name");
+      const emailInput = document.getElementById("profile-email");
+
+      if (nameInput) nameInput.value = userData.name || "";
+      if (emailInput) emailInput.value = userData.email || "";
 
       // Populate Addresses
       renderAddresses(userData.addresses || []);
 
-      // Update local storage just in case
+      // Update local storage with complete user data
       saveUser(userData);
     } else {
+      const errorData = await res.json();
+      console.error("Failed to load profile:", errorData);
       window.cartManager.showToast("Failed to load profile data", "error");
     }
   } catch (error) {
+    console.error("Profile load error:", error);
     window.cartManager.showToast("Connection error", "error");
   }
 }
-
 // 4. Render Address List
 function renderAddresses(addresses) {
   const container = document.getElementById("address-list");
@@ -1211,9 +1254,15 @@ function renderAddresses(addresses) {
 }
 
 // 5. Save Profile (Name)
+// 5. Save Profile (Name)
 async function saveProfileInfo() {
   const newName = document.getElementById("profile-name").value;
   const token = localStorage.getItem("authToken");
+
+  if (!newName || !newName.trim()) {
+    window.cartManager.showToast("Name cannot be empty", "error");
+    return;
+  }
 
   try {
     const res = await fetch("/api/user", {
@@ -1222,7 +1271,7 @@ async function saveProfileInfo() {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify({ name: newName }),
+      body: JSON.stringify({ name: newName.trim() }),
     });
 
     if (res.ok) {
@@ -1230,8 +1279,12 @@ async function saveProfileInfo() {
       saveUser(data.user); // Update local storage
       updateAccountUI(); // Update header name
       window.cartManager.showToast("Profile updated!", "success");
+    } else {
+      const errorData = await res.json();
+      window.cartManager.showToast(errorData.error || "Update failed", "error");
     }
   } catch (e) {
+    console.error("Profile update error:", e);
     window.cartManager.showToast("Update failed", "error");
   }
 }
@@ -1495,15 +1548,16 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
 
-  // --- NEW: View Cart Button Logic ---
+  // --- View Cart Button Logic ---
   const viewCartBtn = document.getElementById("view-cart-btn");
   if (viewCartBtn) {
     viewCartBtn.addEventListener("click", () => {
-      if (window.cartManager.cart.length === 0) {
-        window.cartManager.showToast("Your cart is empty!", "warning");
-        return;
-      }
-      openPaymentModal(window.cartManager.cart);
+      // Close cart dropdown
+      const cartDropdown = document.getElementById("cart-dropdown");
+      if (cartDropdown) cartDropdown.style.display = "none";
+
+      // Open cart review modal
+      openCartReviewModal();
     });
   }
 
@@ -1565,6 +1619,83 @@ function closePaymentModal() {
   const stepPayment = document.getElementById("step-payment");
   if (stepAddress) stepAddress.classList.remove("active");
   if (stepPayment) stepPayment.classList.remove("active");
+}
+
+// Cart Review Modal Functions
+function openCartReviewModal() {
+  const modal = document.getElementById("cart-review-modal");
+  const items = window.cartManager.cart;
+
+  if (items.length === 0) {
+    window.cartManager.showToast("Your cart is empty!", "warning");
+    return;
+  }
+
+  // Populate cart items
+  const cartReviewItems = document.getElementById("cart-review-items");
+  cartReviewItems.innerHTML = items
+    .map(
+      (item) => `
+    <div class="payment-item" style="padding: 15px; border-bottom: 1px solid #eee;">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <strong>${item.title}</strong>
+          <div style="font-size: 0.9rem; color: #666;">
+            Quantity: ${item.quantity}
+            ${item.selectedSize ? `| Size: ${item.selectedSize}` : ""}
+            ${item.selectedColor ? `| Color: ${item.selectedColor}` : ""}
+          </div>
+        </div>
+        <div style="font-weight: 600;">₹${(item.price * item.quantity).toFixed(
+          2
+        )}</div>
+      </div>
+    </div>
+  `
+    )
+    .join("");
+
+  // Calculate totals
+  const subtotal = items.reduce(
+    (sum, item) => sum + item.price * item.quantity,
+    0
+  );
+  const shipping = subtotal > 2000 ? 0 : 150;
+  const tax = subtotal * 0.18;
+  const total = subtotal + shipping + tax;
+
+  document.getElementById("cart-review-subtotal").textContent =
+    subtotal.toFixed(2);
+  document.getElementById("cart-review-shipping").textContent =
+    shipping.toFixed(2);
+  document.getElementById("cart-review-tax").textContent = tax.toFixed(2);
+  document.getElementById("cart-review-total").textContent = total.toFixed(2);
+
+  modal.style.display = "flex";
+
+  // Close button
+  const closeBtn = document.getElementById("close-cart-review");
+  const newCloseBtn = closeBtn.cloneNode(true);
+  closeBtn.parentNode.replaceChild(newCloseBtn, closeBtn);
+  newCloseBtn.addEventListener("click", () => (modal.style.display = "none"));
+
+  // Continue Shopping button
+  const continueBtn = document.getElementById("continue-shopping-btn");
+  const newContinueBtn = continueBtn.cloneNode(true);
+  continueBtn.parentNode.replaceChild(newContinueBtn, continueBtn);
+  newContinueBtn.addEventListener(
+    "click",
+    () => (modal.style.display = "none")
+  );
+
+  // Proceed to Checkout button
+  const proceedBtn = document.getElementById("proceed-checkout-btn");
+  const newProceedBtn = proceedBtn.cloneNode(true);
+  proceedBtn.parentNode.replaceChild(newProceedBtn, proceedBtn);
+  newProceedBtn.addEventListener("click", () => {
+    modal.style.display = "none";
+    openPaymentModal(items);
+  });
 }
 
 function openPaymentModal(items) {
