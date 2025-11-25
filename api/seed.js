@@ -1,7 +1,7 @@
 const mongoose = require("mongoose");
 
-// 1. Product Data
 const seedProducts = [
+  // --- BATS (8 Products) ---
   {
     title: "SG HP33 Kashmir Willow",
     price: 4999,
@@ -9,10 +9,14 @@ const seedProducts = [
     category: "bats",
     brand: "sg",
     image: "images/SS.png",
+    images: ["images/SS.png", "images/bats.png"],
     rating: 4.5,
     reviews: 125,
     isBestSeller: true,
-    description: "Hand-crafted Kashmir Willow bat.",
+    description: "Hand-crafted Kashmir Willow bat with superior balance.",
+    stock: 15,
+    sizes: ["SH", "Harrow", "6"],
+    colors: ["Natural"],
   },
   {
     title: "Kookaburra Kahuna Pro",
@@ -21,22 +25,15 @@ const seedProducts = [
     category: "bats",
     brand: "kookaburra",
     image: "images/Kookabura.png",
-    rating: 5,
-    isNewArrival: true,
-    description: "The iconic Kahuna.",
-  },
-  {
-    title: "Kookaburra Kahuna Pro",
-    price: 8999,
-    originalPrice: 10999,
-    category: "bats",
-    brand: "kookaburra",
-    image: "images/Kookabura.png",
+    images: ["images/Kookabura.png", "images/bats.png"],
     rating: 5,
     reviews: 89,
     isNewArrival: true,
     description:
       "The iconic Kahuna. Mid-blade sweet spot for all-round stroke play.",
+    stock: 5,
+    sizes: ["SH", "LH"],
+    colors: ["Green/White"],
   },
   {
     title: "SS Ton Retro Classic",
@@ -45,9 +42,13 @@ const seedProducts = [
     category: "bats",
     brand: "ss",
     image: "images/ssretro.png",
+    images: ["images/ssretro.png", "images/SS.png"],
     rating: 4.8,
     reviews: 45,
     description: "Grade 1 English Willow. Huge edges and massive power.",
+    stock: 8,
+    sizes: ["SH"],
+    colors: ["Natural"],
   },
   {
     title: "MRF Grand Edition",
@@ -56,10 +57,14 @@ const seedProducts = [
     category: "bats",
     brand: "mrf",
     image: "images/mrf.png",
+    images: ["images/mrf.png", "images/bats.png"],
     rating: 5,
     reviews: 32,
     description:
       "Virat Kohli's choice. Premium English Willow with lightweight pickup.",
+    stock: 3,
+    sizes: ["SH", "LH"],
+    colors: ["Red/White"],
   },
   {
     title: "Gray-Nicolls Cobra",
@@ -68,9 +73,13 @@ const seedProducts = [
     category: "bats",
     brand: "gray-nicolls",
     image: "images/grayniccols.png",
+    images: ["images/grayniccols.png"],
     rating: 4.6,
     reviews: 67,
     description: "Low-profile sweet spot, perfect for front-foot drives.",
+    stock: 12,
+    sizes: ["SH", "Harrow"],
+    colors: ["Blue/Silver"],
   },
   {
     title: "BAS Vampire SR23",
@@ -79,12 +88,46 @@ const seedProducts = [
     category: "bats",
     brand: "bas",
     image: "images/BAS.png",
+    images: ["images/BAS.png"],
     rating: 4.5,
     reviews: 156,
     description: "Legendary BAS profile with thick edges.",
+    stock: 0, // OUT OF STOCK TEST
+    sizes: ["SH"],
+    colors: ["Red/Black"],
+  },
+  {
+    title: "Adidas Incurza 4.0",
+    price: 6500,
+    originalPrice: 8000,
+    category: "bats",
+    brand: "adidas",
+    image: "images/adbats.jpg",
+    images: ["images/adbats.jpg"],
+    rating: 4.3,
+    reviews: 40,
+    description: "Designed for the modern T20 power hitter.",
+    stock: 20,
+    sizes: ["SH", "6"],
+    colors: ["Acid Red"],
+  },
+  {
+    title: "DSC Blak 300",
+    price: 5500,
+    originalPrice: 7000,
+    category: "bats",
+    brand: "dsc",
+    image: "images/dbats.jpg",
+    images: ["images/dbats.jpg"],
+    rating: 4.4,
+    reviews: 25,
+    description: "Powerful profile with high spine for extra punch.",
+    stock: 10,
+    sizes: ["SH"],
+    colors: ["Black"],
   },
 
-  // --- BALLS ---
+  // --- BALLS (5 Products) ---
   {
     title: "SG Test Cricket Ball",
     price: 899,
@@ -92,10 +135,14 @@ const seedProducts = [
     category: "balls",
     brand: "sg",
     image: "images/sgred.png",
+    images: ["images/sgred.png"],
     rating: 5,
     reviews: 78,
     isBestSeller: true,
     description: "Official Test match ball. High-quality alum tanned leather.",
+    stock: 100,
+    sizes: ["Standard"],
+    colors: ["Red"],
   },
   {
     title: "Kookaburra Turf White",
@@ -104,9 +151,13 @@ const seedProducts = [
     category: "balls",
     brand: "kookaburra",
     image: "images/kookaburaball.png",
+    images: ["images/kookaburaball.png"],
     rating: 5,
     reviews: 156,
     description: "Regulation white ball for T20/ODI cricket. Excellent swing.",
+    stock: 50,
+    sizes: ["Standard"],
+    colors: ["White"],
   },
   {
     title: "SG Pink Leather Ball",
@@ -115,9 +166,13 @@ const seedProducts = [
     category: "balls",
     brand: "sg",
     image: "images/sgpink.png",
+    images: ["images/sgpink.png"],
     rating: 4.2,
     reviews: 200,
     description: "Durable 4-piece ball perfect for club matches and nets.",
+    stock: 0, // OUT OF STOCK TEST
+    sizes: ["Standard"],
+    colors: ["Pink"],
   },
   {
     title: "Heavy Tennis Ball (Pack of 5)",
@@ -126,12 +181,31 @@ const seedProducts = [
     category: "balls",
     brand: "dsc",
     image: "images/tball.png",
+    images: ["images/tball.png"],
     rating: 4.5,
     reviews: 500,
     description: "Heavy duty tennis balls for box cricket.",
+    stock: 200,
+    sizes: ["Pack of 5"],
+    colors: ["Red", "Yellow"],
+  },
+  {
+    title: "Training Synthetic Ball",
+    price: 150,
+    originalPrice: 250,
+    category: "balls",
+    brand: "generic",
+    image: "images/synthetic.png",
+    images: ["images/synthetic.png"],
+    rating: 3.8,
+    reviews: 40,
+    description: "All-weather synthetic ball for practice.",
+    stock: 60,
+    sizes: ["Standard"],
+    colors: ["Red", "Yellow"],
   },
 
-  // --- PADS ---
+  // --- PADS (4 Products) ---
   {
     title: "Kookaburra Batting Pads",
     price: 2999,
@@ -139,9 +213,13 @@ const seedProducts = [
     category: "pads",
     brand: "kookaburra",
     image: "images/pads.png",
+    images: ["images/pads.png"],
     rating: 4,
     reviews: 92,
     description: "Lightweight foam pads with traditional cane protection.",
+    stock: 15,
+    sizes: ["Boys", "Youth", "Adult"],
+    colors: ["White", "Blue", "Green"],
   },
   {
     title: "Moonwalkr Thigh Pad Combo",
@@ -150,10 +228,14 @@ const seedProducts = [
     category: "pads",
     brand: "moonwalkr",
     image: "images/mthighpad.jpg",
+    images: ["images/mthighpad.jpg"],
     rating: 4.9,
     reviews: 110,
     isBestSeller: true,
     description: "Futuristic slim design. Integrated inner/outer thigh guard.",
+    stock: 25,
+    sizes: ["S", "M", "L"],
+    colors: ["Blue", "White", "Black"],
   },
   {
     title: "SS Limited Edition Pads",
@@ -162,9 +244,13 @@ const seedProducts = [
     category: "pads",
     brand: "ss",
     image: "images/sspad.png",
+    images: ["images/sspad.png"],
     rating: 4.5,
     reviews: 56,
     description: "Premium PU facing with cotton filled knee rolls.",
+    stock: 8,
+    sizes: ["Adult", "Large Adult"],
+    colors: ["White"],
   },
   {
     title: "SG Test Thigh Guard",
@@ -173,12 +259,16 @@ const seedProducts = [
     category: "pads",
     brand: "sg",
     image: "images/thighpad.png",
+    images: ["images/thighpad.png"],
     rating: 4,
     reviews: 71,
     description: "Standard pre-shaped thigh guard with soft towel backing.",
+    stock: 40,
+    sizes: ["Standard"],
+    colors: ["White"],
   },
 
-  // --- GLOVES ---
+  // --- GLOVES (4 Products) ---
   {
     title: "BAS Vampire Batting Gloves",
     price: 1999,
@@ -186,11 +276,15 @@ const seedProducts = [
     category: "gloves",
     brand: "bas",
     image: "images/gloves.png",
+    images: ["images/gloves.png"],
     rating: 5,
     reviews: 145,
     isBestSeller: true,
     description:
       "Super soft sheep leather palm with sausage finger protection.",
+    stock: 30,
+    sizes: ["Youth", "Adult"],
+    colors: ["White/Red"],
   },
   {
     title: "Kookaburra Pro Keeper Gloves",
@@ -199,10 +293,14 @@ const seedProducts = [
     category: "gloves",
     brand: "kookaburra",
     image: "images/kgloves.png",
+    images: ["images/kgloves.png"],
     rating: 4.5,
     reviews: 84,
     isNewArrival: true,
     description: "Short cuff design with octopus grip for superior catching.",
+    stock: 10,
+    sizes: ["Adult"],
+    colors: ["Green/White"],
   },
   {
     title: "SS Millenium Pro Gloves",
@@ -211,12 +309,31 @@ const seedProducts = [
     category: "gloves",
     brand: "ss",
     image: "images/ssmgloves.png",
+    images: ["images/ssmgloves.png"],
     rating: 4.6,
     reviews: 40,
     description: "Multi-flex points for unrestricted hand movement.",
+    stock: 20,
+    sizes: ["Boys", "Adult"],
+    colors: ["Blue/White"],
+  },
+  {
+    title: "SG Savage Lite Gloves",
+    price: 1500,
+    originalPrice: 1999,
+    category: "gloves",
+    brand: "sg",
+    image: "images/sgggloves.png",
+    images: ["images/sgggloves.png"],
+    rating: 4.2,
+    reviews: 60,
+    description: "Lightweight gloves for club cricket.",
+    stock: 0, // OUT OF STOCK TEST
+    sizes: ["Adult"],
+    colors: ["White"],
   },
 
-  // --- HELMETS ---
+  // --- HELMETS (3 Products) ---
   {
     title: "SG Aerotech Helmet",
     price: 3499,
@@ -224,9 +341,13 @@ const seedProducts = [
     category: "helmets",
     brand: "sg",
     image: "images/helmet.png",
+    images: ["images/helmet.png"],
     rating: 4.5,
     reviews: 67,
     description: "High impact polypropylene shell with sweat absorbent lining.",
+    stock: 12,
+    sizes: ["S", "M", "L"],
+    colors: ["Navy", "Black"],
   },
   {
     title: "Shrey Master Class Air",
@@ -235,13 +356,32 @@ const seedProducts = [
     category: "helmets",
     brand: "shrey",
     image: "images/shhelmet.png",
+    images: ["images/shhelmet.png"],
     rating: 4.9,
     reviews: 45,
     isNewArrival: true,
     description: "Lightweight titanium grille. Choice of international pros.",
+    stock: 5,
+    sizes: ["M", "L", "XL"],
+    colors: ["Green", "Navy", "Yellow"],
+  },
+  {
+    title: "Masuri Legacy Helmet",
+    price: 4500,
+    originalPrice: 5500,
+    category: "helmets",
+    brand: "masuri",
+    image: "images/mhelmets.png",
+    images: ["images/mhelmets.png"],
+    rating: 4.8,
+    reviews: 30,
+    description: "Traditional cloth covered helmet with steel grille.",
+    stock: 8,
+    sizes: ["M", "L"],
+    colors: ["Navy"],
   },
 
-  // --- SHOES ---
+  // --- SHOES (3 Products) ---
   {
     title: "Kookaburra KC 2.0 Spikes",
     price: 4999,
@@ -249,10 +389,14 @@ const seedProducts = [
     category: "shoes",
     brand: "kookaburra",
     image: "images/shoes.png",
+    images: ["images/shoes.png"],
     rating: 4,
     reviews: 98,
     description:
       "Durable spikes for turf wickets with excellent ankle support.",
+    stock: 15,
+    sizes: ["UK 7", "UK 8", "UK 9", "UK 10"],
+    colors: ["White/Green"],
   },
   {
     title: "Adidas Vector Mid",
@@ -261,9 +405,13 @@ const seedProducts = [
     category: "shoes",
     brand: "adidas",
     image: "images/ashoes.png",
+    images: ["images/ashoes.png"],
     rating: 5,
     reviews: 120,
     description: "Premium bowling spikes used by fast bowlers worldwide.",
+    stock: 4,
+    sizes: ["UK 8", "UK 9", "UK 10", "UK 11"],
+    colors: ["White/Blue"],
   },
   {
     title: "Asics Gel Peake Rubber",
@@ -272,12 +420,16 @@ const seedProducts = [
     category: "shoes",
     brand: "asics",
     image: "images/asicshoes.png",
+    images: ["images/asicshoes.png"],
     rating: 4.8,
     reviews: 65,
     description: "Rubber studs perfect for hard wickets and artificial turf.",
+    stock: 10,
+    sizes: ["UK 7", "UK 8", "UK 9", "UK 10"],
+    colors: ["White/Black"],
   },
 
-  // --- BAGS ---
+  // --- BAGS & KITS (3 Products) ---
   {
     title: "SG Teampak Wheelie Bag",
     price: 3999,
@@ -285,70 +437,14 @@ const seedProducts = [
     category: "bags",
     brand: "sg",
     image: "images/bags.png",
+    images: ["images/bags.png"],
     rating: 5,
     reviews: 112,
     description: "Large capacity wheelie bag. Fits pads, bats, and helmet.",
+    stock: 20,
+    sizes: ["Standard"],
+    colors: ["Blue/Black"],
   },
-  {
-    title: "SS Duffle Bag Pro",
-    price: 2499,
-    originalPrice: 3299,
-    category: "bags",
-    brand: "ss",
-    image: "images/duffle.jpg",
-    rating: 4.4,
-    reviews: 88,
-    isBestSeller: true,
-    description: "Modern backpack style duffle bag with shoe compartment.",
-  },
-  {
-    title: "Kookaburra Pro Players Bag",
-    price: 6999,
-    originalPrice: 8500,
-    category: "bags",
-    brand: "kookaburra",
-    image: "images/kbags.png",
-    reviews: 25,
-    description: "Heavy duty coffin bag for professional players.",
-  },
-
-  // --- ACCESSORIES ---
-  {
-    title: "Premium Wooden Stumps",
-    price: 799,
-    originalPrice: 999,
-    category: "accessories",
-    brand: "sg",
-    image: "images/stumps.png",
-    rating: 4,
-    reviews: 67,
-    description: "Seasoned wooden stumps set with bails.",
-  },
-  {
-    title: "Premium Bat Grips (3 Pack)",
-    price: 299,
-    originalPrice: 450,
-    category: "accessories",
-    brand: "sg",
-    image: "images/grips.png",
-    rating: 5,
-    reviews: 234,
-    isBestSeller: true,
-    description: "High traction octopus grips in assorted colors.",
-  },
-  {
-    title: "Fiber Tape",
-    price: 150,
-    originalPrice: 200,
-    category: "accessories",
-    brand: "generic",
-    image: "images/tape.jpg",
-    rating: 4.2,
-    reviews: 110,
-    description: "Strong fiber tape for bat repair and protection.",
-  },
-
-  // --- KITS ---
   {
     title: "BAS Players Complete Kit",
     price: 12999,
@@ -356,10 +452,14 @@ const seedProducts = [
     category: "kits",
     brand: "bas",
     image: "images/baskit.png",
+    images: ["images/baskit.png", "images/kbags.png"],
     rating: 4.5,
     reviews: 89,
     isNewArrival: true,
     description: "Full kit including Bat, Pads, Gloves, Helmet, and Bag.",
+    stock: 2,
+    sizes: ["Adult", "Youth"],
+    colors: ["Multicolor"],
   },
   {
     title: "SG Junior Cricket Kit",
@@ -368,14 +468,18 @@ const seedProducts = [
     category: "kits",
     brand: "sg",
     image: "images/junior.png",
+    images: ["images/junior.png"],
     rating: 4.8,
     reviews: 210,
     description:
       "Perfect starter kit for ages 10-14. Includes Kashmir willow bat.",
+    stock: 5,
+    sizes: ["Size 4", "Size 5", "Size 6"],
+    colors: ["Blue/Orange"],
   },
 ];
 
-// 2. Schema
+// Define Schema (Must match products.js)
 const productSchema = new mongoose.Schema({
   title: String,
   price: Number,
@@ -383,17 +487,23 @@ const productSchema = new mongoose.Schema({
   category: String,
   brand: String,
   image: String,
+
+  // NEW FIELDS
+  images: [String],
   rating: { type: Number, default: 4.5 },
   reviews: { type: Number, default: 0 },
   description: String,
   isNewArrival: { type: Boolean, default: false },
   isBestSeller: { type: Boolean, default: false },
+  stock: { type: Number, default: 10 },
+  inStock: { type: Boolean, default: true },
+  sizes: [String],
+  colors: [String],
 });
 
 const Product =
   mongoose.models.Product || mongoose.model("Product", productSchema);
 
-// 3. The Handler
 module.exports = async (req, res) => {
   try {
     if (!process.env.MONGO_URI) throw new Error("MONGO_URI missing");
@@ -405,7 +515,7 @@ module.exports = async (req, res) => {
 
     res
       .status(200)
-      .json({ message: "✅ Database successfully filled with products!" });
+      .json({ message: "✅ Database successfully seeded with 30 items!" });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: error.message });
