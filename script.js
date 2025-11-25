@@ -1712,51 +1712,27 @@ function closeOrdersModal() {
     modal.style.display = "none";
   }
 }
-
 function updateAccountUI() {
   const user = getUser();
   const accountName = document.querySelector(".user-btn span");
   const accountMenu = document.querySelector(".account-menu");
-  const accountDropdown = document.querySelector(".account-dropdown");
 
   if (!accountName || !accountMenu) return;
 
-  accountMenu.innerHTML = "";
-
+  // Just update the visual text/HTML. 
+  // We DO NOT attach event listeners here anymore. We use Delegation (see below).
   if (user) {
     accountName.textContent = user.name.split(" ")[0];
     accountMenu.innerHTML = `
-      <a href="#" id="my-orders-link">My Orders</a>
-      <a href="#" id="logout-link">Logout</a>
+      <a href="#" class="auth-action" data-action="orders">My Orders</a>
+      <a href="#" class="auth-action" data-action="logout">Logout</a>
     `;
-    document
-      .getElementById("my-orders-link")
-      ?.addEventListener("click", (e) => {
-        e.preventDefault();
-        openOrdersModal();
-        accountDropdown?.classList.remove("active");
-      });
-    document.getElementById("logout-link")?.addEventListener("click", (e) => {
-      e.preventDefault();
-      logoutUser();
-      accountDropdown?.classList.remove("active");
-    });
   } else {
     accountName.textContent = "Account";
     accountMenu.innerHTML = `
-      <a href="#" id="login-link">Login</a>
-      <a href="#" id="signup-link">Sign Up</a>
+      <a href="#" class="auth-action" data-action="login">Login</a>
+      <a href="#" class="auth-action" data-action="signup">Sign Up</a>
     `;
-    document.getElementById("login-link")?.addEventListener("click", (e) => {
-      e.preventDefault();
-      openAuthModal("login");
-      accountDropdown?.classList.remove("active");
-    });
-    document.getElementById("signup-link")?.addEventListener("click", (e) => {
-      e.preventDefault();
-      openAuthModal("signup");
-      accountDropdown?.classList.remove("active");
-    });
   }
 }
 
@@ -1939,24 +1915,42 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
 
+
+// --- ROBUST ACCOUNT & MENU LOGIC (Event Delegation) ---
   const accountDropdown = document.querySelector(".account-dropdown");
   const accountBtn = document.getElementById("account-btn");
+  const accountMenu = document.querySelector(".account-menu");
 
-  if (accountBtn && accountDropdown) {
+  if (accountBtn && accountDropdown && accountMenu) {
+    // 1. Toggle Menu on Click
     accountBtn.addEventListener("click", (e) => {
       e.preventDefault();
       e.stopPropagation();
-      
-      // *** FIX APPLIED HERE: Ensures the UI updates to show Login/Logout based on status ***
-      updateAccountUI(); 
-      
+      updateAccountUI(); // Refresh content state
       accountDropdown.classList.toggle("active");
     });
+
+    // 2. EVENT DELEGATION: Handle ALL menu clicks here
+    // This works even if the HTML inside accountMenu is replaced!
+    accountMenu.addEventListener("click", (e) => {
+      if (e.target.classList.contains("auth-action")) {
+        e.preventDefault();
+        const action = e.target.getAttribute("data-action");
+
+        // Route to the correct function
+        if (action === "login") openAuthModal("login");
+        if (action === "signup") openAuthModal("signup");
+        if (action === "orders") openOrdersModal();
+        if (action === "logout") logoutUser();
+
+        // Close dropdown after selection
+        accountDropdown.classList.remove("active");
+      }
+    });
+
+    // 3. Close Menu when clicking outside
     document.addEventListener("click", (e) => {
-      if (
-        !accountDropdown.contains(e.target) &&
-        accountDropdown.classList.contains("active")
-      ) {
+      if (!accountDropdown.contains(e.target) && !accountBtn.contains(e.target)) {
         accountDropdown.classList.remove("active");
       }
     });
