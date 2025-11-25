@@ -6,12 +6,28 @@ const cors = require("cors");
 const userSchema = new mongoose.Schema({
   name: { type: String, required: true },
   email: { type: String, required: true, unique: true },
-  password: { type: String, required: true }, // This will store the HASH, not plain text
-  // ADD THESE TWO FIELDS
+  password: { type: String, required: true },
   resetPasswordToken: String,
   resetPasswordExpires: Date,
-  // END ADD
   createdAt: { type: Date, default: Date.now },
+  addresses: [
+    {
+      street: String,
+      city: String,
+      state: String,
+      zip: String,
+      country: String,
+      isDefault: { type: Boolean, default: false },
+    },
+  ],
+  wishlist: [
+    {
+      title: String,
+      price: Number,
+      image: String,
+    },
+  ],
+  recentlyViewed: [String],
 });
 
 // Prevent model recompilation error

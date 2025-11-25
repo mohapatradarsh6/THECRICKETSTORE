@@ -6,9 +6,27 @@ const userSchema = new mongoose.Schema({
   name: { type: String, required: true },
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
-  resetPasswordToken: String, // <-- NEW: Field to store the temporary token
-  resetPasswordExpires: Date, // <-- NEW: Field to store token expiry time
+  resetPasswordToken: String,
+  resetPasswordExpires: Date,
   createdAt: { type: Date, default: Date.now },
+  addresses: [
+    {
+      street: String,
+      city: String,
+      state: String,
+      zip: String,
+      country: String,
+      isDefault: { type: Boolean, default: false },
+    },
+  ],
+  wishlist: [
+    {
+      title: String,
+      price: Number,
+      image: String,
+    },
+  ],
+  recentlyViewed: [String],
 });
 
 // IMPORTANT: Do not re-define User if it already exists

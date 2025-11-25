@@ -2,16 +2,32 @@ const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 
-// 1. Re-define User Schema (Must match register.js)
+// 1. define User Schema (Must match register.js)
 const userSchema = new mongoose.Schema({
   name: { type: String, required: true },
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
-  // ADD THESE TWO FIELDS
   resetPasswordToken: String,
   resetPasswordExpires: Date,
-  // END ADD
   createdAt: { type: Date, default: Date.now },
+  addresses: [
+    {
+      street: String,
+      city: String,
+      state: String,
+      zip: String,
+      country: String,
+      isDefault: { type: Boolean, default: false },
+    },
+  ],
+  wishlist: [
+    {
+      title: String,
+      price: Number,
+      image: String,
+    },
+  ],
+  recentlyViewed: [String],
 });
 
 const User = mongoose.models.User || mongoose.model("User", userSchema);
