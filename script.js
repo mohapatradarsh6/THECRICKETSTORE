@@ -39,7 +39,14 @@ class CartManager {
     this.updateWishlistUI();
   }
 
+  // UPDATED: Validates stock before adding
   addToCart(product, quantity = 1) {
+    // Check for stock limit (simple client-side check)
+    if (product.stock !== undefined && product.stock < quantity) {
+      this.showToast(`Sorry, only ${product.stock} items in stock!`, "error");
+      return;
+    }
+
     const existingItem = this.cart.find((item) => item.title === product.title);
     const price = parseFloat(product.price) || 0;
 
@@ -50,6 +57,9 @@ class CartManager {
         ...product,
         price: price,
         quantity: quantity,
+        // Store selected variants if passed
+        selectedSize: product.selectedSize || null,
+        selectedColor: product.selectedColor || null,
       });
     }
 
@@ -151,6 +161,10 @@ class CartManager {
           <div class="cart-item-price">₹${parseFloat(item.price).toFixed(
             2
           )}</div>
+          <div class="cart-item-details" style="font-size:0.8rem; color:#666">
+             ${item.selectedSize ? `Size: ${item.selectedSize}` : ""} 
+             ${item.selectedColor ? `| Color: ${item.selectedColor}` : ""}
+          </div>
           <div class="cart-item-quantity">
             <button class="qty-btn" onclick="window.cartManager.updateQuantity('${item.title.replace(
               /'/g,
@@ -357,16 +371,15 @@ class ProductManager {
   createProductCard(product) {
     const card = document.createElement("div");
     card.className = "product-card";
+
+    // Store core data
     card.setAttribute("data-title", product.title);
     card.setAttribute("data-price", product.price);
-    card.setAttribute("data-category", product.category);
-    card.setAttribute("data-brand", product.brand);
+    // Store full object stringified for easier variant access later
+    card.setAttribute("data-product", JSON.stringify(product));
 
     let ratingHTML = '<div class="stars"><i class="fas fa-star"></i></div>';
-    if (
-      window.cartManager &&
-      typeof window.cartManager.generateRatingHTML === "function"
-    ) {
+    if (window.cartManager?.generateRatingHTML) {
       ratingHTML = window.cartManager.generateRatingHTML(product.rating || 4.5);
     }
 
@@ -378,10 +391,25 @@ class ProductManager {
       discountBadge = `<span class="price-discount">-${percent}%</span>`;
     }
 
+    // --- INVENTORY LOGIC ---
+    const isOutOfStock = product.stock !== undefined && product.stock <= 0;
+    const stockBadge = isOutOfStock
+      ? `<div class="product-badge" style="background:#666">Sold Out</div>`
+      : product.isBestSeller
+      ? `<div class="product-badge">Bestseller</div>`
+      : product.isNewArrival
+      ? `<div class="product-badge" style="background:var(--accent-color)">New</div>`
+      : "";
+
+    // Button state
+    const btnState = isOutOfStock
+      ? 'disabled style="background:#ccc; cursor:not-allowed;"'
+      : "";
+    const btnText = isOutOfStock ? "Out of Stock" : "Add to Cart";
+    const buyBtnState = isOutOfStock ? 'disabled style="display:none"' : "";
+
     card.innerHTML = `
-      <div class="product-badge">${
-        product.isBestSeller ? "Bestseller" : product.isNewArrival ? "New" : ""
-      }</div>
+      ${stockBadge}
       <div class="product-image-wrapper">
         <img class="product-image" src="${product.image}" alt="${
       product.title
@@ -394,9 +422,6 @@ class ProductManager {
         <div class="product-brand">${product.brand}</div>
         <h3 class="product-title">${product.title}</h3>
         <div class="product-rating">${ratingHTML}</div>
-        <p class="product-description" style="display:none;">${
-          product.description || ""
-        }</p>
         <div class="product-price">
           <span class="price-current">₹${product.price}</span>
           ${
@@ -408,16 +433,11 @@ class ProductManager {
         </div>
         <div class="product-actions">
           <button class="btn-wishlist"><i class="far fa-heart"></i></button>
-          <button class="btn-add-cart">Add to Cart</button>
-          <button class="btn-buy-now">Buy Now</button>
+          <button class="btn-add-cart" ${btnState}>${btnText}</button>
+          <button class="btn-buy-now" ${buyBtnState}>Buy Now</button>
         </div>
       </div>
     `;
-
-    if (!product.isBestSeller && !product.isNewArrival) {
-      const badge = card.querySelector(".product-badge");
-      if (badge) badge.style.display = "none";
-    }
 
     return card;
   }
@@ -425,13 +445,13 @@ class ProductManager {
   attachCardListeners(container) {
     container.querySelectorAll(".btn-add-cart").forEach((btn) => {
       btn.addEventListener("click", () => {
+        if (btn.disabled) return; // Prevent click if OOS
+
         const card = btn.closest(".product-card");
-        const product = {
-          title: card.getAttribute("data-title"),
-          price: card.getAttribute("data-price"),
-          image: card.querySelector(".product-image").src,
-        };
-        window.cartManager.addToCart(product);
+        // Parse the full product object we saved
+        const productData = JSON.parse(card.getAttribute("data-product"));
+
+        window.cartManager.addToCart(productData);
       });
     });
 
@@ -439,23 +459,20 @@ class ProductManager {
       btn.addEventListener("click", (e) => {
         e.stopPropagation();
         const card = btn.closest(".product-card");
-        const product = {
-          title: card.getAttribute("data-title"),
-          price: card.getAttribute("data-price"),
-        };
-        window.cartManager.toggleWishlist(product);
+        const productData = JSON.parse(card.getAttribute("data-product"));
+        window.cartManager.toggleWishlist(productData);
       });
     });
 
     container.querySelectorAll(".btn-buy-now").forEach((btn) => {
       btn.addEventListener("click", () => {
+        if (btn.disabled) return;
         const card = btn.closest(".product-card");
-        const product = {
-          title: card.getAttribute("data-title"),
-          price: parseFloat(card.getAttribute("data-price")),
-          quantity: 1,
-        };
-        openPaymentModal([product]);
+        const productData = JSON.parse(card.getAttribute("data-product"));
+
+        // Add qty 1 for instant checkout
+        productData.quantity = 1;
+        openPaymentModal([productData]);
       });
     });
 
@@ -463,7 +480,10 @@ class ProductManager {
       btn.addEventListener("click", (e) => {
         e.stopPropagation();
         const card = btn.closest(".product-card");
-        if (window.quickViewModal) window.quickViewModal.showQuickView(card);
+        // We pass the FULL product object now to support variants
+        const productData = JSON.parse(card.getAttribute("data-product"));
+        if (window.quickViewModal)
+          window.quickViewModal.showQuickView(productData);
       });
     });
   }
@@ -541,6 +561,7 @@ class QuickViewModal {
   constructor() {
     this.modal = document.getElementById("quick-view-modal");
     this.initializeQuickView();
+    this.currentProduct = null;
   }
 
   initializeQuickView() {
@@ -569,24 +590,67 @@ class QuickViewModal {
     }
   }
 
-  showQuickView(productCard) {
+  // UPDATED: Accepts full product object
+  showQuickView(product) {
     if (!this.modal) return;
-    const title = productCard.getAttribute("data-title");
-    const price = productCard.getAttribute("data-price");
-    const image = productCard.querySelector(".product-image").src;
-    const desc = productCard.querySelector(".product-description")?.textContent;
-    const rating = productCard.querySelector(".product-rating")?.innerHTML;
+    this.currentProduct = product;
 
-    this.modal.querySelector("#quick-view-title").textContent = title;
-    this.modal.querySelector("#quick-view-img").src = image;
-    this.modal.querySelector("#quick-view-description").textContent = desc;
+    // Populate Basic Info
+    this.modal.querySelector("#quick-view-title").textContent = product.title;
+    this.modal.querySelector("#quick-view-img").src = product.image;
+    this.modal.querySelector("#quick-view-description").textContent =
+      product.description || "No description.";
     this.modal.querySelector(
       "#quick-view-price"
-    ).innerHTML = `<span class="price-current">₹${price}</span>`;
-    if (this.modal.querySelector("#quick-view-rating")) {
-      this.modal.querySelector("#quick-view-rating").innerHTML = rating || "";
+    ).innerHTML = `<span class="price-current">₹${product.price}</span>`;
+
+    // --- NEW: Variants Logic (Sizes & Colors) ---
+    const detailsContainer = this.modal.querySelector(".quick-view-details");
+
+    // Remove old selectors if any
+    const oldSelectors = detailsContainer.querySelectorAll(".variant-group");
+    oldSelectors.forEach((el) => el.remove());
+
+    let stockHTML = "";
+    if (product.stock !== undefined) {
+      const stockColor = product.stock > 0 ? "green" : "red";
+      const stockText =
+        product.stock > 0 ? `In Stock (${product.stock})` : "Out of Stock";
+      stockHTML = `<div style="color:${stockColor}; font-weight:600; margin:10px 0;">${stockText}</div>`;
     }
 
+    // Create Variant Selectors HTML
+    let variantsHTML = stockHTML;
+
+    if (product.sizes && product.sizes.length > 0) {
+      variantsHTML += `
+        <div class="variant-group" style="margin:10px 0;">
+            <strong>Size:</strong> 
+            <select id="qv-size" style="padding:5px; margin-left:5px;">
+                ${product.sizes
+                  .map((s) => `<option value="${s}">${s}</option>`)
+                  .join("")}
+            </select>
+        </div>`;
+    }
+
+    if (product.colors && product.colors.length > 0) {
+      variantsHTML += `
+        <div class="variant-group" style="margin:10px 0;">
+            <strong>Color:</strong> 
+            <select id="qv-color" style="padding:5px; margin-left:5px;">
+                ${product.colors
+                  .map((c) => `<option value="${c}">${c}</option>`)
+                  .join("")}
+            </select>
+        </div>`;
+    }
+
+    // Insert before price
+    const priceEl = this.modal.querySelector("#quick-view-price");
+    priceEl.insertAdjacentHTML("beforebegin", variantsHTML);
+
+    // Button Logic
     const addToCartBtn = this.modal.querySelector(".btn-add-cart-modal");
     const qtyInput = this.modal.querySelector(".qty-input");
     if (qtyInput) qtyInput.value = 1;
@@ -595,11 +659,31 @@ class QuickViewModal {
       const newBtn = addToCartBtn.cloneNode(true);
       addToCartBtn.parentNode.replaceChild(newBtn, addToCartBtn);
 
-      newBtn.addEventListener("click", () => {
-        const quantity = parseInt(qtyInput?.value || 1);
-        window.cartManager.addToCart({ title, price }, quantity);
-        this.closeModal();
-      });
+      if (product.stock <= 0) {
+        newBtn.disabled = true;
+        newBtn.textContent = "Out of Stock";
+        newBtn.style.background = "#ccc";
+      } else {
+        newBtn.disabled = false;
+        newBtn.textContent = "Add to Cart";
+        newBtn.style.background = ""; // Reset to CSS default
+
+        newBtn.addEventListener("click", () => {
+          const quantity = parseInt(qtyInput?.value || 1);
+          // Capture selected variants
+          const sizeSelect = this.modal.querySelector("#qv-size");
+          const colorSelect = this.modal.querySelector("#qv-color");
+
+          const productToAdd = {
+            ...product,
+            selectedSize: sizeSelect ? sizeSelect.value : null,
+            selectedColor: colorSelect ? colorSelect.value : null,
+          };
+
+          window.cartManager.addToCart(productToAdd, quantity);
+          this.closeModal();
+        });
+      }
     }
 
     this.modal.style.display = "flex";
@@ -879,7 +963,6 @@ function closeAuthModal() {
   if (modal) modal.style.display = "none";
 }
 
-// 2. UPDATED: Fetch Real Orders from DB
 async function openOrdersModal() {
   const user = getUser();
   if (!user) {
@@ -887,7 +970,6 @@ async function openOrdersModal() {
     return;
   }
 
-  // Create/Get Modal
   let modal = document.getElementById("orders-modal");
   if (!modal) {
     modal = document.createElement("div");
@@ -906,7 +988,6 @@ async function openOrdersModal() {
     `;
     document.body.appendChild(modal);
 
-    // Add close listeners
     modal
       .querySelector("#close-orders-modal")
       .addEventListener("click", closeOrdersModal);
@@ -918,7 +999,6 @@ async function openOrdersModal() {
   modal.style.display = "flex";
   const modalBody = document.getElementById("orders-modal-body");
 
-  // Fetch Data
   try {
     const token = localStorage.getItem("authToken");
     const res = await fetch("/api/orders", {
@@ -1005,13 +1085,12 @@ document.addEventListener("DOMContentLoaded", () => {
   window.quickViewModal = new QuickViewModal();
   window.heroCarousel = new HeroCarousel();
 
-  // --- Account Dropdown Logic (Event Delegation) ---
+  // --- Account Dropdown Logic ---
   const accountDropdown = document.querySelector(".account-dropdown");
   const accountBtn = document.getElementById("account-btn");
   const accountMenu = document.querySelector(".account-menu");
 
   if (accountBtn && accountDropdown && accountMenu) {
-    // Toggle Menu
     accountBtn.addEventListener("click", (e) => {
       e.preventDefault();
       e.stopPropagation();
@@ -1019,7 +1098,6 @@ document.addEventListener("DOMContentLoaded", () => {
       accountDropdown.classList.toggle("active");
     });
 
-    // Handle Clicks on Login/Signup/Logout (Delegation)
     accountMenu.addEventListener("click", (e) => {
       if (e.target.classList.contains("auth-action")) {
         e.preventDefault();
@@ -1034,7 +1112,6 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
 
-    // Close when clicking outside
     document.addEventListener("click", (e) => {
       if (
         !accountDropdown.contains(e.target) &&
@@ -1070,7 +1147,7 @@ document.addEventListener("DOMContentLoaded", () => {
       openAuthModal("login");
     });
 
-  // --- Login Form Submission ---
+  // --- Login ---
   document
     .getElementById("login-form")
     ?.addEventListener("submit", async (e) => {
@@ -1107,7 +1184,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
 
-  // --- Signup Form Submission ---
+  // --- Signup ---
   document
     .getElementById("signup-form")
     ?.addEventListener("submit", async (e) => {
@@ -1144,7 +1221,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
 
-  // --- Forgot Password Submission ---
+  // --- Forgot Password ---
   document
     .getElementById("forgot-password-form")
     ?.addEventListener("submit", async (e) => {
@@ -1174,6 +1251,18 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
 
+  // --- NEW: View Cart Button Logic ---
+  const viewCartBtn = document.getElementById("view-cart-btn");
+  if (viewCartBtn) {
+    viewCartBtn.addEventListener("click", () => {
+      if (window.cartManager.cart.length === 0) {
+        window.cartManager.showToast("Your cart is empty!", "warning");
+        return;
+      }
+      openPaymentModal(window.cartManager.cart);
+    });
+  }
+
   // Mobile Nav Logic
   const mobileNav = document.getElementById("mobile-nav");
   const mobileMenuToggle = document.getElementById("mobile-menu-toggle");
@@ -1199,7 +1288,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Mobile Dropdowns
   document.querySelectorAll(".mobile-dropdown-toggle").forEach((toggle) => {
     toggle.addEventListener("click", (e) => {
       e.preventDefault();
@@ -1207,7 +1295,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
-  // Update UI on load
   updateAccountUI();
 });
 
@@ -1239,8 +1326,7 @@ function openPaymentModal(items) {
   paymentRadios.forEach((radio) => {
     radio.addEventListener("change", updatePaymentForms);
   });
-  updatePaymentForms(); // Run once on open
-  // -----------------------------
+  updatePaymentForms();
 
   paymentItems.innerHTML = items
     .map(
@@ -1253,31 +1339,28 @@ function openPaymentModal(items) {
     )
     .join("");
 
-  // Calc total for display
-  const subtotal = items.reduce(
+  const total = items.reduce(
     (sum, item) => sum + item.price * item.quantity,
     0
   );
+  const subtotal = total;
   const shipping = subtotal > 2000 ? 0 : 150;
   const tax = subtotal * 0.18;
-  const total = subtotal + shipping + tax;
+  const finalTotal = subtotal + shipping + tax;
 
-  if (paymentTotal) paymentTotal.textContent = total.toFixed(2);
+  if (paymentTotal) paymentTotal.textContent = finalTotal.toFixed(2);
 
-  // Update summary in modal
+  // Update summary
   const elSub = document.getElementById("payment-subtotal");
   const elShip = document.getElementById("payment-shipping");
   const elTax = document.getElementById("payment-tax");
-  const elTot = document.getElementById("payment-total");
 
   if (elSub) elSub.textContent = subtotal.toFixed(2);
   if (elShip) elShip.textContent = shipping.toFixed(2);
   if (elTax) elTax.textContent = tax.toFixed(2);
-  if (elTot) elTot.textContent = total.toFixed(2);
 
   modal.style.display = "flex";
 
-  // Listeners
   const closeBtn = modal.querySelector(".close");
   const newCloseBtn = closeBtn.cloneNode(true);
   closeBtn.parentNode.replaceChild(newCloseBtn, closeBtn);
@@ -1292,7 +1375,6 @@ function openPaymentModal(items) {
   const newPayNowBtn = payNowBtn.cloneNode(true);
   payNowBtn.parentNode.replaceChild(newPayNowBtn, payNowBtn);
 
-  // 3. UPDATED: Send Order to API
   newPayNowBtn.addEventListener("click", async () => {
     const user = getUser();
     if (!user) {
@@ -1302,7 +1384,6 @@ function openPaymentModal(items) {
       return;
     }
 
-    // --- VALIDATION LOGIC ---
     const selectedMethod = modal.querySelector(
       'input[name="payment"]:checked'
     ).value;
@@ -1321,7 +1402,6 @@ function openPaymentModal(items) {
       }
     }
 
-    // --- SEND TO API ---
     try {
       newPayNowBtn.textContent = "Processing...";
       newPayNowBtn.disabled = true;
@@ -1338,7 +1418,7 @@ function openPaymentModal(items) {
           subtotal,
           shipping,
           tax,
-          total,
+          total: finalTotal,
           paymentMethod: selectedMethod,
         }),
       });
