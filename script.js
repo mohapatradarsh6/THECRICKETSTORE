@@ -224,21 +224,18 @@ class CartManager {
     }, 3000);
   }
 
-  // In class CartManager
+  // Helper to generate star icons
   generateRatingHTML(rating) {
     const fullStars = Math.floor(rating);
     const hasHalfStar = rating % 1 !== 0;
     let html = '<div class="stars" style="color: #ffc107; font-size: 0.8rem;">';
 
-    // Add full stars
     for (let i = 0; i < fullStars; i++) {
       html += '<i class="fas fa-star"></i>';
     }
-    // Add half star if needed
     if (hasHalfStar) {
       html += '<i class="fas fa-star-half-alt"></i>';
     }
-    // Fill remaining with empty stars
     const emptyStars = 5 - Math.ceil(rating);
     for (let i = 0; i < emptyStars; i++) {
       html += '<i class="far fa-star"></i>';
@@ -343,12 +340,10 @@ class ProductManager {
     }
   }
 
-  // 1. CHANGED: Now delegates to Pagination instead of rendering all
   renderProductCards() {
     if (window.productPagination) {
       window.productPagination.updateProducts(this.filteredProducts);
     } else {
-      // Fallback if pagination missing
       const container = document.getElementById("products-container");
       if (!container) return;
       container.innerHTML = "";
@@ -359,7 +354,6 @@ class ProductManager {
     }
   }
 
-  // 2. NEW: Helper function required by ProductPagination
   createProductCard(product) {
     const card = document.createElement("div");
     card.className = "product-card";
@@ -412,10 +406,11 @@ class ProductManager {
           }
           ${discountBadge}
         </div>
-      <div class="product-actions">
+        <div class="product-actions">
           <button class="btn-wishlist"><i class="far fa-heart"></i></button>
           <button class="btn-add-cart">Add to Cart</button>
-          <button class="btn-buy-now">Buy Now</button> </div>
+          <button class="btn-buy-now">Buy Now</button>
+        </div>
       </div>
     `;
 
@@ -460,7 +455,6 @@ class ProductManager {
           price: parseFloat(card.getAttribute("data-price")),
           quantity: 1,
         };
-        // Open checkout immediately
         openPaymentModal([product]);
       });
     });
@@ -541,6 +535,7 @@ class ProductManager {
     this.renderProductCards();
   }
 }
+
 // --- 3. Quick View Modal ---
 class QuickViewModal {
   constructor() {
@@ -675,7 +670,7 @@ class HeroCarousel {
 class ProductPagination {
   constructor() {
     this.currentPage = 1;
-    this.productsPerPage = 6; // Set to 6 as requested
+    this.productsPerPage = 6;
     this.currentProducts = [];
   }
 
@@ -697,7 +692,6 @@ class ProductPagination {
     const productsToShow = this.currentProducts.slice(startIndex, endIndex);
 
     productsToShow.forEach((product) => {
-      // Use the existing card generation logic from ProductManager
       if (window.productManager) {
         container.appendChild(window.productManager.createProductCard(product));
       }
@@ -707,7 +701,6 @@ class ProductPagination {
       window.productManager.attachCardListeners(container);
     }
 
-    // Scroll to top of products
     const productsSection = document.querySelector(".products-section");
     if (productsSection && this.currentPage > 1) {
       productsSection.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -728,7 +721,6 @@ class ProductPagination {
 
     const paginationWrapper = document.createElement("div");
     paginationWrapper.className = "pagination-wrapper";
-    // Add centering styles directly here to be safe
     paginationWrapper.style.display = "flex";
     paginationWrapper.style.justifyContent = "center";
     paginationWrapper.style.alignItems = "center";
@@ -736,12 +728,10 @@ class ProductPagination {
     paginationWrapper.style.marginTop = "40px";
     paginationWrapper.style.gridColumn = "1 / -1";
 
-    // Prev Button
     const prevBtn = document.createElement("button");
     prevBtn.className = "btn-secondary pagination-btn";
     prevBtn.innerHTML = '<i class="fas fa-chevron-left"></i> Prev';
 
-    // HIDE if on page 1
     if (this.currentPage === 1) {
       prevBtn.style.visibility = "hidden";
     }
@@ -754,12 +744,10 @@ class ProductPagination {
       }
     });
 
-    // Next Button
     const nextBtn = document.createElement("button");
     nextBtn.className = "btn-secondary pagination-btn";
     nextBtn.innerHTML = 'Next <i class="fas fa-chevron-right"></i>';
 
-    // HIDE if on last page
     if (this.currentPage === totalPages) {
       nextBtn.style.visibility = "hidden";
     }
@@ -772,7 +760,6 @@ class ProductPagination {
       }
     });
 
-    // Page Info
     const pageInfo = document.createElement("span");
     pageInfo.innerText = `Page ${this.currentPage} of ${totalPages}`;
     pageInfo.style.fontWeight = "600";
@@ -784,6 +771,7 @@ class ProductPagination {
     container.parentNode.insertBefore(paginationWrapper, container.nextSibling);
   }
 }
+
 // ====================================================================
 // AUTHENTICATION LOGIC
 // ====================================================================
@@ -852,7 +840,6 @@ function openAuthModal(mode = "login") {
     signupForm?.reset();
     forgotForm?.reset();
 
-    // Reset visibility
     loginForm?.classList.remove("active");
     signupForm?.classList.remove("active");
     forgotForm?.classList.remove("active");
@@ -873,12 +860,10 @@ function openAuthModal(mode = "login") {
   }
 }
 
-// --- FIXED FUNCTION ---
 function openForgotPasswordForm() {
   document.getElementById("login-form")?.classList.remove("active");
   document.getElementById("signup-form")?.classList.remove("active");
 
-  // Fix: Use standard If checks, not optional chaining for assignment
   const loginTab = document.getElementById("login-tab");
   if (loginTab) loginTab.style.display = "none";
 
@@ -894,8 +879,117 @@ function closeAuthModal() {
   if (modal) modal.style.display = "none";
 }
 
-function openOrdersModal() {
-  window.cartManager.showToast("Orders feature coming soon!", "info");
+// 2. UPDATED: Fetch Real Orders from DB
+async function openOrdersModal() {
+  const user = getUser();
+  if (!user) {
+    openAuthModal("login");
+    return;
+  }
+
+  // Create/Get Modal
+  let modal = document.getElementById("orders-modal");
+  if (!modal) {
+    modal = document.createElement("div");
+    modal.id = "orders-modal";
+    modal.className = "modal";
+    modal.innerHTML = `
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>My Orders</h2>
+          <span class="close" id="close-orders-modal">&times;</span>
+        </div>
+        <div class="modal-body" id="orders-modal-body">
+          <div style="text-align:center; padding:40px;">Loading orders...</div>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+
+    // Add close listeners
+    modal
+      .querySelector("#close-orders-modal")
+      .addEventListener("click", closeOrdersModal);
+    modal.addEventListener("click", (e) => {
+      if (e.target === modal) closeOrdersModal();
+    });
+  }
+
+  modal.style.display = "flex";
+  const modalBody = document.getElementById("orders-modal-body");
+
+  // Fetch Data
+  try {
+    const token = localStorage.getItem("authToken");
+    const res = await fetch("/api/orders", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (!res.ok) throw new Error("Failed to fetch");
+    const orders = await res.json();
+
+    if (orders.length === 0) {
+      modalBody.innerHTML = `
+          <div style="text-align: center; padding: 40px;">
+            <h3>No Orders Yet</h3>
+            <p style="color: #999;">Start shopping to see your orders here!</p>
+          </div>`;
+    } else {
+      modalBody.innerHTML = `
+          <div class="orders-list">
+            ${orders
+              .map(
+                (order) => `
+              <div class="order-card">
+                <div class="order-header">
+                  <div>
+                    <h3>Order #${
+                      order.trackingId || order._id.slice(-6).toUpperCase()
+                    }</h3>
+                    <p class="order-date">${formatDate(order.orderDate)}</p>
+                  </div>
+                  <div class="order-status" style="color: var(--primary-color)">${
+                    order.status
+                  }</div>
+                </div>
+                <div class="order-items">
+                  ${order.items
+                    .map(
+                      (item) => `
+                    <div class="order-item">
+                      <span>${item.title} × ${item.quantity}</span>
+                      <span>₹${(item.price * item.quantity).toFixed(2)}</span>
+                    </div>
+                  `
+                    )
+                    .join("")}
+                </div>
+                <div class="order-footer">
+                  <strong>Total: ₹${order.total.toFixed(2)}</strong>
+                </div>
+              </div>
+            `
+              )
+              .join("")}
+          </div>`;
+    }
+  } catch (err) {
+    modalBody.innerHTML = `<p style="color:red; text-align:center;">Failed to load orders.</p>`;
+  }
+}
+
+function closeOrdersModal() {
+  const modal = document.getElementById("orders-modal");
+  if (modal) modal.style.display = "none";
+}
+
+function formatDate(isoString) {
+  const date = new Date(isoString);
+  return date.toLocaleDateString("en-IN", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
 }
 
 // ====================================================================
@@ -1159,11 +1253,27 @@ function openPaymentModal(items) {
     )
     .join("");
 
-  const total = items.reduce(
+  // Calc total for display
+  const subtotal = items.reduce(
     (sum, item) => sum + item.price * item.quantity,
     0
   );
+  const shipping = subtotal > 2000 ? 0 : 150;
+  const tax = subtotal * 0.18;
+  const total = subtotal + shipping + tax;
+
   if (paymentTotal) paymentTotal.textContent = total.toFixed(2);
+
+  // Update summary in modal
+  const elSub = document.getElementById("payment-subtotal");
+  const elShip = document.getElementById("payment-shipping");
+  const elTax = document.getElementById("payment-tax");
+  const elTot = document.getElementById("payment-total");
+
+  if (elSub) elSub.textContent = subtotal.toFixed(2);
+  if (elShip) elShip.textContent = shipping.toFixed(2);
+  if (elTax) elTax.textContent = tax.toFixed(2);
+  if (elTot) elTot.textContent = total.toFixed(2);
 
   modal.style.display = "flex";
 
@@ -1182,7 +1292,8 @@ function openPaymentModal(items) {
   const newPayNowBtn = payNowBtn.cloneNode(true);
   payNowBtn.parentNode.replaceChild(newPayNowBtn, payNowBtn);
 
-  newPayNowBtn.addEventListener("click", () => {
+  // 3. UPDATED: Send Order to API
+  newPayNowBtn.addEventListener("click", async () => {
     const user = getUser();
     if (!user) {
       closePaymentModal();
@@ -1209,11 +1320,41 @@ function openPaymentModal(items) {
         return;
       }
     }
-    // COD and NetBanking pass automatically
-    // ------------------------
 
-    window.cartManager.showToast("Order placed successfully!", "success");
-    window.cartManager.clearCart();
-    closePaymentModal();
+    // --- SEND TO API ---
+    try {
+      newPayNowBtn.textContent = "Processing...";
+      newPayNowBtn.disabled = true;
+
+      const token = localStorage.getItem("authToken");
+      const res = await fetch("/api/orders", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          items,
+          subtotal,
+          shipping,
+          tax,
+          total,
+          paymentMethod: selectedMethod,
+        }),
+      });
+
+      if (res.ok) {
+        window.cartManager.showToast("Order placed successfully!", "success");
+        window.cartManager.clearCart();
+        closePaymentModal();
+      } else {
+        throw new Error("Order failed");
+      }
+    } catch (e) {
+      window.cartManager.showToast("Failed to place order", "error");
+    } finally {
+      newPayNowBtn.textContent = "Pay Now";
+      newPayNowBtn.disabled = false;
+    }
   });
 }
