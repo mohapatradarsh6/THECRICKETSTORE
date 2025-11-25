@@ -1720,7 +1720,7 @@ function openPaymentModal(items) {
   // Reset View (Show Address, Hide Payment)
   if (addressSection) addressSection.style.display = "block";
   if (paymentSection) paymentSection.style.display = "none";
-  if (payNowBtn) payNowBtn.style.display = "none";
+  //if (payNowBtn) payNowBtn.style.display = "none";
 
   // Step Indicators
   const stepCart = document.querySelector(".checkout-steps .step:first-child");
@@ -1845,8 +1845,11 @@ function openPaymentModal(items) {
       addressSection.style.display = "none";
       paymentSection.style.display = "block";
 
-      // FIX: Show Pay Now button
-      if (payNowBtn) payNowBtn.style.display = "block";
+      const payBtn = document.getElementById("pay-now"); // Get fresh reference
+      if (payBtn) {
+        payBtn.style.display = "block";
+        payBtn.style.visibility = "visible"; // Extra safety
+      }
 
       if (stepAddress) stepAddress.classList.add("active");
       if (stepPayment) stepPayment.classList.add("active");
