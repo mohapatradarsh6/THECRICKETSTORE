@@ -39,9 +39,7 @@ class CartManager {
     this.updateWishlistUI();
   }
 
-  // UPDATED: Validates stock before adding
   addToCart(product, quantity = 1) {
-    // Check for stock limit (simple client-side check)
     if (product.stock !== undefined && product.stock < quantity) {
       this.showToast(`Sorry, only ${product.stock} items in stock!`, "error");
       return;
@@ -51,7 +49,6 @@ class CartManager {
     const price = parseFloat(product.price) || 0;
 
     if (existingItem) {
-      // Check if adding more would exceed stock
       if (
         product.stock !== undefined &&
         existingItem.quantity + quantity > product.stock
@@ -68,7 +65,6 @@ class CartManager {
         ...product,
         price: price,
         quantity: quantity,
-        // Store selected variants if passed
         selectedSize: product.selectedSize || null,
         selectedColor: product.selectedColor || null,
       });
@@ -89,7 +85,6 @@ class CartManager {
       if (quantity <= 0) {
         this.removeFromCart(productTitle);
       } else {
-        // Check stock limit on update
         if (item.stock !== undefined && quantity > item.stock) {
           this.showToast(`Max stock reached (${item.stock})`, "error");
           return;
@@ -254,7 +249,6 @@ class CartManager {
     }, 3000);
   }
 
-  // Helper to generate star icons (5-Star Loop Fix)
   generateRatingHTML(rating) {
     const fullStars = Math.floor(rating);
     const hasHalfStar = rating % 1 !== 0;
@@ -388,10 +382,8 @@ class ProductManager {
     const card = document.createElement("div");
     card.className = "product-card";
 
-    // Store core data
     card.setAttribute("data-title", product.title);
     card.setAttribute("data-price", product.price);
-    // Store full object stringified for easier variant access later
     card.setAttribute("data-product", JSON.stringify(product));
 
     let ratingHTML = '<div class="stars"><i class="fas fa-star"></i></div>';
@@ -407,7 +399,6 @@ class ProductManager {
       discountBadge = `<span class="price-discount">-${percent}%</span>`;
     }
 
-    // --- INVENTORY LOGIC (Visual) ---
     const isOutOfStock = product.stock !== undefined && product.stock <= 0;
     const stockBadge = isOutOfStock
       ? `<div class="product-badge" style="background:#666">Sold Out</div>`
@@ -417,7 +408,6 @@ class ProductManager {
       ? `<div class="product-badge" style="background:var(--accent-color)">New</div>`
       : "";
 
-    // Button state
     const btnState = isOutOfStock
       ? 'disabled style="background:#ccc; cursor:not-allowed;"'
       : "";
@@ -461,12 +451,9 @@ class ProductManager {
   attachCardListeners(container) {
     container.querySelectorAll(".btn-add-cart").forEach((btn) => {
       btn.addEventListener("click", () => {
-        if (btn.disabled) return; // Prevent click if OOS
-
+        if (btn.disabled) return;
         const card = btn.closest(".product-card");
-        // Parse the full product object we saved
         const productData = JSON.parse(card.getAttribute("data-product"));
-
         window.cartManager.addToCart(productData);
       });
     });
@@ -485,8 +472,6 @@ class ProductManager {
         if (btn.disabled) return;
         const card = btn.closest(".product-card");
         const productData = JSON.parse(card.getAttribute("data-product"));
-
-        // Add qty 1 for instant checkout
         productData.quantity = 1;
         openPaymentModal([productData]);
       });
@@ -496,7 +481,6 @@ class ProductManager {
       btn.addEventListener("click", (e) => {
         e.stopPropagation();
         const card = btn.closest(".product-card");
-        // We pass the FULL product object now to support variants
         const productData = JSON.parse(card.getAttribute("data-product"));
         if (window.quickViewModal)
           window.quickViewModal.showQuickView(productData);
@@ -601,7 +585,6 @@ class QuickViewModal {
     }
     if (qtyPlus) {
       qtyPlus.addEventListener("click", () => {
-        // SMART STOCK LIMIT: Check max stock
         if (this.currentProduct && this.currentProduct.stock !== undefined) {
           if (parseInt(qtyInput.value) >= this.currentProduct.stock) {
             window.cartManager.showToast(`Max stock reached!`, "warning");
@@ -613,12 +596,10 @@ class QuickViewModal {
     }
   }
 
-  // UPDATED: Accepts full product object
   showQuickView(product) {
     if (!this.modal) return;
     this.currentProduct = product;
 
-    // Populate Basic Info
     this.modal.querySelector("#quick-view-title").textContent = product.title;
     this.modal.querySelector("#quick-view-img").src = product.image;
     this.modal.querySelector("#quick-view-description").textContent =
@@ -627,31 +608,23 @@ class QuickViewModal {
       "#quick-view-price"
     ).innerHTML = `<span class="price-current">₹${product.price}</span>`;
 
-    // --- NEW: Variants Logic (Sizes & Colors) ---
     const detailsContainer = this.modal.querySelector(".quick-view-details");
-
-    // FIX: Remove BOTH old selectors AND old stock status to prevent stacking
     const oldElements = detailsContainer.querySelectorAll(
       ".variant-group, .stock-status"
     );
     oldElements.forEach((el) => el.remove());
 
-    // --- SMART STOCK LOGIC ---
     let stockHTML = "";
     if (product.stock !== undefined) {
-      // Default: No message if stock is plentiful (>= 5)
       if (product.stock <= 0) {
         stockHTML = `<div class="stock-status" style="color:var(--danger-color); font-weight:600; margin:10px 0;">Out of Stock</div>`;
       } else if (product.stock < 5) {
-        // Low Stock Warning
         stockHTML = `<div class="stock-status" style="color:#e67e22; font-weight:600; margin:10px 0;">
                 <i class="fas fa-exclamation-circle"></i> Hurry! Only ${product.stock} left in stock
              </div>`;
       }
-      // If stock >= 5, we show nothing (cleaner look)
     }
 
-    // Create Variant Selectors HTML
     let variantsHTML = stockHTML;
 
     if (product.sizes && product.sizes.length > 0) {
@@ -678,11 +651,9 @@ class QuickViewModal {
         </div>`;
     }
 
-    // Insert before price
     const priceEl = this.modal.querySelector("#quick-view-price");
     priceEl.insertAdjacentHTML("beforebegin", variantsHTML);
 
-    // Button Logic
     const addToCartBtn = this.modal.querySelector(".btn-add-cart-modal");
     const qtyInput = this.modal.querySelector(".qty-input");
     if (qtyInput) qtyInput.value = 1;
@@ -699,13 +670,12 @@ class QuickViewModal {
       } else {
         newBtn.disabled = false;
         newBtn.textContent = "Add to Cart";
-        newBtn.style.background = ""; // Reset to CSS default
+        newBtn.style.background = "";
         newBtn.style.cursor = "pointer";
 
         newBtn.addEventListener("click", () => {
           const quantity = parseInt(qtyInput?.value || 1);
 
-          // NEW: Block if requesting more than stock
           if (quantity > product.stock) {
             window.cartManager.showToast(
               `Cannot add ${quantity}. Only ${product.stock} left!`,
@@ -941,7 +911,8 @@ function updateAccountUI() {
   if (user) {
     accountName.textContent = user.name.split(" ")[0];
     accountMenu.innerHTML = `
-      <a href="#" class="auth-action" data-action="profile">My Profile</a> <a href="#" class="auth-action" data-action="orders">My Orders</a>
+      <a href="#" class="auth-action" data-action="profile">My Profile</a>
+      <a href="#" class="auth-action" data-action="orders">My Orders</a>
       <a href="#" class="auth-action" data-action="logout">Logout</a>
     `;
   } else {
@@ -1044,6 +1015,13 @@ async function openOrdersModal() {
 
   try {
     const token = localStorage.getItem("authToken");
+    // Debug: Check if token exists
+    if (!token) {
+      console.error("No auth token found!");
+      openAuthModal("login");
+      return;
+    }
+
     const res = await fetch("/api/orders", {
       headers: { Authorization: `Bearer ${token}` },
     });
@@ -1115,6 +1093,204 @@ function formatDate(isoString) {
   });
 }
 
+// --- USER PROFILE LOGIC ---
+
+// 1. Tab Switcher
+window.switchProfileTab = function (tab) {
+  document.getElementById("profile-info-section").style.display =
+    tab === "info" ? "block" : "none";
+  document.getElementById("profile-address-section").style.display =
+    tab === "address" ? "block" : "none";
+
+  document.getElementById("tab-info").className =
+    tab === "info" ? "auth-tab active" : "auth-tab";
+  document.getElementById("tab-address").className =
+    tab === "address" ? "auth-tab active" : "auth-tab";
+};
+
+// 2. Toggle Address Form visibility
+window.toggleAddressForm = function (show) {
+  document.getElementById("new-address-form").style.display = show
+    ? "block"
+    : "none";
+  document.getElementById("add-address-btn").style.display = show
+    ? "none"
+    : "block";
+};
+
+// 3. Open Modal & Fetch Data
+async function openProfileModal() {
+  const user = getUser();
+  if (!user) {
+    openAuthModal("login");
+    return;
+  }
+
+  const modal = document.getElementById("profile-modal");
+  modal.style.display = "flex";
+
+  // Close button logic
+  modal.querySelector(".close").onclick = () => (modal.style.display = "none");
+
+  // Load data from API
+  try {
+    const token = localStorage.getItem("authToken");
+    console.log("Fetching profile with token:", token); // Debug log
+
+    const res = await fetch("/api/user", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (res.ok) {
+      const userData = await res.json();
+      console.log("Profile Data:", userData); // Debug log
+
+      // Populate Info
+      document.getElementById("profile-name").value = userData.name || "";
+      // FIX: Ensure we use the email from the backend
+      document.getElementById("profile-email").value = userData.email || "";
+
+      // Populate Addresses
+      renderAddresses(userData.addresses || []);
+
+      // Update local storage just in case
+      saveUser(userData);
+    } else {
+      console.error("Failed to fetch profile:", res.status);
+      window.cartManager.showToast("Failed to load profile data", "error");
+    }
+  } catch (error) {
+    console.error("Failed to load profile", error);
+    window.cartManager.showToast("Connection error", "error");
+  }
+}
+
+// 4. Render Address List
+function renderAddresses(addresses) {
+  const container = document.getElementById("address-list");
+  container.innerHTML = "";
+
+  if (addresses.length === 0) {
+    container.innerHTML =
+      "<p style='text-align:center; color:#999'>No saved addresses.</p>";
+    return;
+  }
+
+  addresses.forEach((addr, index) => {
+    const div = document.createElement("div");
+    div.className = "address-card";
+    div.innerHTML = `
+      <h5>Address #${index + 1}</h5>
+      <p>${addr.street}, ${addr.city}</p>
+      <p>${addr.state} - ${addr.zip}, ${addr.country}</p>
+      <button class="btn-delete-addr" onclick="deleteAddress(${index})">Delete</button>
+    `;
+    container.appendChild(div);
+  });
+}
+
+// 5. Save Profile (Name)
+async function saveProfileInfo() {
+  const newName = document.getElementById("profile-name").value;
+  const token = localStorage.getItem("authToken");
+
+  try {
+    const res = await fetch("/api/user", {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ name: newName }),
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      saveUser(data.user); // Update local storage
+      updateAccountUI(); // Update header name
+      window.cartManager.showToast("Profile updated!", "success");
+    }
+  } catch (e) {
+    window.cartManager.showToast("Update failed", "error");
+  }
+}
+
+// 6. Save New Address
+async function saveNewAddress() {
+  const street = document.getElementById("addr-street").value;
+  const city = document.getElementById("addr-city").value;
+  const state = document.getElementById("addr-state").value;
+  const zip = document.getElementById("addr-zip").value;
+  const country = document.getElementById("addr-country").value;
+
+  if (!street || !city || !zip) {
+    window.cartManager.showToast("Please fill required fields", "error");
+    return;
+  }
+
+  const user = getUser();
+  const newAddress = { street, city, state, zip, country };
+  const updatedAddresses = [...(user.addresses || []), newAddress];
+
+  try {
+    const token = localStorage.getItem("authToken");
+    const res = await fetch("/api/user", {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ addresses: updatedAddresses }),
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      saveUser(data.user);
+      renderAddresses(data.user.addresses);
+      window.toggleAddressForm(false);
+
+      // Clear inputs
+      document.getElementById("addr-street").value = "";
+      document.getElementById("addr-city").value = "";
+      document.getElementById("addr-state").value = "";
+      document.getElementById("addr-zip").value = "";
+
+      window.cartManager.showToast("Address saved!", "success");
+    }
+  } catch (e) {
+    window.cartManager.showToast("Failed to save address", "error");
+  }
+}
+
+// 7. Delete Address
+window.deleteAddress = async function (index) {
+  if (!confirm("Are you sure you want to delete this address?")) return;
+
+  const user = getUser();
+  const updatedAddresses = user.addresses.filter((_, i) => i !== index);
+
+  try {
+    const token = localStorage.getItem("authToken");
+    const res = await fetch("/api/user", {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ addresses: updatedAddresses }),
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      saveUser(data.user);
+      renderAddresses(data.user.addresses);
+      window.cartManager.showToast("Address deleted", "info");
+    }
+  } catch (e) {
+    window.cartManager.showToast("Failed to delete", "error");
+  }
+};
+
 // ====================================================================
 // INITIALIZATION
 // ====================================================================
@@ -1157,197 +1333,6 @@ document.addEventListener("DOMContentLoaded", () => {
         accountDropdown.classList.remove("active");
       }
     });
-
-    // --- USER PROFILE LOGIC ---
-
-    // 1. Tab Switcher
-    window.switchProfileTab = function (tab) {
-      document.getElementById("profile-info-section").style.display =
-        tab === "info" ? "block" : "none";
-      document.getElementById("profile-address-section").style.display =
-        tab === "address" ? "block" : "none";
-
-      document.getElementById("tab-info").className =
-        tab === "info" ? "auth-tab active" : "auth-tab";
-      document.getElementById("tab-address").className =
-        tab === "address" ? "auth-tab active" : "auth-tab";
-    };
-
-    // 2. Toggle Address Form visibility
-    window.toggleAddressForm = function (show) {
-      document.getElementById("new-address-form").style.display = show
-        ? "block"
-        : "none";
-      document.getElementById("add-address-btn").style.display = show
-        ? "none"
-        : "block";
-    };
-
-    // 3. Open Modal & Fetch Data
-    async function openProfileModal() {
-      const user = getUser();
-      if (!user) {
-        openAuthModal("login");
-        return;
-      }
-
-      const modal = document.getElementById("profile-modal");
-      modal.style.display = "flex";
-
-      // Close button logic
-      modal.querySelector(".close").onclick = () =>
-        (modal.style.display = "none");
-
-      // Load data from API
-      try {
-        const token = localStorage.getItem("authToken");
-        const res = await fetch("/api/user", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-
-        if (res.ok) {
-          const userData = await res.json();
-
-          // Populate Info
-          document.getElementById("profile-name").value = userData.name;
-          document.getElementById("profile-email").value = userData.email;
-
-          // Populate Addresses
-          renderAddresses(userData.addresses || []);
-
-          // Save updated user to local storage
-          saveUser(userData);
-        }
-      } catch (error) {
-        console.error("Failed to load profile", error);
-      }
-    }
-
-    // 4. Render Address List
-    function renderAddresses(addresses) {
-      const container = document.getElementById("address-list");
-      container.innerHTML = "";
-
-      if (addresses.length === 0) {
-        container.innerHTML =
-          "<p style='text-align:center; color:#999'>No saved addresses.</p>";
-        return;
-      }
-
-      addresses.forEach((addr, index) => {
-        const div = document.createElement("div");
-        div.className = "address-card";
-        div.innerHTML = `
-      <h5>Address #${index + 1}</h5>
-      <p>${addr.street}, ${addr.city}</p>
-      <p>${addr.state} - ${addr.zip}, ${addr.country}</p>
-      <button class="btn-delete-addr" onclick="deleteAddress(${index})">Delete</button>
-    `;
-        container.appendChild(div);
-      });
-    }
-
-    // 5. Save Profile (Name)
-    async function saveProfileInfo() {
-      const newName = document.getElementById("profile-name").value;
-      const token = localStorage.getItem("authToken");
-
-      try {
-        const res = await fetch("/api/user", {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({ name: newName }),
-        });
-
-        if (res.ok) {
-          const data = await res.json();
-          saveUser(data.user); // Update local storage
-          updateAccountUI(); // Update header name
-          window.cartManager.showToast("Profile updated!", "success");
-        }
-      } catch (e) {
-        window.cartManager.showToast("Update failed", "error");
-      }
-    }
-
-    // 6. Save New Address
-    async function saveNewAddress() {
-      const street = document.getElementById("addr-street").value;
-      const city = document.getElementById("addr-city").value;
-      const state = document.getElementById("addr-state").value;
-      const zip = document.getElementById("addr-zip").value;
-      const country = document.getElementById("addr-country").value;
-
-      if (!street || !city || !zip) {
-        window.cartManager.showToast("Please fill required fields", "error");
-        return;
-      }
-
-      const user = getUser();
-      const newAddress = { street, city, state, zip, country };
-      const updatedAddresses = [...(user.addresses || []), newAddress];
-
-      try {
-        const token = localStorage.getItem("authToken");
-        const res = await fetch("/api/user", {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({ addresses: updatedAddresses }),
-        });
-
-        if (res.ok) {
-          const data = await res.json();
-          saveUser(data.user);
-          renderAddresses(data.user.addresses);
-          window.toggleAddressForm(false);
-
-          // Clear inputs
-          document.getElementById("addr-street").value = "";
-          document.getElementById("addr-city").value = "";
-          document.getElementById("addr-state").value = "";
-          document.getElementById("addr-zip").value = "";
-
-          window.cartManager.showToast("Address saved!", "success");
-        }
-      } catch (e) {
-        window.cartManager.showToast("Failed to save address", "error");
-      }
-    }
-
-    // 7. Delete Address
-    window.deleteAddress = async function (index) {
-      if (!confirm("Are you sure you want to delete this address?")) return;
-
-      const user = getUser();
-      const updatedAddresses = user.addresses.filter((_, i) => i !== index);
-
-      try {
-        const token = localStorage.getItem("authToken");
-        const res = await fetch("/api/user", {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({ addresses: updatedAddresses }),
-        });
-
-        if (res.ok) {
-          const data = await res.json();
-          saveUser(data.user);
-          renderAddresses(data.user.addresses);
-          window.cartManager.showToast("Address deleted", "info");
-        }
-      } catch (e) {
-        window.cartManager.showToast("Failed to delete", "error");
-      }
-    };
 
     // Close when clicking outside
     document.addEventListener("click", (e) => {
@@ -1538,9 +1523,13 @@ document.addEventListener("DOMContentLoaded", () => {
   document
     .getElementById("save-profile-btn")
     ?.addEventListener("click", saveProfileInfo);
-  document
-    .getElementById("add-address-btn")
-    ?.addEventListener("click", () => window.toggleAddressForm(true));
+
+  // FIX: Explicitly toggle the form style
+  document.getElementById("add-address-btn")?.addEventListener("click", () => {
+    document.getElementById("new-address-form").style.display = "block";
+    document.getElementById("add-address-btn").style.display = "none";
+  });
+
   document
     .getElementById("save-address-btn")
     ?.addEventListener("click", saveNewAddress);
