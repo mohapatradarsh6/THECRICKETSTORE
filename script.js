@@ -1720,7 +1720,7 @@ function openPaymentModal(items) {
   // Reset View (Show Address, Hide Payment)
   if (addressSection) addressSection.style.display = "block";
   if (paymentSection) paymentSection.style.display = "none";
-  if (payNowBtn) payNowBtn.style.display = "block";
+  if (payNowBtn) payNowBtn.style.display = "none";
 
   // Step Indicators
   const stepCart = document.querySelector(".checkout-steps .step:first-child");
