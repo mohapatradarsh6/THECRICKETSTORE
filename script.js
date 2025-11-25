@@ -936,7 +936,8 @@ function updateAccountUI() {
   if (user) {
     accountName.textContent = user.name.split(" ")[0];
     accountMenu.innerHTML = `
-      <a href="#" class="auth-action" data-action="profile">My Profile</a> <a href="#" class="auth-action" data-action="orders">My Orders</a>
+      <a href="#" class="auth-action" data-action="profile">My Profile</a>
+      <a href="#" class="auth-action" data-action="orders">My Orders</a>
       <a href="#" class="auth-action" data-action="logout">Logout</a>
     `;
   } else {
@@ -1556,6 +1557,12 @@ document.addEventListener("DOMContentLoaded", () => {
 function closePaymentModal() {
   const modal = document.getElementById("demo-payment-modal");
   if (modal) modal.style.display = "none";
+  
+  // FIX: Reset Step Indicators when closing
+  const stepAddress = document.getElementById("step-address");
+  const stepPayment = document.getElementById("step-payment");
+  if(stepAddress) stepAddress.classList.remove("active");
+  if(stepPayment) stepPayment.classList.remove("active");
 }
 
 function openPaymentModal(items) {
@@ -1612,6 +1619,7 @@ function openPaymentModal(items) {
         const card = document.createElement("div");
         card.className = "address-option-card";
         
+        // Auto-select the first one or default
         if (index === 0) {
             card.classList.add("selected");
             selectedAddress = addr;
