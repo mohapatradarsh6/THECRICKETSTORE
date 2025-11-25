@@ -39,7 +39,9 @@ class CartManager {
     this.updateWishlistUI();
   }
 
+  // UPDATED: Validates stock before adding
   addToCart(product, quantity = 1) {
+    // Check for stock limit (simple client-side check)
     if (product.stock !== undefined && product.stock < quantity) {
       this.showToast(`Sorry, only ${product.stock} items in stock!`, "error");
       return;
@@ -49,6 +51,7 @@ class CartManager {
     const price = parseFloat(product.price) || 0;
 
     if (existingItem) {
+      // Check if adding more would exceed stock
       if (
         product.stock !== undefined &&
         existingItem.quantity + quantity > product.stock
@@ -65,6 +68,7 @@ class CartManager {
         ...product,
         price: price,
         quantity: quantity,
+        // Store selected variants if passed
         selectedSize: product.selectedSize || null,
         selectedColor: product.selectedColor || null,
       });
@@ -85,6 +89,7 @@ class CartManager {
       if (quantity <= 0) {
         this.removeFromCart(productTitle);
       } else {
+        // Check stock limit on update
         if (item.stock !== undefined && quantity > item.stock) {
           this.showToast(`Max stock reached (${item.stock})`, "error");
           return;
@@ -451,9 +456,12 @@ class ProductManager {
   attachCardListeners(container) {
     container.querySelectorAll(".btn-add-cart").forEach((btn) => {
       btn.addEventListener("click", () => {
-        if (btn.disabled) return;
+        if (btn.disabled) return; // Prevent click if OOS
+
         const card = btn.closest(".product-card");
+        // Parse the full product object we saved
         const productData = JSON.parse(card.getAttribute("data-product"));
+
         window.cartManager.addToCart(productData);
       });
     });
@@ -472,6 +480,8 @@ class ProductManager {
         if (btn.disabled) return;
         const card = btn.closest(".product-card");
         const productData = JSON.parse(card.getAttribute("data-product"));
+
+        // Add qty 1 for instant checkout
         productData.quantity = 1;
         openPaymentModal([productData]);
       });
@@ -481,6 +491,7 @@ class ProductManager {
       btn.addEventListener("click", (e) => {
         e.stopPropagation();
         const card = btn.closest(".product-card");
+        // We pass the FULL product object now to support variants
         const productData = JSON.parse(card.getAttribute("data-product"));
         if (window.quickViewModal)
           window.quickViewModal.showQuickView(productData);
@@ -585,6 +596,7 @@ class QuickViewModal {
     }
     if (qtyPlus) {
       qtyPlus.addEventListener("click", () => {
+        // SMART STOCK LIMIT: Check max stock
         if (this.currentProduct && this.currentProduct.stock !== undefined) {
           if (parseInt(qtyInput.value) >= this.currentProduct.stock) {
             window.cartManager.showToast(`Max stock reached!`, "warning");
@@ -596,10 +608,12 @@ class QuickViewModal {
     }
   }
 
+  // UPDATED: Accepts full product object
   showQuickView(product) {
     if (!this.modal) return;
     this.currentProduct = product;
 
+    // Populate Basic Info
     this.modal.querySelector("#quick-view-title").textContent = product.title;
     this.modal.querySelector("#quick-view-img").src = product.image;
     this.modal.querySelector("#quick-view-description").textContent =
@@ -608,23 +622,31 @@ class QuickViewModal {
       "#quick-view-price"
     ).innerHTML = `<span class="price-current">₹${product.price}</span>`;
 
+    // --- NEW: Variants Logic (Sizes & Colors) ---
     const detailsContainer = this.modal.querySelector(".quick-view-details");
+
+    // FIX: Remove BOTH old selectors AND old stock status to prevent stacking
     const oldElements = detailsContainer.querySelectorAll(
       ".variant-group, .stock-status"
     );
     oldElements.forEach((el) => el.remove());
 
+    // --- SMART STOCK LOGIC ---
     let stockHTML = "";
     if (product.stock !== undefined) {
+      // Default: No message if stock is plentiful (>= 5)
       if (product.stock <= 0) {
         stockHTML = `<div class="stock-status" style="color:var(--danger-color); font-weight:600; margin:10px 0;">Out of Stock</div>`;
       } else if (product.stock < 5) {
+        // Low Stock Warning
         stockHTML = `<div class="stock-status" style="color:#e67e22; font-weight:600; margin:10px 0;">
                 <i class="fas fa-exclamation-circle"></i> Hurry! Only ${product.stock} left in stock
              </div>`;
       }
+      // If stock >= 5, we show nothing (cleaner look)
     }
 
+    // Create Variant Selectors HTML
     let variantsHTML = stockHTML;
 
     if (product.sizes && product.sizes.length > 0) {
@@ -651,9 +673,11 @@ class QuickViewModal {
         </div>`;
     }
 
+    // Insert before price
     const priceEl = this.modal.querySelector("#quick-view-price");
     priceEl.insertAdjacentHTML("beforebegin", variantsHTML);
 
+    // Button Logic
     const addToCartBtn = this.modal.querySelector(".btn-add-cart-modal");
     const qtyInput = this.modal.querySelector(".qty-input");
     if (qtyInput) qtyInput.value = 1;
@@ -670,12 +694,13 @@ class QuickViewModal {
       } else {
         newBtn.disabled = false;
         newBtn.textContent = "Add to Cart";
-        newBtn.style.background = "";
+        newBtn.style.background = ""; // Reset to CSS default
         newBtn.style.cursor = "pointer";
 
         newBtn.addEventListener("click", () => {
           const quantity = parseInt(qtyInput?.value || 1);
 
+          // NEW: Block if requesting more than stock
           if (quantity > product.stock) {
             window.cartManager.showToast(
               `Cannot add ${quantity}. Only ${product.stock} left!`,
@@ -1015,9 +1040,7 @@ async function openOrdersModal() {
 
   try {
     const token = localStorage.getItem("authToken");
-    // Debug: Check if token exists
     if (!token) {
-      console.error("No auth token found!");
       openAuthModal("login");
       return;
     }
@@ -1048,6 +1071,11 @@ async function openOrdersModal() {
                       order.trackingId || order._id.slice(-6).toUpperCase()
                     }</h3>
                     <p class="order-date">${formatDate(order.orderDate)}</p>
+                    <p class="order-address" style="font-size:0.9rem; color:#444;">
+                      To: ${order.shippingAddress?.street}, ${
+                  order.shippingAddress?.city
+                }
+                    </p>
                   </div>
                   <div class="order-status" style="color: var(--primary-color)">${
                     order.status
@@ -1135,19 +1163,15 @@ async function openProfileModal() {
   // Load data from API
   try {
     const token = localStorage.getItem("authToken");
-    console.log("Fetching profile with token:", token); // Debug log
-
     const res = await fetch("/api/user", {
       headers: { Authorization: `Bearer ${token}` },
     });
 
     if (res.ok) {
       const userData = await res.json();
-      console.log("Profile Data:", userData); // Debug log
 
       // Populate Info
       document.getElementById("profile-name").value = userData.name || "";
-      // FIX: Ensure we use the email from the backend
       document.getElementById("profile-email").value = userData.email || "";
 
       // Populate Addresses
@@ -1156,11 +1180,9 @@ async function openProfileModal() {
       // Update local storage just in case
       saveUser(userData);
     } else {
-      console.error("Failed to fetch profile:", res.status);
       window.cartManager.showToast("Failed to load profile data", "error");
     }
   } catch (error) {
-    console.error("Failed to load profile", error);
     window.cartManager.showToast("Connection error", "error");
   }
 }
@@ -1206,8 +1228,8 @@ async function saveProfileInfo() {
 
     if (res.ok) {
       const data = await res.json();
-      saveUser(data.user); // Update local storage
-      updateAccountUI(); // Update header name
+      saveUser(data.user);
+      updateAccountUI();
       window.cartManager.showToast("Profile updated!", "success");
     }
   } catch (e) {
@@ -1249,7 +1271,6 @@ async function saveNewAddress() {
       renderAddresses(data.user.addresses);
       window.toggleAddressForm(false);
 
-      // Clear inputs
       document.getElementById("addr-street").value = "";
       document.getElementById("addr-city").value = "";
       document.getElementById("addr-state").value = "";
@@ -1427,6 +1448,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const data = await res.json();
 
         if (res.ok) {
+          saveUser(data.user);
           window.cartManager.showToast(
             "Account created! Please login.",
             "success"
@@ -1524,11 +1546,9 @@ document.addEventListener("DOMContentLoaded", () => {
     .getElementById("save-profile-btn")
     ?.addEventListener("click", saveProfileInfo);
 
-  // FIX: Explicitly toggle the form style
-  document.getElementById("add-address-btn")?.addEventListener("click", () => {
-    document.getElementById("new-address-form").style.display = "block";
-    document.getElementById("add-address-btn").style.display = "none";
-  });
+  document
+    .getElementById("add-address-btn")
+    ?.addEventListener("click", () => window.toggleAddressForm(true));
 
   document
     .getElementById("save-address-btn")
@@ -1545,16 +1565,121 @@ function closePaymentModal() {
 }
 
 function openPaymentModal(items) {
+  const user = getUser();
+  if (!user) {
+    window.cartManager.showToast("Please login to checkout", "warning");
+    document.getElementById("auth-modal").style.display = "flex";
+    return;
+  }
+
   const modal = document.getElementById("demo-payment-modal");
+
+  // Sections
+  const addressSection = document.getElementById("checkout-address-section");
+  const paymentSection = document.getElementById("checkout-payment-section");
+  const addressList = document.getElementById("checkout-addresses-list");
+  const continueBtn = document.getElementById("btn-continue-payment");
+  const payNowBtn = document.getElementById("pay-now");
+
+  // Reset View (Show Address, Hide Payment)
+  if (addressSection) addressSection.style.display = "block";
+  if (paymentSection) paymentSection.style.display = "none";
+  if (payNowBtn) payNowBtn.style.display = "none";
+
+  // Step Indicators
+  const stepAddress = document.getElementById("step-address");
+  const stepPayment = document.getElementById("step-payment");
+  const stepCart = document.querySelector(".checkout-steps .step");
+  if (stepAddress) stepAddress.classList.remove("active");
+  if (stepPayment) stepPayment.classList.remove("active");
+  if (stepCart) stepCart.classList.add("active");
+
+  let selectedAddress = null;
+
+  // --- RENDER ADDRESSES ---
+  const addresses = user.addresses || [];
+
+  if (addressList) {
+    addressList.innerHTML = "";
+
+    if (addresses.length === 0) {
+      addressList.innerHTML = `
+        <p style="text-align:center; color:#666; margin-bottom:15px">No saved addresses found.</p>
+        <button class="btn-secondary" style="width:100%" onclick="closePaymentModal(); openProfileModal(); window.switchProfileTab('address');">
+          + Add New Address in Profile
+        </button>
+      `;
+      if (continueBtn) continueBtn.style.display = "none";
+    } else {
+      if (continueBtn) continueBtn.style.display = "block";
+      addresses.forEach((addr, index) => {
+        const card = document.createElement("div");
+        card.className = "address-option-card";
+
+        // Auto-select the first one or default
+        if (index === 0) {
+          card.classList.add("selected");
+          selectedAddress = addr;
+        }
+
+        card.innerHTML = `
+          <div style="font-weight:600">${user.name}</div>
+          <div>${addr.street}, ${addr.city}</div>
+          <div>${addr.state} - ${addr.zip}</div>
+        `;
+
+        card.addEventListener("click", () => {
+          document
+            .querySelectorAll(".address-option-card")
+            .forEach((c) => c.classList.remove("selected"));
+          card.classList.add("selected");
+          selectedAddress = addr;
+        });
+
+        addressList.appendChild(card);
+      });
+    }
+  }
+
+  // --- POPULATE PAYMENT ITEMS (Needed for both steps) ---
   const paymentItems = document.getElementById("payment-items");
-  const paymentTotal = document.getElementById("payment-total");
+  if (paymentItems) {
+    paymentItems.innerHTML = items
+      .map(
+        (item) => `
+        <div class="payment-item">
+          <span>${item.title} (x${item.quantity})</span>
+          <span>₹${(item.price * item.quantity).toFixed(2)}</span>
+        </div>
+      `
+      )
+      .join("");
+  }
 
-  if (!modal || !paymentItems) return;
+  // Calculations
+  const subtotal = items.reduce(
+    (sum, item) => sum + item.price * item.quantity,
+    0
+  );
+  const shipping = subtotal > 2000 ? 0 : 150;
+  const tax = subtotal * 0.18;
+  const finalTotal = subtotal + shipping + tax;
 
-  // --- PAYMENT TOGGLE LOGIC ---
+  // Update summary text
+  const elSub = document.getElementById("payment-subtotal");
+  const elShip = document.getElementById("payment-shipping");
+  const elTax = document.getElementById("payment-tax");
+  const elTot = document.getElementById("payment-total");
+
+  if (elSub) elSub.textContent = subtotal.toFixed(2);
+  if (elShip) elShip.textContent = shipping.toFixed(2);
+  if (elTax) elTax.textContent = tax.toFixed(2);
+  if (elTot) elTot.textContent = finalTotal.toFixed(2);
+
+  // Payment Toggles
   const paymentRadios = modal.querySelectorAll('input[name="payment"]');
-  const cardForm = modal.querySelector("#card-form");
-  const upiForm = modal.querySelector("#upi-form");
+  const cardForm = document.getElementById("card-form");
+  const upiForm = document.getElementById("upi-form");
 
   const updatePaymentForms = () => {
     const selected = modal.querySelector('input[name="payment"]:checked').value;
@@ -1562,91 +1687,59 @@ function openPaymentModal(items) {
       cardForm.style.display = selected === "card" ? "block" : "none";
     if (upiForm) upiForm.style.display = selected === "upi" ? "block" : "none";
   };
-
-  paymentRadios.forEach((radio) => {
-    radio.addEventListener("change", updatePaymentForms);
-  });
+  paymentRadios.forEach((r) =>
+    r.addEventListener("change", updatePaymentForms)
+  );
   updatePaymentForms();
 
-  paymentItems.innerHTML = items
-    .map(
-      (item) => `
-    <div class="payment-item">
-      <span>${item.title} (x${item.quantity})</span>
-      <span>₹${(item.price * item.quantity).toFixed(2)}</span>
-    </div>
-  `
-    )
-    .join("");
+  // --- CONTINUE BUTTON LOGIC ---
+  if (continueBtn) {
+    const newContinue = continueBtn.cloneNode(true);
+    continueBtn.parentNode.replaceChild(newContinue, continueBtn);
 
-  const total = items.reduce(
-    (sum, item) => sum + item.price * item.quantity,
-    0
-  );
-  const subtotal = total;
-  const shipping = subtotal > 2000 ? 0 : 150;
-  const tax = subtotal * 0.18;
-  const finalTotal = subtotal + shipping + tax;
+    newContinue.addEventListener("click", () => {
+      if (!selectedAddress) {
+        window.cartManager.showToast("Please select an address", "warning");
+        return;
+      }
+      // Move to Payment Step
+      addressSection.style.display = "none";
+      paymentSection.style.display = "block";
+      payNowBtn.style.display = "block";
 
-  if (paymentTotal) paymentTotal.textContent = finalTotal.toFixed(2);
+      if (stepAddress) stepAddress.classList.add("active");
+      if (stepPayment) stepPayment.classList.add("active");
+    });
+  }
 
-  // Update summary
-  const elSub = document.getElementById("payment-subtotal");
-  const elShip = document.getElementById("payment-shipping");
-  const elTax = document.getElementById("payment-tax");
+  // --- FINAL PAY BUTTON LOGIC ---
+  const payNowBtnNew = payNowBtn.cloneNode(true);
+  payNowBtn.parentNode.replaceChild(payNowBtnNew, payNowBtn);
 
-  if (elSub) elSub.textContent = subtotal.toFixed(2);
-  if (elShip) elShip.textContent = shipping.toFixed(2);
-  if (elTax) elTax.textContent = tax.toFixed(2);
-
-  modal.style.display = "flex";
-
-  const closeBtn = modal.querySelector(".close");
-  const newCloseBtn = closeBtn.cloneNode(true);
-  closeBtn.parentNode.replaceChild(newCloseBtn, closeBtn);
-  newCloseBtn.addEventListener("click", closePaymentModal);
-
-  const cancelBtn = document.getElementById("cancel-payment");
-  const newCancelBtn = cancelBtn.cloneNode(true);
-  cancelBtn.parentNode.replaceChild(newCancelBtn, cancelBtn);
-  newCancelBtn.addEventListener("click", closePaymentModal);
-
-  const payNowBtn = document.getElementById("pay-now");
-  const newPayNowBtn = payNowBtn.cloneNode(true);
-  payNowBtn.parentNode.replaceChild(newPayNowBtn, payNowBtn);
-
-  newPayNowBtn.addEventListener("click", async () => {
-    const user = getUser();
-    if (!user) {
-      closePaymentModal();
-      window.cartManager.showToast("Please login first", "warning");
-      openAuthModal("login");
-      return;
-    }
-
+  payNowBtnNew.addEventListener("click", async () => {
     const selectedMethod = modal.querySelector(
       'input[name="payment"]:checked'
     ).value;
 
+    // Validation
     if (selectedMethod === "card") {
-      const cardInput = cardForm.querySelector("input");
-      if (!cardInput || !cardInput.value.trim()) {
+      if (!cardForm.querySelector("input")?.value?.trim()) {
         window.cartManager.showToast("Please enter card details", "error");
         return;
       }
     } else if (selectedMethod === "upi") {
-      const upiInput = upiForm.querySelector("input");
-      if (!upiInput || !upiInput.value.trim()) {
+      if (!upiForm.querySelector("input")?.value?.trim()) {
         window.cartManager.showToast("Please enter UPI ID", "error");
         return;
       }
     }
 
     try {
-      newPayNowBtn.textContent = "Processing...";
-      newPayNowBtn.disabled = true;
+      payNowBtnNew.textContent = "Processing...";
+      payNowBtnNew.disabled = true;
 
       const token = localStorage.getItem("authToken");
+
       const res = await fetch("/api/orders", {
         method: "POST",
         headers: {
@@ -1660,6 +1753,7 @@ function openPaymentModal(items) {
           tax,
           total: finalTotal,
           paymentMethod: selectedMethod,
+          shippingAddress: selectedAddress, // SENDING SELECTED ADDRESS
         }),
       });
 
@@ -1673,8 +1767,10 @@ function openPaymentModal(items) {
     } catch (e) {
       window.cartManager.showToast("Failed to place order", "error");
     } finally {
-      newPayNowBtn.textContent = "Pay Now";
-      newPayNowBtn.disabled = false;
+      payNowBtnNew.textContent = "Pay Now";
+      payNowBtnNew.disabled = false;
     }
   });
+
+  modal.style.display = "flex";
 }
