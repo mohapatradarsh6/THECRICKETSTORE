@@ -740,12 +740,12 @@ class ProductPagination {
     const prevBtn = document.createElement("button");
     prevBtn.className = "btn-secondary pagination-btn";
     prevBtn.innerHTML = '<i class="fas fa-chevron-left"></i> Prev';
-    
+
     // HIDE if on page 1
     if (this.currentPage === 1) {
-        prevBtn.style.visibility = "hidden"; 
+      prevBtn.style.visibility = "hidden";
     }
-    
+
     prevBtn.addEventListener("click", () => {
       if (this.currentPage > 1) {
         this.currentPage--;
@@ -758,10 +758,10 @@ class ProductPagination {
     const nextBtn = document.createElement("button");
     nextBtn.className = "btn-secondary pagination-btn";
     nextBtn.innerHTML = 'Next <i class="fas fa-chevron-right"></i>';
-    
+
     // HIDE if on last page
     if (this.currentPage === totalPages) {
-        nextBtn.style.visibility = "hidden";
+      nextBtn.style.visibility = "hidden";
     }
 
     nextBtn.addEventListener("click", () => {
@@ -783,6 +783,7 @@ class ProductPagination {
 
     container.parentNode.insertBefore(paginationWrapper, container.nextSibling);
   }
+}
 // ====================================================================
 // AUTHENTICATION LOGIC
 // ====================================================================
