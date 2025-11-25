@@ -351,7 +351,7 @@ class ProductManager {
         throw new Error(`HTTP error! status: ${response.status}`);
       const data = await response.json();
 
-      if (!ArrayOf(data)) {
+      if (!Array.isArray(data)) {
         this.products = [];
         this.filteredProducts = [];
         return;
@@ -1592,13 +1592,15 @@ function openPaymentModal(items) {
   if (payNowBtn) payNowBtn.style.display = "none";
 
   // Step Indicators
+  const stepCart = document.querySelector(".checkout-steps .step:first-child");
   const stepAddress = document.getElementById("step-address");
   const stepPayment = document.getElementById("step-payment");
-  const stepCart = document.querySelector(".checkout-steps .step");
+
+  if (stepCart) stepCart.classList.remove("active");
   if (stepAddress) stepAddress.classList.remove("active");
   if (stepPayment) stepPayment.classList.remove("active");
-  if (stepCart) stepCart.classList.add("active");
 
+  if (stepAddress) stepAddress.classList.add("active");
   let selectedAddress = null;
 
   // --- RENDER ADDRESSES ---
@@ -1777,4 +1779,19 @@ function openPaymentModal(items) {
   });
 
   modal.style.display = "flex";
+  // Cancel button handler
+  const cancelBtn = document.getElementById("cancel-payment");
+  if (cancelBtn) {
+    const newCancelBtn = cancelBtn.cloneNode(true);
+    cancelBtn.parentNode.replaceChild(newCancelBtn, cancelBtn);
+    newCancelBtn.addEventListener("click", closePaymentModal);
+  }
+
+  // Close X button handler
+  const closeBtn = modal.querySelector(".close");
+  if (closeBtn) {
+    const newCloseBtn = closeBtn.cloneNode(true);
+    closeBtn.parentNode.replaceChild(newCloseBtn, closeBtn);
+    newCloseBtn.addEventListener("click", closePaymentModal);
+  }
 }
