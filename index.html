@@ -683,6 +683,7 @@
           </div>
 
           <div id="checkout-payment-section" style="display: none">
+            <h3 style="margin-bottom: 15px">Order Summary</h3>
             <div id="payment-items"></div>
 
             <div class="order-summary">
@@ -704,7 +705,7 @@
               </div>
             </div>
 
-            <h3>Payment Method</h3>
+            <h3 style="margin-top: 20px">Payment Method</h3>
             <div class="payment-methods-grid">
               <label class="payment-option">
                 <input type="radio" name="payment" value="card" checked />
@@ -763,14 +764,20 @@
                 />
               </div>
             </div>
+
+            <!-- Place Order Button Inside Payment Section -->
+            <button
+              id="pay-now"
+              class="btn-primary"
+              style="width: 100%; margin-top: 20px; display: none"
+            >
+              Pay Now
+            </button>
           </div>
         </div>
 
         <div class="modal-footer">
           <button id="cancel-payment" class="btn-secondary">Cancel</button>
-          <button id="pay-now" class="btn-primary" style="display: none">
-            Pay Now
-          </button>
         </div>
       </div>
     </div>
