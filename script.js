@@ -941,7 +941,7 @@ function updateAccountUI() {
   if (user) {
     accountName.textContent = user.name.split(" ")[0];
     accountMenu.innerHTML = `
-      <a href="#" class="auth-action" data-action="orders">My Orders</a>
+      <a href="#" class="auth-action" data-action="profile">My Profile</a> <a href="#" class="auth-action" data-action="orders">My Orders</a>
       <a href="#" class="auth-action" data-action="logout">Logout</a>
     `;
   } else {
@@ -1150,12 +1150,204 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (action === "login") openAuthModal("login");
         if (action === "signup") openAuthModal("signup");
+        if (action === "profile") openProfileModal();
         if (action === "orders") openOrdersModal();
         if (action === "logout") logoutUser();
 
         accountDropdown.classList.remove("active");
       }
     });
+
+    // --- USER PROFILE LOGIC ---
+
+    // 1. Tab Switcher
+    window.switchProfileTab = function (tab) {
+      document.getElementById("profile-info-section").style.display =
+        tab === "info" ? "block" : "none";
+      document.getElementById("profile-address-section").style.display =
+        tab === "address" ? "block" : "none";
+
+      document.getElementById("tab-info").className =
+        tab === "info" ? "auth-tab active" : "auth-tab";
+      document.getElementById("tab-address").className =
+        tab === "address" ? "auth-tab active" : "auth-tab";
+    };
+
+    // 2. Toggle Address Form visibility
+    window.toggleAddressForm = function (show) {
+      document.getElementById("new-address-form").style.display = show
+        ? "block"
+        : "none";
+      document.getElementById("add-address-btn").style.display = show
+        ? "none"
+        : "block";
+    };
+
+    // 3. Open Modal & Fetch Data
+    async function openProfileModal() {
+      const user = getUser();
+      if (!user) {
+        openAuthModal("login");
+        return;
+      }
+
+      const modal = document.getElementById("profile-modal");
+      modal.style.display = "flex";
+
+      // Close button logic
+      modal.querySelector(".close").onclick = () =>
+        (modal.style.display = "none");
+
+      // Load data from API
+      try {
+        const token = localStorage.getItem("authToken");
+        const res = await fetch("/api/user", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        if (res.ok) {
+          const userData = await res.json();
+
+          // Populate Info
+          document.getElementById("profile-name").value = userData.name;
+          document.getElementById("profile-email").value = userData.email;
+
+          // Populate Addresses
+          renderAddresses(userData.addresses || []);
+
+          // Save updated user to local storage
+          saveUser(userData);
+        }
+      } catch (error) {
+        console.error("Failed to load profile", error);
+      }
+    }
+
+    // 4. Render Address List
+    function renderAddresses(addresses) {
+      const container = document.getElementById("address-list");
+      container.innerHTML = "";
+
+      if (addresses.length === 0) {
+        container.innerHTML =
+          "<p style='text-align:center; color:#999'>No saved addresses.</p>";
+        return;
+      }
+
+      addresses.forEach((addr, index) => {
+        const div = document.createElement("div");
+        div.className = "address-card";
+        div.innerHTML = `
+      <h5>Address #${index + 1}</h5>
+      <p>${addr.street}, ${addr.city}</p>
+      <p>${addr.state} - ${addr.zip}, ${addr.country}</p>
+      <button class="btn-delete-addr" onclick="deleteAddress(${index})">Delete</button>
+    `;
+        container.appendChild(div);
+      });
+    }
+
+    // 5. Save Profile (Name)
+    async function saveProfileInfo() {
+      const newName = document.getElementById("profile-name").value;
+      const token = localStorage.getItem("authToken");
+
+      try {
+        const res = await fetch("/api/user", {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ name: newName }),
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          saveUser(data.user); // Update local storage
+          updateAccountUI(); // Update header name
+          window.cartManager.showToast("Profile updated!", "success");
+        }
+      } catch (e) {
+        window.cartManager.showToast("Update failed", "error");
+      }
+    }
+
+    // 6. Save New Address
+    async function saveNewAddress() {
+      const street = document.getElementById("addr-street").value;
+      const city = document.getElementById("addr-city").value;
+      const state = document.getElementById("addr-state").value;
+      const zip = document.getElementById("addr-zip").value;
+      const country = document.getElementById("addr-country").value;
+
+      if (!street || !city || !zip) {
+        window.cartManager.showToast("Please fill required fields", "error");
+        return;
+      }
+
+      const user = getUser();
+      const newAddress = { street, city, state, zip, country };
+      const updatedAddresses = [...(user.addresses || []), newAddress];
+
+      try {
+        const token = localStorage.getItem("authToken");
+        const res = await fetch("/api/user", {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ addresses: updatedAddresses }),
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          saveUser(data.user);
+          renderAddresses(data.user.addresses);
+          window.toggleAddressForm(false);
+
+          // Clear inputs
+          document.getElementById("addr-street").value = "";
+          document.getElementById("addr-city").value = "";
+          document.getElementById("addr-state").value = "";
+          document.getElementById("addr-zip").value = "";
+
+          window.cartManager.showToast("Address saved!", "success");
+        }
+      } catch (e) {
+        window.cartManager.showToast("Failed to save address", "error");
+      }
+    }
+
+    // 7. Delete Address
+    window.deleteAddress = async function (index) {
+      if (!confirm("Are you sure you want to delete this address?")) return;
+
+      const user = getUser();
+      const updatedAddresses = user.addresses.filter((_, i) => i !== index);
+
+      try {
+        const token = localStorage.getItem("authToken");
+        const res = await fetch("/api/user", {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ addresses: updatedAddresses }),
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          saveUser(data.user);
+          renderAddresses(data.user.addresses);
+          window.cartManager.showToast("Address deleted", "info");
+        }
+      } catch (e) {
+        window.cartManager.showToast("Failed to delete", "error");
+      }
+    };
 
     // Close when clicking outside
     document.addEventListener("click", (e) => {
@@ -1341,6 +1533,17 @@ document.addEventListener("DOMContentLoaded", () => {
       toggle.closest(".mobile-dropdown").classList.toggle("active");
     });
   });
+
+  // Profile Form Listeners
+  document
+    .getElementById("save-profile-btn")
+    ?.addEventListener("click", saveProfileInfo);
+  document
+    .getElementById("add-address-btn")
+    ?.addEventListener("click", () => window.toggleAddressForm(true));
+  document
+    .getElementById("save-address-btn")
+    ?.addEventListener("click", saveNewAddress);
 
   // Update UI on load
   updateAccountUI();
