@@ -1456,8 +1456,14 @@ function saveUser(user) {
 }
 
 function getUser() {
-  const user = localStorage.getItem(AUTH_KEY);
-  return user ? JSON.parse(user) : null;
+  try {
+    const user = localStorage.getItem(AUTH_KEY);
+    return user ? JSON.parse(user) : null;
+  } catch (error) {
+    console.error("Error reading user data, clearing storage:", error);
+    localStorage.removeItem(AUTH_KEY); // Clear corrupt data
+    return null;
+  }
 }
 
 function logoutUser() {
