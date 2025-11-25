@@ -936,8 +936,7 @@ function updateAccountUI() {
   if (user) {
     accountName.textContent = user.name.split(" ")[0];
     accountMenu.innerHTML = `
-      <a href="#" class="auth-action" data-action="profile">My Profile</a>
-      <a href="#" class="auth-action" data-action="orders">My Orders</a>
+      <a href="#" class="auth-action" data-action="profile">My Profile</a> <a href="#" class="auth-action" data-action="orders">My Orders</a>
       <a href="#" class="auth-action" data-action="logout">Logout</a>
     `;
   } else {
@@ -1072,9 +1071,7 @@ async function openOrdersModal() {
                     }</h3>
                     <p class="order-date">${formatDate(order.orderDate)}</p>
                     <p class="order-address" style="font-size:0.9rem; color:#444;">
-                      To: ${order.shippingAddress?.street}, ${
-                  order.shippingAddress?.city
-                }
+                      To: ${order.shippingAddress?.street}, ${order.shippingAddress?.city}
                     </p>
                   </div>
                   <div class="order-status" style="color: var(--primary-color)">${
@@ -1228,8 +1225,8 @@ async function saveProfileInfo() {
 
     if (res.ok) {
       const data = await res.json();
-      saveUser(data.user);
-      updateAccountUI();
+      saveUser(data.user); // Update local storage
+      updateAccountUI(); // Update header name
       window.cartManager.showToast("Profile updated!", "success");
     }
   } catch (e) {
@@ -1448,7 +1445,6 @@ document.addEventListener("DOMContentLoaded", () => {
         const data = await res.json();
 
         if (res.ok) {
-          saveUser(data.user);
           window.cartManager.showToast(
             "Account created! Please login.",
             "success"
@@ -1545,11 +1541,9 @@ document.addEventListener("DOMContentLoaded", () => {
   document
     .getElementById("save-profile-btn")
     ?.addEventListener("click", saveProfileInfo);
-
   document
     .getElementById("add-address-btn")
     ?.addEventListener("click", () => window.toggleAddressForm(true));
-
   document
     .getElementById("save-address-btn")
     ?.addEventListener("click", saveNewAddress);
@@ -1573,26 +1567,28 @@ function openPaymentModal(items) {
   }
 
   const modal = document.getElementById("demo-payment-modal");
+  // FIX: Hide cart dropdown to prevent visual overlap
+  document.getElementById("cart-dropdown")?.style.display = 'none';
 
-  // Sections
   const addressSection = document.getElementById("checkout-address-section");
   const paymentSection = document.getElementById("checkout-payment-section");
   const addressList = document.getElementById("checkout-addresses-list");
   const continueBtn = document.getElementById("btn-continue-payment");
   const payNowBtn = document.getElementById("pay-now");
-
+  
   // Reset View (Show Address, Hide Payment)
-  if (addressSection) addressSection.style.display = "block";
-  if (paymentSection) paymentSection.style.display = "none";
-  if (payNowBtn) payNowBtn.style.display = "none";
-
+  if(addressSection) addressSection.style.display = "block";
+  if(paymentSection) paymentSection.style.display = "none";
+  if(payNowBtn) payNowBtn.style.display = "none";
+  
   // Step Indicators
   const stepAddress = document.getElementById("step-address");
   const stepPayment = document.getElementById("step-payment");
   const stepCart = document.querySelector(".checkout-steps .step");
-  if (stepAddress) stepAddress.classList.remove("active");
-  if (stepPayment) stepPayment.classList.remove("active");
-  if (stepCart) stepCart.classList.add("active");
+  if(stepAddress) stepAddress.classList.remove("active");
+  if(stepPayment) stepPayment.classList.remove("active");
+  if(stepCart) stepCart.classList.add("active");
+
 
   let selectedAddress = null;
 
@@ -1601,7 +1597,7 @@ function openPaymentModal(items) {
 
   if (addressList) {
     addressList.innerHTML = "";
-
+    
     if (addresses.length === 0) {
       addressList.innerHTML = `
         <p style="text-align:center; color:#666; margin-bottom:15px">No saved addresses found.</p>
@@ -1609,33 +1605,30 @@ function openPaymentModal(items) {
           + Add New Address in Profile
         </button>
       `;
-      if (continueBtn) continueBtn.style.display = "none";
+      if(continueBtn) continueBtn.style.display = "none";
     } else {
-      if (continueBtn) continueBtn.style.display = "block";
+      if(continueBtn) continueBtn.style.display = "block";
       addresses.forEach((addr, index) => {
         const card = document.createElement("div");
         card.className = "address-option-card";
-
-        // Auto-select the first one or default
+        
         if (index === 0) {
-          card.classList.add("selected");
-          selectedAddress = addr;
+            card.classList.add("selected");
+            selectedAddress = addr;
         }
-
+        
         card.innerHTML = `
           <div style="font-weight:600">${user.name}</div>
           <div>${addr.street}, ${addr.city}</div>
           <div>${addr.state} - ${addr.zip}</div>
         `;
-
+        
         card.addEventListener("click", () => {
-          document
-            .querySelectorAll(".address-option-card")
-            .forEach((c) => c.classList.remove("selected"));
-          card.classList.add("selected");
-          selectedAddress = addr;
+            document.querySelectorAll(".address-option-card").forEach(c => c.classList.remove("selected"));
+            card.classList.add("selected");
+            selectedAddress = addr;
         });
-
+        
         addressList.appendChild(card);
       });
     }
@@ -1644,132 +1637,116 @@ function openPaymentModal(items) {
   // --- POPULATE PAYMENT ITEMS (Needed for both steps) ---
   const paymentItems = document.getElementById("payment-items");
   if (paymentItems) {
-    paymentItems.innerHTML = items
-      .map(
-        (item) => `
+      paymentItems.innerHTML = items.map(item => `
         <div class="payment-item">
           <span>${item.title} (x${item.quantity})</span>
           <span>₹${(item.price * item.quantity).toFixed(2)}</span>
         </div>
-      `
-      )
-      .join("");
+      `).join("");
   }
-
+  
   // Calculations
-  const subtotal = items.reduce(
-    (sum, item) => sum + item.price * item.quantity,
-    0
-  );
+  const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const shipping = subtotal > 2000 ? 0 : 150;
   const tax = subtotal * 0.18;
   const finalTotal = subtotal + shipping + tax;
 
   // Update summary text
-  const elSub = document.getElementById("payment-subtotal");
-  const elShip = document.getElementById("payment-shipping");
-  const elTax = document.getElementById("payment-tax");
-  const elTot = document.getElementById("payment-total");
+  const elSub = document.getElementById('payment-subtotal');
+  const elShip = document.getElementById('payment-shipping');
+  const elTax = document.getElementById('payment-tax');
+  const elTot = document.getElementById('payment-total');
 
-  if (elSub) elSub.textContent = subtotal.toFixed(2);
-  if (elShip) elShip.textContent = shipping.toFixed(2);
-  if (elTax) elTax.textContent = tax.toFixed(2);
-  if (elTot) elTot.textContent = finalTotal.toFixed(2);
+  if(elSub) elSub.textContent = subtotal.toFixed(2);
+  if(elShip) elShip.textContent = shipping.toFixed(2);
+  if(elTax) elTax.textContent = tax.toFixed(2);
+  if(elTot) elTot.textContent = finalTotal.toFixed(2);
 
   // Payment Toggles
   const paymentRadios = modal.querySelectorAll('input[name="payment"]');
   const cardForm = document.getElementById("card-form");
   const upiForm = document.getElementById("upi-form");
-
+  
   const updatePaymentForms = () => {
     const selected = modal.querySelector('input[name="payment"]:checked').value;
-    if (cardForm)
-      cardForm.style.display = selected === "card" ? "block" : "none";
+    if (cardForm) cardForm.style.display = selected === "card" ? "block" : "none";
     if (upiForm) upiForm.style.display = selected === "upi" ? "block" : "none";
   };
-  paymentRadios.forEach((r) =>
-    r.addEventListener("change", updatePaymentForms)
-  );
+  paymentRadios.forEach(r => r.addEventListener("change", updatePaymentForms));
   updatePaymentForms();
+
 
   // --- CONTINUE BUTTON LOGIC ---
   if (continueBtn) {
-    const newContinue = continueBtn.cloneNode(true);
-    continueBtn.parentNode.replaceChild(newContinue, continueBtn);
-
-    newContinue.addEventListener("click", () => {
-      if (!selectedAddress) {
-        window.cartManager.showToast("Please select an address", "warning");
-        return;
-      }
-      // Move to Payment Step
-      addressSection.style.display = "none";
-      paymentSection.style.display = "block";
-      payNowBtn.style.display = "block";
-
-      if (stepAddress) stepAddress.classList.add("active");
-      if (stepPayment) stepPayment.classList.add("active");
-    });
+      const newContinue = continueBtn.cloneNode(true);
+      continueBtn.parentNode.replaceChild(newContinue, continueBtn);
+      
+      newContinue.addEventListener("click", () => {
+          if (!selectedAddress) {
+              window.cartManager.showToast("Please select an address", "warning");
+              return;
+          }
+          // Move to Payment Step
+          addressSection.style.display = "none";
+          paymentSection.style.display = "block";
+          payNowBtn.style.display = "block";
+          
+          if(stepAddress) stepAddress.classList.add("active");
+          if(stepPayment) stepPayment.classList.add("active");
+      });
   }
+
 
   // --- FINAL PAY BUTTON LOGIC ---
   const payNowBtnNew = payNowBtn.cloneNode(true);
   payNowBtn.parentNode.replaceChild(payNowBtnNew, payNowBtn);
 
   payNowBtnNew.addEventListener("click", async () => {
-    const selectedMethod = modal.querySelector(
-      'input[name="payment"]:checked'
-    ).value;
+      const selectedMethod = modal.querySelector('input[name="payment"]:checked').value;
 
-    // Validation
-    if (selectedMethod === "card") {
-      if (!cardForm.querySelector("input")?.value?.trim()) {
-        window.cartManager.showToast("Please enter card details", "error");
-        return;
+      // Validation
+      if (selectedMethod === "card") {
+          if (!cardForm.querySelector("input")?.value?.trim()) {
+              window.cartManager.showToast("Please enter card details", "error");
+              return;
+          }
+      } else if (selectedMethod === "upi") {
+          if (!upiForm.querySelector("input")?.value?.trim()) {
+              window.cartManager.showToast("Please enter UPI ID", "error");
+              return;
+          }
       }
-    } else if (selectedMethod === "upi") {
-      if (!upiForm.querySelector("input")?.value?.trim()) {
-        window.cartManager.showToast("Please enter UPI ID", "error");
-        return;
+
+      try {
+          payNowBtnNew.textContent = "Processing...";
+          payNowBtnNew.disabled = true;
+
+          const token = localStorage.getItem("authToken");
+          
+          const res = await fetch("/api/orders", {
+              method: "POST",
+              headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+              body: JSON.stringify({
+                  items, subtotal, shipping, tax,
+                  total: finalTotal,
+                  paymentMethod: selectedMethod,
+                  shippingAddress: selectedAddress // SENDING SELECTED ADDRESS
+              })
+          });
+
+          if (res.ok) {
+              window.cartManager.showToast("Order placed successfully!", "success");
+              window.cartManager.clearCart();
+              closePaymentModal();
+          } else {
+              throw new Error("Order failed");
+          }
+      } catch (e) {
+          window.cartManager.showToast("Failed to place order", "error");
+      } finally {
+          payNowBtnNew.textContent = "Pay Now";
+          payNowBtnNew.disabled = false;
       }
-    }
-
-    try {
-      payNowBtnNew.textContent = "Processing...";
-      payNowBtnNew.disabled = true;
-
-      const token = localStorage.getItem("authToken");
-
-      const res = await fetch("/api/orders", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          items,
-          subtotal,
-          shipping,
-          tax,
-          total: finalTotal,
-          paymentMethod: selectedMethod,
-          shippingAddress: selectedAddress, // SENDING SELECTED ADDRESS
-        }),
-      });
-
-      if (res.ok) {
-        window.cartManager.showToast("Order placed successfully!", "success");
-        window.cartManager.clearCart();
-        closePaymentModal();
-      } else {
-        throw new Error("Order failed");
-      }
-    } catch (e) {
-      window.cartManager.showToast("Failed to place order", "error");
-    } finally {
-      payNowBtnNew.textContent = "Pay Now";
-      payNowBtnNew.disabled = false;
-    }
   });
 
   modal.style.display = "flex";

@@ -3625,3 +3625,35 @@ body {
 .btn-delete-addr:hover {
   text-decoration: underline;
 }
+
+/* --- Checkout Address Selection --- */
+.address-option-card {
+  border: 2px solid var(--border-color);
+  border-radius: 8px;
+  padding: 15px;
+  margin-bottom: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: white;
+  position: relative;
+}
+
+.address-option-card:hover {
+  border-color: var(--primary-color);
+  background: #f9f9f9;
+}
+
+.address-option-card.selected {
+  border-color: var(--primary-color);
+  background: rgba(26, 95, 63, 0.05);
+}
+
+.address-option-card.selected::after {
+  content: "✔";
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  color: var(--primary-color);
+  font-weight: bold;
+  font-size: 1.2rem;
+}
