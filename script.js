@@ -351,7 +351,7 @@ class ProductManager {
         throw new Error(`HTTP error! status: ${response.status}`);
       const data = await response.json();
 
-      if (!Array.isArray(data)) {
+      if (!ArrayOf(data)) {
         this.products = [];
         this.filteredProducts = [];
         return;
@@ -608,7 +608,6 @@ class QuickViewModal {
     }
   }
 
-  // UPDATED: Accepts full product object
   showQuickView(product) {
     if (!this.modal) return;
     this.currentProduct = product;
@@ -1446,6 +1445,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const data = await res.json();
 
         if (res.ok) {
+          saveUser(data.user);
           window.cartManager.showToast(
             "Account created! Please login.",
             "success"
@@ -1557,7 +1557,7 @@ document.addEventListener("DOMContentLoaded", () => {
 function closePaymentModal() {
   const modal = document.getElementById("demo-payment-modal");
   if (modal) modal.style.display = "none";
-  
+
   // FIX: Reset Step Indicators when closing
   const stepAddress = document.getElementById("step-address");
   const stepPayment = document.getElementById("step-payment");
@@ -1619,7 +1619,6 @@ function openPaymentModal(items) {
         const card = document.createElement("div");
         card.className = "address-option-card";
         
-        // Auto-select the first one or default
         if (index === 0) {
             card.classList.add("selected");
             selectedAddress = addr;
