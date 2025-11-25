@@ -51,6 +51,17 @@ class CartManager {
     const price = parseFloat(product.price) || 0;
 
     if (existingItem) {
+      // Check if adding more would exceed stock
+      if (
+        product.stock !== undefined &&
+        existingItem.quantity + quantity > product.stock
+      ) {
+        this.showToast(
+          `Cannot add more! You have ${existingItem.quantity} in cart.`,
+          "warning"
+        );
+        return;
+      }
       existingItem.quantity += quantity;
     } else {
       this.cart.push({
@@ -78,6 +89,11 @@ class CartManager {
       if (quantity <= 0) {
         this.removeFromCart(productTitle);
       } else {
+        // Check stock limit on update
+        if (item.stock !== undefined && quantity > item.stock) {
+          this.showToast(`Max stock reached (${item.stock})`, "error");
+          return;
+        }
         item.quantity = quantity;
         this.saveCart();
       }
@@ -238,7 +254,7 @@ class CartManager {
     }, 3000);
   }
 
-  // Helper to generate star icons
+  // Helper to generate star icons (5-Star Loop Fix)
   generateRatingHTML(rating) {
     const fullStars = Math.floor(rating);
     const hasHalfStar = rating % 1 !== 0;
@@ -391,7 +407,7 @@ class ProductManager {
       discountBadge = `<span class="price-discount">-${percent}%</span>`;
     }
 
-    // --- INVENTORY LOGIC ---
+    // --- INVENTORY LOGIC (Visual) ---
     const isOutOfStock = product.stock !== undefined && product.stock <= 0;
     const stockBadge = isOutOfStock
       ? `<div class="product-badge" style="background:#666">Sold Out</div>`
@@ -585,6 +601,13 @@ class QuickViewModal {
     }
     if (qtyPlus) {
       qtyPlus.addEventListener("click", () => {
+        // SMART STOCK LIMIT: Check max stock
+        if (this.currentProduct && this.currentProduct.stock !== undefined) {
+          if (parseInt(qtyInput.value) >= this.currentProduct.stock) {
+            window.cartManager.showToast(`Max stock reached!`, "warning");
+            return;
+          }
+        }
         if (qtyInput) qtyInput.value = parseInt(qtyInput.value) + 1;
       });
     }
@@ -613,14 +636,19 @@ class QuickViewModal {
     );
     oldElements.forEach((el) => el.remove());
 
+    // --- SMART STOCK LOGIC ---
     let stockHTML = "";
     if (product.stock !== undefined) {
-      const stockColor =
-        product.stock > 0 ? "var(--primary-color)" : "var(--danger-color)";
-      const stockText =
-        product.stock > 0 ? `In Stock (${product.stock})` : "Out of Stock";
-      // Added "stock-status" class so we can find and remove it next time
-      stockHTML = `<div class="stock-status" style="color:${stockColor}; font-weight:600; margin:10px 0;">${stockText}</div>`;
+      // Default: No message if stock is plentiful (>= 5)
+      if (product.stock <= 0) {
+        stockHTML = `<div class="stock-status" style="color:var(--danger-color); font-weight:600; margin:10px 0;">Out of Stock</div>`;
+      } else if (product.stock < 5) {
+        // Low Stock Warning
+        stockHTML = `<div class="stock-status" style="color:#e67e22; font-weight:600; margin:10px 0;">
+                <i class="fas fa-exclamation-circle"></i> Hurry! Only ${product.stock} left in stock
+             </div>`;
+      }
+      // If stock >= 5, we show nothing (cleaner look)
     }
 
     // Create Variant Selectors HTML
@@ -676,6 +704,16 @@ class QuickViewModal {
 
         newBtn.addEventListener("click", () => {
           const quantity = parseInt(qtyInput?.value || 1);
+
+          // NEW: Block if requesting more than stock
+          if (quantity > product.stock) {
+            window.cartManager.showToast(
+              `Cannot add ${quantity}. Only ${product.stock} left!`,
+              "error"
+            );
+            return;
+          }
+
           const sizeSelect = this.modal.querySelector("#qv-size");
           const colorSelect = this.modal.querySelector("#qv-color");
 
@@ -1090,12 +1128,13 @@ document.addEventListener("DOMContentLoaded", () => {
   window.quickViewModal = new QuickViewModal();
   window.heroCarousel = new HeroCarousel();
 
-  // --- Account Dropdown Logic ---
+  // --- Account Dropdown Logic (Event Delegation) ---
   const accountDropdown = document.querySelector(".account-dropdown");
   const accountBtn = document.getElementById("account-btn");
   const accountMenu = document.querySelector(".account-menu");
 
   if (accountBtn && accountDropdown && accountMenu) {
+    // Toggle Menu
     accountBtn.addEventListener("click", (e) => {
       e.preventDefault();
       e.stopPropagation();
@@ -1103,6 +1142,7 @@ document.addEventListener("DOMContentLoaded", () => {
       accountDropdown.classList.toggle("active");
     });
 
+    // Handle Clicks on Login/Signup/Logout (Delegation)
     accountMenu.addEventListener("click", (e) => {
       if (e.target.classList.contains("auth-action")) {
         e.preventDefault();
@@ -1117,6 +1157,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
 
+    // Close when clicking outside
     document.addEventListener("click", (e) => {
       if (
         !accountDropdown.contains(e.target) &&
@@ -1152,7 +1193,7 @@ document.addEventListener("DOMContentLoaded", () => {
       openAuthModal("login");
     });
 
-  // --- Login ---
+  // --- Login Form Submission ---
   document
     .getElementById("login-form")
     ?.addEventListener("submit", async (e) => {
@@ -1189,7 +1230,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
 
-  // --- Signup ---
+  // --- Signup Form Submission ---
   document
     .getElementById("signup-form")
     ?.addEventListener("submit", async (e) => {
@@ -1226,7 +1267,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
 
-  // --- Forgot Password ---
+  // --- Forgot Password Submission ---
   document
     .getElementById("forgot-password-form")
     ?.addEventListener("submit", async (e) => {
@@ -1293,6 +1334,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  // Mobile Dropdowns
   document.querySelectorAll(".mobile-dropdown-toggle").forEach((toggle) => {
     toggle.addEventListener("click", (e) => {
       e.preventDefault();
@@ -1300,6 +1342,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
+  // Update UI on load
   updateAccountUI();
 });
 
