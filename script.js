@@ -1792,44 +1792,6 @@ document.addEventListener("DOMContentLoaded", () => {
     e.preventDefault();
     openAuthModal("login"); // Reuses existing function to show login form
   });
-  // --- REAL FORGOT PASSWORD LOGIC ---
-  document.getElementById("forgot-password-form")?.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const email = document.getElementById("forgot-email").value;
-    const submitBtn = e.target.querySelector("button");
-
-    submitBtn.textContent = "Sending...";
-    submitBtn.disabled = true;
-
-    try {
-      
-      const res = await fetch("/api/forgot-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
-      });
-
-      const data = await res.json();
-       if (res.ok) {
-        // Response 200 is expected for security reasons (even if email isn't found)
-        window.cartManager.showToast(data.message, "success");
-        e.target.reset();
-        openAuthModal("login"); 
-      } else {
-       
-        window.cartManager.showToast(data.error || "Reset failed. Please try again.", "danger");
-      }
-      
-    } catch (error) {
-      console.error("Forgot password frontend error:", error);
-      window.cartManager.showToast("Connection failed. Check your network.", "error");
-    } finally {
-      submitBtn.textContent = "Send Reset Link";
-      submitBtn.disabled = false;
-    }
-  });
-
- 
   // Home button click - Reset to default state
   document.querySelectorAll('a[href="#home"]').forEach((homeLink) => {
     homeLink.addEventListener("click", (e) => {
