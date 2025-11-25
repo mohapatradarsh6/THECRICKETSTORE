@@ -3659,3 +3659,12 @@ body {
   font-weight: bold;
   font-size: 1.2rem;
 }
+
+/* Place Order Button - Green Color */
+#pay-now {
+  background-color: var(--primary-color) !important;
+}
+
+#pay-now:hover {
+  background-color: var(--secondary-color) !important;
+}
