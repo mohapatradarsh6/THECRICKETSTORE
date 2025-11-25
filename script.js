@@ -1732,6 +1732,8 @@ function openPaymentModal(items) {
   if (stepPayment) stepPayment.classList.remove("active");
 
   if (stepAddress) stepAddress.classList.add("active");
+
+  // FIX: Make selectedAddress accessible throughout the function
   let selectedAddress = null;
 
   // --- RENDER ADDRESSES ---
@@ -1842,7 +1844,9 @@ function openPaymentModal(items) {
       // Move to Payment Step
       addressSection.style.display = "none";
       paymentSection.style.display = "block";
-      payNowBtn.style.display = "block";
+
+      // FIX: Show Pay Now button
+      if (payNowBtn) payNowBtn.style.display = "block";
 
       if (stepAddress) stepAddress.classList.add("active");
       if (stepPayment) stepPayment.classList.add("active");
@@ -1850,66 +1854,90 @@ function openPaymentModal(items) {
   }
 
   // --- FINAL PAY BUTTON LOGIC ---
-  const payNowBtnNew = payNowBtn.cloneNode(true);
-  payNowBtn.parentNode.replaceChild(payNowBtnNew, payNowBtn);
+  if (payNowBtn) {
+    const payNowBtnNew = payNowBtn.cloneNode(true);
+    payNowBtn.parentNode.replaceChild(payNowBtnNew, payNowBtn);
 
-  payNowBtnNew.addEventListener("click", async () => {
-    const selectedMethod = modal.querySelector(
-      'input[name="payment"]:checked'
-    ).value;
-
-    // Validation
-    if (selectedMethod === "card") {
-      if (!cardForm.querySelector("input")?.value?.trim()) {
-        window.cartManager.showToast("Please enter card details", "error");
+    payNowBtnNew.addEventListener("click", async () => {
+      // FIX: Check if address was selected
+      if (!selectedAddress) {
+        window.cartManager.showToast(
+          "Please select a delivery address",
+          "error"
+        );
         return;
       }
-    } else if (selectedMethod === "upi") {
-      if (!upiForm.querySelector("input")?.value?.trim()) {
-        window.cartManager.showToast("Please enter UPI ID", "error");
+
+      const selectedMethod = modal.querySelector(
+        'input[name="payment"]:checked'
+      )?.value;
+
+      if (!selectedMethod) {
+        window.cartManager.showToast("Please select a payment method", "error");
         return;
       }
-    }
 
-    try {
-      payNowBtnNew.textContent = "Processing...";
-      payNowBtnNew.disabled = true;
-
-      const token = localStorage.getItem("authToken");
-
-      const res = await fetch("/api/orders", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          items,
-          subtotal,
-          shipping,
-          tax,
-          total: finalTotal,
-          paymentMethod: selectedMethod,
-          shippingAddress: selectedAddress, // SENDING SELECTED ADDRESS
-        }),
-      });
-
-      if (res.ok) {
-        window.cartManager.showToast("Order placed successfully!", "success");
-        window.cartManager.clearCart();
-        closePaymentModal();
-      } else {
-        throw new Error("Order failed");
+      // Validation
+      if (selectedMethod === "card") {
+        const cardInput = cardForm?.querySelector("input");
+        if (!cardInput || !cardInput.value?.trim()) {
+          window.cartManager.showToast("Please enter card details", "error");
+          return;
+        }
+      } else if (selectedMethod === "upi") {
+        const upiInput = upiForm?.querySelector("input");
+        if (!upiInput || !upiInput.value?.trim()) {
+          window.cartManager.showToast("Please enter UPI ID", "error");
+          return;
+        }
       }
-    } catch (e) {
-      window.cartManager.showToast("Failed to place order", "error");
-    } finally {
-      payNowBtnNew.textContent = "Pay Now";
-      payNowBtnNew.disabled = false;
-    }
-  });
+
+      try {
+        payNowBtnNew.textContent = "Processing...";
+        payNowBtnNew.disabled = true;
+
+        const token = localStorage.getItem("authToken");
+
+        const res = await fetch("/api/orders", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            items,
+            subtotal,
+            shipping,
+            tax,
+            total: finalTotal,
+            paymentMethod: selectedMethod,
+            shippingAddress: selectedAddress, // FIX: Now this has the correct address
+          }),
+        });
+
+        if (res.ok) {
+          window.cartManager.showToast("Order placed successfully!", "success");
+          window.cartManager.clearCart();
+          closePaymentModal();
+        } else {
+          const errorData = await res.json();
+          throw new Error(errorData.error || "Order failed");
+        }
+      } catch (e) {
+        console.error("Order error:", e);
+        window.cartManager.showToast(
+          e.message || "Failed to place order",
+          "error"
+        );
+      } finally {
+        payNowBtnNew.textContent = "Pay Now";
+        payNowBtnNew.disabled = false;
+      }
+    });
+  }
 
   modal.style.display = "flex";
+
   // Cancel button handler
   const cancelBtn = document.getElementById("cancel-payment");
   if (cancelBtn) {
