@@ -1931,6 +1931,8 @@ body {
 
 .modal-body {
   padding: 30px;
+  max-height: calc(90vh - 200px); /* Reserve space for header and footer */
+  overflow-y: auto;
 }
 
 .modal-footer {
