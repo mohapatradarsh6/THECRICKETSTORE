@@ -331,7 +331,6 @@ class ProductManager {
       card.setAttribute("data-category", product.category);
       card.setAttribute("data-brand", product.brand);
 
-      // Helper for stars
       let ratingHTML = '<div class="stars"><i class="fas fa-star"></i></div>';
       if (
         window.cartManager &&
@@ -402,7 +401,6 @@ class ProductManager {
   }
 
   attachCardListeners(container) {
-    // Add to Cart
     container.querySelectorAll(".btn-add-cart").forEach((btn) => {
       btn.addEventListener("click", () => {
         const card = btn.closest(".product-card");
@@ -415,7 +413,6 @@ class ProductManager {
       });
     });
 
-    // Wishlist
     container.querySelectorAll(".btn-wishlist").forEach((btn) => {
       btn.addEventListener("click", (e) => {
         e.stopPropagation();
@@ -428,7 +425,6 @@ class ProductManager {
       });
     });
 
-    // Quick View
     container.querySelectorAll(".btn-quick-view").forEach((btn) => {
       btn.addEventListener("click", (e) => {
         e.stopPropagation();
@@ -722,11 +718,17 @@ function openAuthModal(mode = "login") {
   }
 }
 
+// --- FIXED FUNCTION ---
 function openForgotPasswordForm() {
   document.getElementById("login-form")?.classList.remove("active");
   document.getElementById("signup-form")?.classList.remove("active");
-  document.getElementById("login-tab")?.style.display = "none";
-  document.getElementById("signup-tab")?.style.display = "none";
+
+  // Fix: Use standard If checks, not optional chaining for assignment
+  const loginTab = document.getElementById("login-tab");
+  if (loginTab) loginTab.style.display = "none";
+
+  const signupTab = document.getElementById("signup-tab");
+  if (signupTab) signupTab.style.display = "none";
 
   const forgotForm = document.getElementById("forgot-password-form");
   if (forgotForm) forgotForm.classList.add("active");
