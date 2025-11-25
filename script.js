@@ -888,6 +888,7 @@ document.addEventListener("DOMContentLoaded", () => {
         window.cartManager.showToast("Signup failed.", "error");
       } finally {
         submitBtn.textContent = "Sign Up";
+        submitBtn.disabled = false;
       }
     });
 
