@@ -69,7 +69,7 @@ const handler = async (req, res) => {
     // --- GENERATE JWT TOKEN ---
     // This is the digital ID card.
     const token = jwt.sign(
-      { id: user._id, name: user.name },
+      { id: user._id, name: user.name, email: user.email },
       process.env.JWT_SECRET || "default_secret_key", // We will add this var later
       { expiresIn: "1h" }
     );
