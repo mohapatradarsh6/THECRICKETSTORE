@@ -607,16 +607,20 @@ class QuickViewModal {
     // --- NEW: Variants Logic (Sizes & Colors) ---
     const detailsContainer = this.modal.querySelector(".quick-view-details");
 
-    // Remove old selectors if any
-    const oldSelectors = detailsContainer.querySelectorAll(".variant-group");
-    oldSelectors.forEach((el) => el.remove());
+    // FIX: Remove BOTH old selectors AND old stock status to prevent stacking
+    const oldElements = detailsContainer.querySelectorAll(
+      ".variant-group, .stock-status"
+    );
+    oldElements.forEach((el) => el.remove());
 
     let stockHTML = "";
     if (product.stock !== undefined) {
-      const stockColor = product.stock > 0 ? "green" : "red";
+      const stockColor =
+        product.stock > 0 ? "var(--primary-color)" : "var(--danger-color)";
       const stockText =
         product.stock > 0 ? `In Stock (${product.stock})` : "Out of Stock";
-      stockHTML = `<div style="color:${stockColor}; font-weight:600; margin:10px 0;">${stockText}</div>`;
+      // Added "stock-status" class so we can find and remove it next time
+      stockHTML = `<div class="stock-status" style="color:${stockColor}; font-weight:600; margin:10px 0;">${stockText}</div>`;
     }
 
     // Create Variant Selectors HTML
@@ -663,14 +667,15 @@ class QuickViewModal {
         newBtn.disabled = true;
         newBtn.textContent = "Out of Stock";
         newBtn.style.background = "#ccc";
+        newBtn.style.cursor = "not-allowed";
       } else {
         newBtn.disabled = false;
         newBtn.textContent = "Add to Cart";
         newBtn.style.background = ""; // Reset to CSS default
+        newBtn.style.cursor = "pointer";
 
         newBtn.addEventListener("click", () => {
           const quantity = parseInt(qtyInput?.value || 1);
-          // Capture selected variants
           const sizeSelect = this.modal.querySelector("#qv-size");
           const colorSelect = this.modal.querySelector("#qv-color");
 
