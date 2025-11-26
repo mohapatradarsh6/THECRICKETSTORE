@@ -598,13 +598,41 @@ class ProductManager {
       const btn = document.getElementById(btnId);
       const suggestions = document.getElementById(suggestionsId);
 
+      // Shared function to perform search and UI updates
+      const performSearch = (query) => {
+        if (!query) return;
+
+        this.searchProducts(query);
+
+        // 1. Close Mobile Nav (if open)
+        const mobileNav = document.getElementById("mobile-nav");
+        const mobileOverlay = document.getElementById("mobile-nav-overlay");
+        if (mobileNav) mobileNav.classList.remove("active");
+        if (mobileOverlay) mobileOverlay.classList.remove("active");
+
+        // 2. Close Suggestions
+        if (suggestions) suggestions.classList.remove("active");
+
+        // 3. Scroll to Products Section (Crucial!)
+        const productsSection = document.querySelector(".products-section");
+        if (productsSection) {
+          // Add a small timeout to allow DOM updates if needed, or scroll immediately
+          setTimeout(() => {
+            productsSection.scrollIntoView({
+              behavior: "smooth",
+              block: "start",
+            });
+          }, 100);
+        }
+      };
+
       if (input) {
-        // Show history on focus
+        // History
         input.addEventListener("focus", () => {
           if (!input.value.trim()) this.showSearchHistory(suggestions, input);
         });
 
-        // Handle typing
+        // Input typing
         input.addEventListener("input", (e) => {
           const query = e.target.value;
           if (query.length > 0) {
@@ -612,20 +640,29 @@ class ProductManager {
           } else {
             this.showSearchHistory(suggestions, input);
           }
-          // Real-time search (optional, or keep distinct)
-          this.searchProducts(query);
         });
 
-        // Hide suggestions on click outside
+        // Enter Key
+        input.addEventListener("keypress", (e) => {
+          if (e.key === "Enter") {
+            performSearch(input.value);
+          }
+        });
+
+        // Click outside to close suggestions
         document.addEventListener("click", (e) => {
           if (!input.contains(e.target) && !suggestions.contains(e.target)) {
             suggestions.classList.remove("active");
           }
         });
-
-        // ... (Keep existing Enter key logic) ...
       }
-      // ... (Keep existing Button click logic) ...
+
+      // Button Click
+      if (btn) {
+        btn.addEventListener("click", () => {
+          if (input) performSearch(input.value);
+        });
+      }
     };
 
     setupSearchListener("search-input", "search-btn", "search-suggestions");
@@ -635,7 +672,6 @@ class ProductManager {
       "mobile-search-suggestions"
     );
   }
-
   // NEW: Show Autocomplete Suggestions
   showSuggestions(query, container, inputElement) {
     const matches = this.products
@@ -675,7 +711,14 @@ class ProductManager {
       this.addToSearchHistory(title);
       container.classList.remove("active");
     };
+    // FIX: Also scroll on suggestion click
+    const productsSection = document.querySelector(".products-section");
+    if (productsSection)
+      productsSection.scrollIntoView({ behavior: "smooth", block: "start" });
 
+    // FIX: Close mobile menu on suggestion click
+    document.getElementById("mobile-nav")?.classList.remove("active");
+    document.getElementById("mobile-nav-overlay")?.classList.remove("active");
     container.classList.add("active");
   }
 
