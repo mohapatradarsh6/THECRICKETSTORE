@@ -3041,330 +3041,112 @@ body {
   background: var(--secondary-color);
 }
 
+/* --- Mobile Header Layout Refinement --- */
 @media (max-width: 768px) {
-  /* --- 1. General Layout and Header Fixes --- */
-
-  .container {
-    padding: 0 15px; /* Adjust container padding */
-  }
-
-  /* Hide top bar details to save space */
-  .top-bar-content {
-    display: none;
-  }
-
+  /* 1. Reset Header Content to Flex Row */
   .header-content {
-    /* Ensure elements don't get squished */
-    gap: 10px;
-    padding: 10px 0;
+    display: flex;
+    flex-wrap: wrap; /* Allow wrapping for search bar */
+    align-items: center;
     justify-content: space-between;
+    padding: 10px 15px;
+    position: relative;
   }
 
-  /* Hide main navigation and search box on mobile */
+  /* 2. Logo Centered (or adjust as needed) */
+  .logo {
+    order: 2; /* Middle */
+    flex: 1;
+    text-align: center;
+  }
+  .logo h1 {
+    font-size: 1.4rem;
+    justify-content: center;
+  }
+  .tagline {
+    display: none;
+  } /* Hide tagline on mobile to save space */
+
+  /* 3. Hamburger Menu (Left) */
+  .mobile-menu-toggle {
+    order: 1; /* First */
+    display: block;
+    font-size: 1.4rem;
+    margin-right: 10px;
+    padding: 5px;
+  }
+
+  /* 4. Right Side Icons (Profile, Wishlist, Cart) */
+  .mobile-header-actions {
+    display: none !important; /* We don't need the extra wrapper anymore */
+  }
+
+  /* We'll use the main header-actions wrapper but restyle it */
+  .header-actions {
+    order: 3; /* Right side */
+    display: flex;
+    gap: 12px;
+    align-items: center;
+  }
+
+  /* Ensure Desktop Search & Nav are hidden */
   .main-nav,
-  .search-box {
+  .header-actions .search-box {
     display: none;
   }
 
-  /* Show the mobile menu toggle button */
-  .mobile-menu-toggle {
-    display: block;
-    font-size: 1.5rem;
+  /* Style User/Wishlist Icons for Mobile */
+  .user-action-item,
+  .wishlist-wrapper {
+    display: block; /* Ensure they are visible */
+  }
+
+  .user-btn span {
+    display: none;
+  } /* Icon only */
+  .user-btn i,
+  .wishlist-btn i {
+    font-size: 1.3rem;
     color: var(--dark-color);
   }
 
-  /* * FIX 1: Account and Shopping Cart Display 
-  * We make the action buttons compact by hiding text labels.
-  */
-  .user-actions {
-    gap: 5px; /* Reduce space between actions */
-    flex-shrink: 0;
+  /* Cart Icon Styling */
+  .cart-wrapper {
+    display: block;
   }
-
-  /* Hide the text label (e.g., 'Account') next to the icon */
-  .user-btn span {
-    display: none;
+  .cart-btn {
+    width: 38px;
+    height: 38px;
+    padding: 0;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
-
-  /* Make the Account/Wishlist button icon-only and compact */
-  .user-btn {
-    padding: 8px 10px;
-  }
-
-  /* Hide the text label for the Cart button */
   .cart-btn span:first-child {
     display: none;
-  }
-
-  /* Make the Cart button a compact, circular icon */
-  .cart-btn {
-    padding: 8px; /* Equal padding for circular shape */
-    border-radius: 50%;
-    height: 40px;
-    width: 40px;
-    justify-content: center;
-    align-items: center;
-    gap: 0; /* Remove gap inside compact button */
-  }
-
-  .cart-btn i {
-    margin-right: 0; /* Remove space if icon had margin */
-    font-size: 1.2rem;
-  }
-
-  /* Reposition the Cart count badge for the smaller button */
+  } /* Hide "Cart" text */
   .cart-count {
-    position: absolute;
-    top: -3px;
-    right: -3px;
-    margin-left: 0;
+    top: -5px;
+    right: -5px;
     font-size: 0.7rem;
-    padding: 3px 6px;
+    width: 18px;
+    height: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
   }
 
-  /* Ensure dropdowns align to the right edge of the screen */
-  .account-menu,
-  .wishlist-dropdown,
-  .cart-dropdown {
-    right: 15px; /* Align to the container padding */
-    left: auto; /* Overrides any left alignment */
-    max-width: 90vw;
-  }
-
-  /* --- 2. Hero Section (Carousel) Fixes --- */
-
-  .hero-section {
-    height: auto; /* Allow height to adapt to content */
-    min-height: 450px; /* Ensures a minimum visible area */
-  }
-
-  .hero-slide {
-    flex-direction: column; /* Stack content and image vertically */
-    padding: 30px 0;
-    height: auto;
-  }
-
-  .hero-content {
-    order: 2; /* Content moves below the image */
-    padding: 10px 15px;
-    text-align: center;
-    max-width: 100%;
-  }
-
-  /* Adjust typography for mobile */
-  .hero-content h1 {
-    font-size: 1.8rem;
-    margin-bottom: 8px;
-  }
-
-  .hero-content p {
-    font-size: 0.9rem;
-    margin-bottom: 15px;
-    line-height: 1.4;
-    display: -webkit-box;
-    -webkit-line-clamp: 3; /* Limit text to 3 lines */
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-  }
-
-  /*
-  * FIX 2: Carousel Image Not Visible
-  * We reset opacity and manage image container size.
-  */
-  .hero-image {
-    order: 1; /* Image moves above the content */
-    opacity: 1; /* ***THE FIX: Make the image fully visible (was 0.3)*** */
-    position: relative;
-    max-width: 80%; /* Adjust container size and center it */
-    margin: 20px auto 0;
-  }
-
-  .hero-product-img {
-    width: 100%; /* Make the image fill its new container */
-    max-width: 250px; /* Set a reasonable max width for the image itself */
-    height: auto;
-    object-fit: contain;
-  }
-
-  /* Hide extra visual clutter like floating badges */
-  .floating-badge {
-    display: none;
-  }
-
-  /* --- 3. Products, Categories & Footer Layout Fixes --- */
-
-  .products-container {
-    grid-template-columns: repeat(2, 1fr) !important;
-    gap: 12px;
-    padding: 0 10px;
-  }
-
-  /* Compact product cards for mobile */
-  .product-card {
-    padding: 10px;
-    font-size: 0.85rem;
-  }
-
-  .product-image-wrapper {
-    height: 180px;
-  }
-
-  .product-badge {
-    font-size: 0.7rem;
-    padding: 4px 8px;
-    top: 8px;
-    right: 8px;
-  }
-
-  .product-info {
-    padding: 12px 8px;
-  }
-
-  .product-brand {
-    font-size: 0.75rem;
-    margin-bottom: 4px;
-  }
-
-  .product-title {
-    font-size: 0.85rem;
-    margin: 4px 0;
-    line-height: 1.2;
-    min-height: 32px;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-  }
-
-  .product-rating {
-    gap: 5px;
-    margin: 6px 0;
-  }
-
-  .stars {
-    font-size: 0.75rem;
-  }
-
-  .rating-count {
-    font-size: 0.7rem;
-  }
-
-  .product-description {
-    display: none !important; /* Hide description on mobile to save space */
-  }
-
-  .product-price {
-    margin: 10px 0;
-    flex-wrap: wrap;
-    gap: 6px;
-  }
-
-  .price-current {
-    font-size: 1.1rem;
-  }
-
-  .price-original {
-    font-size: 0.85rem;
-  }
-
-  .price-discount {
-    font-size: 0.75rem;
-    padding: 2px 6px;
-  }
-
-  /* Mobile product actions */
-  .product-actions {
-    flex-direction: column;
-    gap: 8px;
-  }
-
-  .btn-wishlist {
-    position: absolute;
-    top: 10px;
-    left: 10px;
-    width: 32px;
-    height: 32px;
-    font-size: 0.9rem;
-    background: rgba(255, 255, 255, 0.95);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-    z-index: 5;
-  }
-
-  .btn-add-cart,
-  .btn-buy-now {
-    padding: 10px 12px;
-    font-size: 0.85rem;
-    width: 100%;
-  }
-
-  .btn-add-cart i {
-    display: none; /* Hide cart icon on mobile to save space */
-
-    /* Mobile filters */
-    .filter-section {
-      padding: 15px 0;
-    }
-
-    .filter-header {
-      flex-direction: column;
-      gap: 12px;
-    }
-
-    .filter-header h2 {
-      font-size: 1.4rem;
-      text-align: center;
-    }
-
-    .filter-controls {
-      width: 100%;
-      gap: 8px;
-    }
-
-    .filter-select {
-      width: 100%;
-      padding: 10px 12px;
-      font-size: 0.9rem;
-    }
-  }
-
-  .newsletter-section {
-    padding: 40px 0;
-  }
-
-  .newsletter-content h2 {
-    font-size: 1.5rem;
-    margin-bottom: 10px;
-  }
-
-  .newsletter-content p {
-    font-size: 0.9rem;
-    margin-bottom: 20px;
-  }
-
-  .newsletter-form {
-    flex-direction: column;
-    border-radius: 10px;
-    max-width: 100%;
-    padding: 0 15px;
-  }
-
-  .newsletter-form input {
-    padding: 12px 20px;
-    border-radius: 8px 8px 0 0;
-  }
-
-  .newsletter-form button {
-    padding: 12px;
-    border-radius: 0 0 8px 8px;
-  }
-  .filter-section {
+  /* 5. Mobile Search Overlay Trigger (Search Icon) */
+  #mobile-search-toggle {
     display: block;
-    padding: 20px 0; /* some padding for better spacing */
-  }
-
-  /* Move section title inside products section */
-  .products-section {
-    padding-top: 20px;
+    font-size: 1.3rem;
+    color: var(--dark-color);
+    background: none;
+    border: none;
+    cursor: pointer;
+    order: 4; /* Rightmost if you want search icon there too */
   }
 }
 

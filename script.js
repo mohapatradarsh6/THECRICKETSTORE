@@ -40,6 +40,7 @@ class CartManager {
   }
 
   addToCart(product, quantity = 1) {
+    // Check stock limit
     if (product.stock !== undefined && product.stock < quantity) {
       this.showToast(`Sorry, only ${product.stock} items in stock!`, "error");
       return;
@@ -49,8 +50,10 @@ class CartManager {
     const price = parseFloat(product.price) || 0;
 
     if (existingItem) {
-      const newQty = existingItem.quantity + quantity;
-      if (product.stock !== undefined && newQty > product.stock) {
+      if (
+        product.stock !== undefined &&
+        existingItem.quantity + quantity > product.stock
+      ) {
         this.showToast(`Cannot add more! Max stock reached.`, "warning");
         return;
       }
@@ -156,6 +159,10 @@ class CartManager {
           <div class="cart-item-price">₹${parseFloat(item.price).toFixed(
             2
           )}</div>
+          <div class="cart-item-details" style="font-size:0.8rem; color:#666">
+             ${item.selectedSize ? `Size: ${item.selectedSize}` : ""} 
+             ${item.selectedColor ? `| Color: ${item.selectedColor}` : ""}
+          </div>
           <div class="cart-item-quantity">
             <button class="qty-btn" onclick="window.cartManager.updateQuantity('${item.title.replace(
               /'/g,
@@ -352,6 +359,7 @@ class ProductManager {
   createProductCard(product) {
     const card = document.createElement("div");
     card.className = "product-card";
+
     card.setAttribute("data-title", product.title);
     card.setAttribute("data-price", product.price);
     card.setAttribute("data-product", JSON.stringify(product));
@@ -495,6 +503,7 @@ class ProductManager {
     if (ratingFilter)
       ratingFilter.addEventListener("change", () => this.applyFilters());
   }
+
   applyFilters() {
     const category = document.getElementById("category-filter")?.value || "all";
     const brand = document.getElementById("brand-filter")?.value || "all";
@@ -511,8 +520,6 @@ class ProductManager {
     this.filteredProducts = this.products.filter((product) => {
       const catMatch = category === "all" || product.category === category;
       const brandMatch = brand === "all" || product.brand === brand;
-
-      // NEW CHECKS
       const priceMatch = product.price <= maxPrice;
       const stockMatch = !inStockOnly || (product.stock && product.stock > 0);
       const ratingMatch =
@@ -800,7 +807,6 @@ class QuickViewModal {
     );
     oldElements.forEach((el) => el.remove());
 
-    // Smart Stock Logic
     let stockHTML = "";
     if (product.stock !== undefined) {
       if (product.stock <= 0) {
@@ -983,6 +989,11 @@ class ProductPagination {
 
     if (window.productManager) {
       window.productManager.attachCardListeners(container);
+    }
+
+    const productsSection = document.querySelector(".products-section");
+    if (productsSection && this.currentPage > 1) {
+      productsSection.scrollIntoView({ behavior: "smooth", block: "start" });
     }
   }
 
@@ -1498,6 +1509,7 @@ function openPaymentModal(items) {
       addressSection.style.display = "none";
       paymentSection.style.display = "block";
 
+      // FIX: Explicitly show the Pay button now
       payNowBtn.style.display = "block";
       continueBtn.style.display = "none";
 
