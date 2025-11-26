@@ -3260,9 +3260,9 @@ body {
     padding: 12px;
     border-radius: 0 0 8px 8px;
   }
-  /* Hide the desktop filter section on mobile */
   .filter-section {
-    display: none;
+    display: block;
+    padding: 20px 0; /* some padding for better spacing */
   }
 
   /* Move section title inside products section */
@@ -3726,4 +3726,82 @@ body {
   font-weight: bold;
   color: #888;
   background: #f9f9f9;
+}
+
+/* --- Enhanced Filter Layout --- */
+.filter-controls-wrapper {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  margin-top: 15px;
+}
+
+/* Desktop: Make filters more compact */
+@media (min-width: 769px) {
+  .filter-header {
+    align-items: flex-start;
+  }
+  .filter-controls-wrapper {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .advanced-filters {
+    margin-top: 0 !important;
+    border-top: none !important;
+    padding-top: 0 !important;
+    flex: 1;
+    justify-content: flex-end;
+  }
+}
+
+/* Price Inputs Styling */
+.price-inputs {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+#price-number {
+  width: 80px;
+  padding: 5px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+}
+
+/* Mobile Adjustments */
+@media (max-width: 768px) {
+  .filter-section {
+    display: block !important; /* Force show filters on mobile */
+    padding: 15px 0;
+  }
+  .filter-header h2 {
+    font-size: 1.5rem;
+    margin-bottom: 10px;
+  }
+  .filter-controls {
+    flex-direction: column;
+    width: 100%;
+  }
+  .filter-select {
+    width: 100%;
+  }
+  .advanced-filters {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 15px;
+  }
+  .price-group {
+    width: 100%;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .price-inputs {
+    width: 100%;
+  }
+  #price-range {
+    flex: 1;
+  }
 }

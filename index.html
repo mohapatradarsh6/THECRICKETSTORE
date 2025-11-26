@@ -502,88 +502,67 @@
       <div class="container">
         <div class="filter-header">
           <h2>Featured Products</h2>
-          <div class="filter-controls">
-            <select id="category-filter" class="filter-select">
-              <option value="all">All Categories</option>
-              <option value="bats">Cricket Bats</option>
-              <option value="balls">Balls</option>
-              <option value="pads">Pads</option>
-              <option value="gloves">Gloves</option>
-            </select>
 
-            <select id="brand-filter" class="filter-select">
-              <option value="all">All Brands</option>
-              <option value="sg">SG</option>
-              <option value="kookaburra">Kookaburra</option>
-              <option value="bas">BAS</option>
-            </select>
+          <div class="filter-controls-wrapper">
+            <div class="filter-controls">
+              <select id="category-filter" class="filter-select">
+                <option value="all">All Categories</option>
+                <option value="bats">Cricket Bats</option>
+                <option value="balls">Balls</option>
+                <option value="pads">Pads</option>
+                <option value="gloves">Gloves</option>
+                <option value="helmets">Helmets</option>
+                <option value="shoes">Shoes</option>
+                <option value="bags">Kit Bags</option>
+              </select>
 
-            <select id="sort-filter" class="filter-select">
-              <option value="featured">Featured</option>
-              <option value="price-low">Price: Low to High</option>
-              <option value="price-high">Price: High to Low</option>
-              <option value="rating">Highest Rated</option>
-            </select>
+              <select id="brand-filter" class="filter-select">
+                <option value="all">All Brands</option>
+                <option value="sg">SG</option>
+                <option value="kookaburra">Kookaburra</option>
+                <option value="bas">BAS</option>
+                <option value="gray-nicolls">Gray-Nicolls</option>
+                <option value="mrf">MRF</option>
+                <option value="ss">SS</option>
+              </select>
 
-            <select id="sort-filter" class="filter-select">
-              <option value="featured">Featured</option>
-              <option value="relevance">Relevance</option>
-              <option value="price-low">Price: Low to High</option>
-              <option value="price-high">Price: High to Low</option>
-              <option value="rating">Highest Rated</option>
-            </select>
+              <select id="sort-filter" class="filter-select">
+                <option value="featured">Featured</option>
+                <option value="relevance">Relevance</option>
+                <option value="price-low">Price: Low to High</option>
+                <option value="price-high">Price: High to Low</option>
+                <option value="rating">Highest Rated</option>
+              </select>
+            </div>
 
-            <div
-              class="advanced-filters"
-              style="
-                width: 100%;
-                display: flex;
-                gap: 20px;
-                align-items: center;
-                margin-top: 15px;
-                padding-top: 15px;
-                border-top: 1px solid #eee;
-              "
-            >
-              <div class="filter-group">
-                <label
-                  for="price-range"
-                  style="font-size: 0.9rem; font-weight: 600"
-                  >Max Price: ₹<span id="price-value">50000</span></label
-                >
-                <input
-                  type="range"
-                  id="price-range"
-                  min="0"
-                  max="50000"
-                  step="1000"
-                  value="50000"
-                  style="cursor: pointer"
-                />
+            <div class="advanced-filters">
+              <div class="filter-group price-group">
+                <label>Max Price:</label>
+                <div class="price-inputs">
+                  <input
+                    type="range"
+                    id="price-range"
+                    min="0"
+                    max="50000"
+                    step="500"
+                    value="50000"
+                  />
+                  <input
+                    type="number"
+                    id="price-number"
+                    min="0"
+                    max="50000"
+                    value="50000"
+                  />
+                </div>
               </div>
 
-              <div class="filter-checkboxes" style="display: flex; gap: 15px">
-                <label
-                  style="
-                    font-size: 0.9rem;
-                    cursor: pointer;
-                    display: flex;
-                    align-items: center;
-                    gap: 5px;
-                  "
-                >
-                  <input type="checkbox" id="stock-filter" /> In Stock Only
+              <div class="filter-checkboxes">
+                <label class="checkbox-label">
+                  <input type="checkbox" id="stock-filter" /> In Stock
                 </label>
-                <label
-                  style="
-                    font-size: 0.9rem;
-                    cursor: pointer;
-                    display: flex;
-                    align-items: center;
-                    gap: 5px;
-                  "
-                >
-                  <input type="checkbox" id="rating-filter" /> 4★ & Above
+                <label class="checkbox-label">
+                  <input type="checkbox" id="rating-filter" /> 4★+
                 </label>
               </div>
             </div>

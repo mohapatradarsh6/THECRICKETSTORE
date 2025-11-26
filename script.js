@@ -511,36 +511,50 @@ class ProductManager {
     const brandFilter = document.getElementById("brand-filter");
     const sortFilter = document.getElementById("sort-filter");
 
+    // Advanced Filters
     const priceRange = document.getElementById("price-range");
+    const priceNumber = document.getElementById("price-number"); // New
     const stockFilter = document.getElementById("stock-filter");
     const ratingFilter = document.getElementById("rating-filter");
+
+    // Bind Dropdowns
     if (categoryFilter)
       categoryFilter.addEventListener("change", () => this.applyFilters());
     if (brandFilter)
       brandFilter.addEventListener("change", () => this.applyFilters());
     if (sortFilter)
       sortFilter.addEventListener("change", () => this.applyFilters());
-    if (priceRange) {
+
+    // Bind Price Slider -> Number
+    if (priceRange && priceNumber) {
       priceRange.addEventListener("input", (e) => {
-        document.getElementById("price-value").textContent = e.target.value;
+        priceNumber.value = e.target.value;
+        this.applyFilters();
+      });
+
+      // Bind Number -> Slider
+      priceNumber.addEventListener("input", (e) => {
+        let val = parseInt(e.target.value);
+        if (val > 50000) val = 50000; // Max limit
+        if (val < 0) val = 0;
+        priceRange.value = val;
         this.applyFilters();
       });
     }
+
     if (stockFilter)
       stockFilter.addEventListener("change", () => this.applyFilters());
     if (ratingFilter)
       ratingFilter.addEventListener("change", () => this.applyFilters());
   }
-
   applyFilters() {
     const category = document.getElementById("category-filter")?.value || "all";
     const brand = document.getElementById("brand-filter")?.value || "all";
     const sort = document.getElementById("sort-filter")?.value || "featured";
 
     // NEW VALUES
-    const maxPrice = document.getElementById("price-range")
-      ? parseInt(document.getElementById("price-range").value)
-      : 50000;
+    const maxPriceInput = document.getElementById("price-number");
+    const maxPrice = maxPriceInput ? parseInt(maxPriceInput.value) : 50000;
     const inStockOnly =
       document.getElementById("stock-filter")?.checked || false;
     const highRating =
