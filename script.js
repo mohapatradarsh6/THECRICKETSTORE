@@ -1615,26 +1615,21 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
-  // Mobile Menu Links - Close sidebar on click
+  // Mobile Menu Links - Close sidebar ONLY for Home link
   document.querySelectorAll(".mobile-menu-list a").forEach((link) => {
     link.addEventListener("click", (e) => {
-      // Close mobile nav
-      mobileNav.classList.remove("active");
-      mobileNavOverlay.classList.remove("active");
-
-      // Handle anchor links (scroll to section)
       const href = link.getAttribute("href");
-      if (href && href.startsWith("#")) {
-        e.preventDefault();
-        const targetId = href.substring(1);
-        const targetSection = document.getElementById(targetId);
 
-        if (targetSection) {
-          targetSection.scrollIntoView({ behavior: "smooth", block: "start" });
-        } else {
-          // If target doesn't exist, scroll to top (for #home)
-          window.scrollTo({ top: 0, behavior: "smooth" });
-        }
+      // Only handle the #home link
+      if (href === "#home") {
+        e.preventDefault();
+
+        // Close mobile nav
+        mobileNav.classList.remove("active");
+        mobileNavOverlay.classList.remove("active");
+
+        // Scroll to top
+        window.scrollTo({ top: 0, behavior: "smooth" });
       }
     });
   });
