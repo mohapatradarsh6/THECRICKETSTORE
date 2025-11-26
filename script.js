@@ -1497,7 +1497,9 @@ function openPaymentModal(items) {
       // Move to Payment Step
       addressSection.style.display = "none";
       paymentSection.style.display = "block";
+
       payNowBtn.style.display = "block";
+      continueBtn.style.display = "none";
 
       if (stepAddress) stepAddress.classList.add("active");
       if (stepPayment) stepPayment.classList.add("active");
@@ -1914,6 +1916,54 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
+  // --- ADVANCED HOME RESET LOGIC ---
+  const resetHomeState = (e) => {
+    e.preventDefault();
+
+    // 1. Reset Search
+    const searchInput = document.getElementById("search-input");
+    const mobileSearchInput = document.getElementById(
+      "mobile-search-input-overlay"
+    );
+    if (searchInput) searchInput.value = "";
+    if (mobileSearchInput) mobileSearchInput.value = "";
+
+    // 2. Reset Filters
+    const categoryFilter = document.getElementById("category-filter");
+    if (categoryFilter) categoryFilter.value = "all";
+
+    // Reset Advanced Filters
+    const priceRange = document.getElementById("price-range");
+    const priceNumber = document.getElementById("price-number");
+    if (priceRange) priceRange.value = 50000;
+    if (priceNumber) priceNumber.value = 50000;
+
+    document.getElementById("stock-filter").checked = false;
+    document.getElementById("rating-filter").checked = false;
+
+    // 3. Reset Logic in ProductManager
+    if (window.productManager) {
+      window.productManager.applyFilters(); // Re-fetches/resets list
+    }
+
+    // 4. Show Hero Section
+    const hero = document.querySelector(".hero-section");
+    if (hero) hero.style.display = "block"; // Bring back hero
+
+    // 5. Close Mobile Menu
+    const mobileNav = document.getElementById("mobile-nav");
+    const mobileOverlay = document.getElementById("mobile-nav-overlay");
+    if (mobileNav) mobileNav.classList.remove("active");
+    if (mobileOverlay) mobileOverlay.classList.remove("active");
+
+    // 6. Scroll to Top
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  // Attach to ALL Home links (Desktop & Mobile)
+  document.querySelectorAll('a[href="#home"]').forEach((link) => {
+    link.addEventListener("click", resetHomeState);
+  });
   // Profile Listeners
   document
     .getElementById("save-profile-btn")
