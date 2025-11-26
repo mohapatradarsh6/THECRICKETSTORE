@@ -288,6 +288,7 @@
                 placeholder="Search products..."
               />
               <button id="search-btn"><i class="fas fa-search"></i></button>
+              <div id="search-suggestions" class="suggestions-dropdown"></div>
             </div>
 
             <div class="user-action-item account-dropdown">
@@ -523,6 +524,69 @@
               <option value="price-high">Price: High to Low</option>
               <option value="rating">Highest Rated</option>
             </select>
+
+            <select id="sort-filter" class="filter-select">
+              <option value="featured">Featured</option>
+              <option value="relevance">Relevance</option>
+              <option value="price-low">Price: Low to High</option>
+              <option value="price-high">Price: High to Low</option>
+              <option value="rating">Highest Rated</option>
+            </select>
+
+            <div
+              class="advanced-filters"
+              style="
+                width: 100%;
+                display: flex;
+                gap: 20px;
+                align-items: center;
+                margin-top: 15px;
+                padding-top: 15px;
+                border-top: 1px solid #eee;
+              "
+            >
+              <div class="filter-group">
+                <label
+                  for="price-range"
+                  style="font-size: 0.9rem; font-weight: 600"
+                  >Max Price: ₹<span id="price-value">50000</span></label
+                >
+                <input
+                  type="range"
+                  id="price-range"
+                  min="0"
+                  max="50000"
+                  step="1000"
+                  value="50000"
+                  style="cursor: pointer"
+                />
+              </div>
+
+              <div class="filter-checkboxes" style="display: flex; gap: 15px">
+                <label
+                  style="
+                    font-size: 0.9rem;
+                    cursor: pointer;
+                    display: flex;
+                    align-items: center;
+                    gap: 5px;
+                  "
+                >
+                  <input type="checkbox" id="stock-filter" /> In Stock Only
+                </label>
+                <label
+                  style="
+                    font-size: 0.9rem;
+                    cursor: pointer;
+                    display: flex;
+                    align-items: center;
+                    gap: 5px;
+                  "
+                >
+                  <input type="checkbox" id="rating-filter" /> 4★ & Above
+                </label>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -1010,6 +1074,7 @@
         <button id="mobile-search-btn">
           <i class="fas fa-search"></i>
         </button>
+        <div id="mobile-search-suggestions" class="suggestions-dropdown"></div>
       </div>
 
       <ul class="mobile-menu-list">

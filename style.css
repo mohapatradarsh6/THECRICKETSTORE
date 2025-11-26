@@ -3668,3 +3668,62 @@ body {
 #pay-now:hover {
   background-color: var(--secondary-color) !important;
 }
+
+/* Search Autocomplete */
+.search-box,
+.mobile-search-box {
+  position: relative; /* Needed for absolute positioning of suggestions */
+}
+
+.suggestions-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  width: 100%;
+  background: white;
+  border: 1px solid var(--border-color);
+  border-top: none;
+  border-radius: 0 0 10px 10px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+  z-index: 1002;
+  max-height: 300px;
+  overflow-y: auto;
+  display: none; /* Hidden by default */
+}
+
+.suggestions-dropdown.active {
+  display: block;
+}
+
+.suggestion-item {
+  padding: 10px 15px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-bottom: 1px solid #f0f0f0;
+  transition: background 0.2s;
+}
+
+.suggestion-item:hover {
+  background-color: var(--light-color);
+}
+
+.suggestion-item img {
+  width: 30px;
+  height: 30px;
+  object-fit: contain;
+}
+
+.suggestion-info {
+  font-size: 0.9rem;
+  color: var(--text-color);
+}
+
+.search-history-header {
+  padding: 8px 15px;
+  font-size: 0.8rem;
+  font-weight: bold;
+  color: #888;
+  background: #f9f9f9;
+}

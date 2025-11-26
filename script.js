@@ -340,6 +340,8 @@ class ProductManager {
   constructor() {
     this.products = [];
     this.filteredProducts = [];
+    this.searchHistory =
+      JSON.parse(localStorage.getItem("searchHistory")) || [];
     this.init();
   }
 
@@ -509,54 +511,198 @@ class ProductManager {
     const brandFilter = document.getElementById("brand-filter");
     const sortFilter = document.getElementById("sort-filter");
 
+    const priceRange = document.getElementById("price-range");
+    const stockFilter = document.getElementById("stock-filter");
+    const ratingFilter = document.getElementById("rating-filter");
     if (categoryFilter)
       categoryFilter.addEventListener("change", () => this.applyFilters());
     if (brandFilter)
       brandFilter.addEventListener("change", () => this.applyFilters());
     if (sortFilter)
       sortFilter.addEventListener("change", () => this.applyFilters());
+    if (priceRange) {
+      priceRange.addEventListener("input", (e) => {
+        document.getElementById("price-value").textContent = e.target.value;
+        this.applyFilters();
+      });
+    }
+    if (stockFilter)
+      stockFilter.addEventListener("change", () => this.applyFilters());
+    if (ratingFilter)
+      ratingFilter.addEventListener("change", () => this.applyFilters());
+  }
+
+  applyFilters() {
+    const category = document.getElementById("category-filter")?.value || "all";
+    const brand = document.getElementById("brand-filter")?.value || "all";
+    const sort = document.getElementById("sort-filter")?.value || "featured";
+
+    // NEW VALUES
+    const maxPrice = document.getElementById("price-range")
+      ? parseInt(document.getElementById("price-range").value)
+      : 50000;
+    const inStockOnly =
+      document.getElementById("stock-filter")?.checked || false;
+    const highRating =
+      document.getElementById("rating-filter")?.checked || false;
+
+    this.filteredProducts = this.products.filter((product) => {
+      const catMatch = category === "all" || product.category === category;
+      const brandMatch = brand === "all" || product.brand === brand;
+
+      // NEW CHECKS
+      const priceMatch = product.price <= maxPrice;
+      const stockMatch = !inStockOnly || (product.stock && product.stock > 0);
+      const ratingMatch =
+        !highRating || (product.rating && product.rating >= 4);
+
+      return catMatch && brandMatch && priceMatch && stockMatch && ratingMatch;
+    });
+
+    // Sorting
+    switch (sort) {
+      case "price-low":
+        this.filteredProducts.sort((a, b) => a.price - b.price);
+        break;
+      case "price-high":
+        this.filteredProducts.sort((a, b) => b.price - a.price);
+        break;
+      case "rating":
+        this.filteredProducts.sort((a, b) => b.rating - a.rating);
+        break;
+      case "relevance":
+        // Simple relevance: matches keyword first (if search active) or default
+        break;
+    }
+
+    this.renderProductCards();
   }
 
   initializeSearch() {
-    // Helper to attach listeners to any search input/button pair
-    const setupSearchListener = (inputId, btnId) => {
+    const setupSearchListener = (inputId, btnId, suggestionsId) => {
       const input = document.getElementById(inputId);
       const btn = document.getElementById(btnId);
+      const suggestions = document.getElementById(suggestionsId);
 
       if (input) {
-        input.addEventListener("input", (e) =>
-          this.searchProducts(e.target.value)
-        );
-        input.addEventListener("keypress", (e) => {
-          if (e.key === "Enter") {
-            this.searchProducts(e.target.value);
-            document.getElementById("mobile-nav")?.classList.remove("active");
-            document
-              .getElementById("mobile-nav-overlay")
-              ?.classList.remove("active");
+        // Show history on focus
+        input.addEventListener("focus", () => {
+          if (!input.value.trim()) this.showSearchHistory(suggestions, input);
+        });
+
+        // Handle typing
+        input.addEventListener("input", (e) => {
+          const query = e.target.value;
+          if (query.length > 0) {
+            this.showSuggestions(query, suggestions, input);
+          } else {
+            this.showSearchHistory(suggestions, input);
+          }
+          // Real-time search (optional, or keep distinct)
+          this.searchProducts(query);
+        });
+
+        // Hide suggestions on click outside
+        document.addEventListener("click", (e) => {
+          if (!input.contains(e.target) && !suggestions.contains(e.target)) {
+            suggestions.classList.remove("active");
           }
         });
+
+        // ... (Keep existing Enter key logic) ...
       }
-      if (btn) {
-        btn.addEventListener("click", () => {
-          if (input) {
-            this.searchProducts(input.value);
-            document.getElementById("mobile-nav")?.classList.remove("active");
-            document
-              .getElementById("mobile-nav-overlay")
-              ?.classList.remove("active");
-          }
-        });
-      }
+      // ... (Keep existing Button click logic) ...
     };
 
-    // 1. Desktop Search
-    setupSearchListener("search-input", "search-btn");
-
-    // 2. Mobile Search (This was missing!)
-    setupSearchListener("mobile-search-input", "mobile-search-btn");
+    setupSearchListener("search-input", "search-btn", "search-suggestions");
+    setupSearchListener(
+      "mobile-search-input",
+      "mobile-search-btn",
+      "mobile-search-suggestions"
+    );
   }
 
+  // NEW: Show Autocomplete Suggestions
+  showSuggestions(query, container, inputElement) {
+    const matches = this.products
+      .filter(
+        (p) =>
+          p.title.toLowerCase().includes(query.toLowerCase()) ||
+          p.brand.toLowerCase().includes(query.toLowerCase())
+      )
+      .slice(0, 5); // Limit to 5
+
+    if (matches.length === 0) {
+      container.classList.remove("active");
+      return;
+    }
+
+    container.innerHTML = matches
+      .map(
+        (p) => `
+          <div class="suggestion-item" onclick="window.productManager.selectSuggestion('${p.title.replace(
+            /'/g,
+            "\\'"
+          )}')">
+              <img src="${p.image}" alt="${p.title}">
+              <div class="suggestion-info">
+                  <div>${p.title}</div>
+                  <small style="color:#666">${p.brand}</small>
+              </div>
+          </div>
+      `
+      )
+      .join("");
+
+    // Helper to handle click (attach to window/class instance)
+    window.productManager.selectSuggestion = (title) => {
+      inputElement.value = title;
+      this.searchProducts(title);
+      this.addToSearchHistory(title);
+      container.classList.remove("active");
+    };
+
+    container.classList.add("active");
+  }
+
+  // NEW: Search History Logic
+  showSearchHistory(container, inputElement) {
+    if (this.searchHistory.length === 0) return;
+
+    container.innerHTML =
+      `<div class="search-history-header">Recent Searches</div>` +
+      this.searchHistory
+        .map(
+          (term) => `
+          <div class="suggestion-item" onclick="window.productManager.selectSuggestion('${term}')">
+              <i class="fas fa-history" style="color:#ccc"></i>
+              <span>${term}</span>
+          </div>
+      `
+        )
+        .join("");
+
+    container.classList.add("active");
+  }
+
+  addToSearchHistory(term) {
+    const hero = document.querySelector(".hero-section");
+    if (hero) {
+      if (searchTerm.length > 0) {
+        hero.style.display = "none"; // Hide on search
+        // Add padding to body or main container if needed to prevent jump
+      } else {
+        hero.style.display = "block"; // Show if search cleared
+      }
+    }
+
+    if (!term) return;
+    // Remove duplicate and add to top
+    this.searchHistory = this.searchHistory.filter((t) => t !== term);
+    this.searchHistory.unshift(term);
+    if (this.searchHistory.length > 5) this.searchHistory.pop();
+    localStorage.setItem("searchHistory", JSON.stringify(this.searchHistory));
+  }
   searchProducts(query) {
     const searchTerm = query.toLowerCase().trim();
 
