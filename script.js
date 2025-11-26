@@ -37,6 +37,7 @@ class CartManager {
   saveWishlist() {
     localStorage.setItem("cricketStoreWishlist", JSON.stringify(this.wishlist));
     this.updateWishlistUI();
+    updateMobileWishlist();
   }
 
   addToCart(product, quantity = 1) {
@@ -299,6 +300,48 @@ class CartManager {
       });
     }
   }
+}
+
+function formatDate(dateString) {
+  const date = new Date(dateString);
+  const options = {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  };
+  return date.toLocaleDateString("en-US", options);
+}
+
+// Sync Wishlist to Mobile Sidebar
+function updateMobileWishlist() {
+  const container = document.getElementById("mobile-wishlist-items");
+  if (!container || !window.cartManager) return;
+
+  const wishlist = window.cartManager.wishlist;
+
+  if (wishlist.length === 0) {
+    container.innerHTML =
+      '<p style="text-align:center; color:#999; font-size:0.85rem;">No items yet</p>';
+    return;
+  }
+
+  container.innerHTML = wishlist
+    .map(
+      (item) => `
+    <div class="mobile-wishlist-item">
+      <span>${item.title}</span>
+      <i class="fas fa-trash mobile-wishlist-remove" 
+         onclick="window.cartManager.toggleWishlist({title: '${item.title.replace(
+           /'/g,
+           "\\'"
+         )}', price: ${item.price}})">
+      </i>
+    </div>
+  `
+    )
+    .join("");
 }
 
 // --- 2. Product Management (Enhanced) ---
@@ -796,61 +839,74 @@ class QuickViewModal {
     this.modal.querySelector("#quick-view-title").textContent = product.title;
     this.modal.querySelector("#quick-view-img").src = product.image;
     this.modal.querySelector("#quick-view-description").textContent =
-      product.description || "No description.";
+      product.description || "No description available.";
+
     this.modal.querySelector(
       "#quick-view-price"
     ).innerHTML = `<span class="price-current">₹${product.price}</span>`;
 
+    // Clear old variant elements
     const detailsContainer = this.modal.querySelector(".quick-view-details");
     const oldElements = detailsContainer.querySelectorAll(
       ".variant-group, .stock-status"
     );
     oldElements.forEach((el) => el.remove());
 
+    // Build stock status HTML
     let stockHTML = "";
     if (product.stock !== undefined) {
       if (product.stock <= 0) {
-        stockHTML = `<div class="stock-status" style="color:var(--danger-color); font-weight:600; margin:10px 0;">Out of Stock</div>`;
+        stockHTML = `<div class="stock-status" style="background:#ffe0e0; color:var(--danger-color); padding:10px; border-radius:6px; font-weight:600;">
+        <i class="fas fa-times-circle"></i> Out of Stock
+      </div>`;
       } else if (product.stock < 5) {
-        stockHTML = `<div class="stock-status" style="color:#e67e22; font-weight:600; margin:10px 0;">
-                <i class="fas fa-exclamation-circle"></i> Hurry! Only ${product.stock} left in stock
-             </div>`;
+        stockHTML = `<div class="stock-status" style="background:#fff3cd; color:#856404; padding:10px; border-radius:6px; font-weight:600;">
+        <i class="fas fa-exclamation-circle"></i> Only ${product.stock} left!
+      </div>`;
+      } else {
+        stockHTML = `<div class="stock-status" style="background:#d4edda; color:#155724; padding:10px; border-radius:6px; font-weight:600;">
+        <i class="fas fa-check-circle"></i> In Stock
+      </div>`;
       }
     }
 
+    // Build variants HTML
     let variantsHTML = stockHTML;
 
     if (product.sizes && product.sizes.length > 0) {
       variantsHTML += `
-        <div class="variant-group" style="margin:10px 0;">
-            <strong>Size:</strong> 
-            <select id="qv-size" style="padding:5px; margin-left:5px;">
-                ${product.sizes
-                  .map((s) => `<option value="${s}">${s}</option>`)
-                  .join("")}
-            </select>
-        </div>`;
+      <div class="variant-group">
+        <strong>Size:</strong>
+        <select id="qv-size">
+          ${product.sizes
+            .map((s) => `<option value="${s}">${s}</option>`)
+            .join("")}
+        </select>
+      </div>`;
     }
 
     if (product.colors && product.colors.length > 0) {
       variantsHTML += `
-        <div class="variant-group" style="margin:10px 0;">
-            <strong>Color:</strong> 
-            <select id="qv-color" style="padding:5px; margin-left:5px;">
-                ${product.colors
-                  .map((c) => `<option value="${c}">${c}</option>`)
-                  .join("")}
-            </select>
-        </div>`;
+      <div class="variant-group">
+        <strong>Color:</strong>
+        <select id="qv-color">
+          ${product.colors
+            .map((c) => `<option value="${c}">${c}</option>`)
+            .join("")}
+        </select>
+      </div>`;
     }
 
+    // Insert after price (before description)
     const priceEl = this.modal.querySelector("#quick-view-price");
-    priceEl.insertAdjacentHTML("beforebegin", variantsHTML);
+    priceEl.insertAdjacentHTML("afterend", variantsHTML);
 
-    const addToCartBtn = this.modal.querySelector(".btn-add-cart-modal");
+    // Reset quantity
     const qtyInput = this.modal.querySelector(".qty-input");
     if (qtyInput) qtyInput.value = 1;
 
+    // Handle Add to Cart button
+    const addToCartBtn = this.modal.querySelector(".btn-add-cart-modal");
     if (addToCartBtn) {
       const newBtn = addToCartBtn.cloneNode(true);
       addToCartBtn.parentNode.replaceChild(newBtn, addToCartBtn);
@@ -859,19 +915,17 @@ class QuickViewModal {
         newBtn.disabled = true;
         newBtn.textContent = "Out of Stock";
         newBtn.style.background = "#ccc";
-        newBtn.style.cursor = "not-allowed";
       } else {
         newBtn.disabled = false;
         newBtn.textContent = "Add to Cart";
         newBtn.style.background = "";
-        newBtn.style.cursor = "pointer";
 
         newBtn.addEventListener("click", () => {
           const quantity = parseInt(qtyInput?.value || 1);
 
           if (quantity > product.stock) {
             window.cartManager.showToast(
-              `Cannot add ${quantity}. Only ${product.stock} left!`,
+              `Only ${product.stock} available!`,
               "error"
             );
             return;
@@ -1616,7 +1670,10 @@ async function openOrdersModal() {
           <span class="close" id="close-orders-modal">&times;</span>
         </div>
         <div class="modal-body" id="orders-modal-body">
-          <div style="text-align:center; padding:40px;">Loading orders...</div>
+          <div style="text-align:center; padding:40px;">
+            <div class="spinner"></div>
+            <p>Loading orders...</p>
+          </div>
         </div>
       </div>
     `;
@@ -1636,7 +1693,11 @@ async function openOrdersModal() {
   try {
     const token = localStorage.getItem("authToken");
     if (!token) {
-      openAuthModal("login");
+      modalBody.innerHTML = `
+        <div style="text-align:center; padding:40px;">
+          <p style="color:var(--danger-color);">Please login to view orders</p>
+        </div>
+      `;
       return;
     }
 
@@ -1644,64 +1705,88 @@ async function openOrdersModal() {
       headers: { Authorization: `Bearer ${token}` },
     });
 
-    if (!res.ok) throw new Error("Failed to fetch");
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+    }
+
     const orders = await res.json();
 
     if (orders.length === 0) {
       modalBody.innerHTML = `
-          <div style="text-align: center; padding: 40px;">
-            <h3>No Orders Yet</h3>
-            <p style="color: #999;">Start shopping to see your orders here!</p>
-          </div>`;
+        <div style="text-align: center; padding: 40px;">
+          <i class="fas fa-shopping-bag" style="font-size:3rem; color:#ccc; margin-bottom:15px;"></i>
+          <h3>No Orders Yet</h3>
+          <p style="color: #999;">Start shopping to see your orders here!</p>
+          <button class="btn-primary" onclick="closeOrdersModal()" style="margin-top:15px;">
+            Continue Shopping
+          </button>
+        </div>`;
     } else {
       modalBody.innerHTML = `
-          <div class="orders-list">
-            ${orders
-              .map(
-                (order) => `
-              <div class="order-card">
-                <div class="order-header">
-                  <div>
-                    <h3>Order #${
-                      order.trackingId || order._id.slice(-6).toUpperCase()
-                    }</h3>
-                    <p class="order-date">${formatDate(order.orderDate)}</p>
-                    <p class="order-address" style="font-size:0.9rem; color:#444;">
-                      To: ${order.shippingAddress?.street}, ${
-                  order.shippingAddress?.city
-                }
-                    </p>
-                  </div>
-                  <div class="order-status" style="color: var(--primary-color)">${
-                    order.status
-                  }</div>
+        <div class="orders-list">
+          ${orders
+            .map(
+              (order) => `
+            <div class="order-card">
+              <div class="order-header">
+                <div>
+                  <h3>Order #${
+                    order.trackingId || order._id.slice(-6).toUpperCase()
+                  }</h3>
+                  <p class="order-date">${formatDate(order.orderDate)}</p>
                 </div>
-                <div class="order-items">
-                  ${order.items
-                    .map(
-                      (item) => `
-                    <div class="order-item">
-                      <span>${item.title} × ${item.quantity}</span>
-                      <span>₹${(item.price * item.quantity).toFixed(2)}</span>
-                    </div>
-                  `
-                    )
-                    .join("")}
-                </div>
-                <div class="order-footer">
-                  <strong>Total: ₹${order.total.toFixed(2)}</strong>
-                </div>
+                <span class="order-status status-${order.status
+                  .toLowerCase()
+                  .replace(/ /g, "-")}">${order.status}</span>
               </div>
-            `
-              )
-              .join("")}
-          </div>`;
+              <div class="order-items">
+                ${order.items
+                  .map(
+                    (item) => `
+                  <div class="order-item">
+                    <span>${item.title} × ${item.quantity}</span>
+                    <span>₹${(item.price * item.quantity).toFixed(2)}</span>
+                  </div>
+                `
+                  )
+                  .join("")}
+              </div>
+              <div class="order-summary" style="margin-top:10px; padding-top:10px; border-top:1px solid #e0e0e0;">
+                <div class="summary-row"><span>Subtotal:</span><span>₹${order.subtotal.toFixed(
+                  2
+                )}</span></div>
+                <div class="summary-row"><span>Shipping:</span><span>₹${order.shipping.toFixed(
+                  2
+                )}</span></div>
+                <div class="summary-row"><span>Tax:</span><span>₹${order.tax.toFixed(
+                  2
+                )}</span></div>
+                <div class="summary-row total"><span>Total:</span><span>₹${order.total.toFixed(
+                  2
+                )}</span></div>
+              </div>
+              <div class="order-footer" style="margin-top:10px; font-size:0.85rem; color:#666;">
+                Payment: ${order.paymentMethod.toUpperCase()}
+              </div>
+            </div>
+          `
+            )
+            .join("")}
+        </div>`;
     }
   } catch (err) {
-    modalBody.innerHTML = `<p style="color:red; text-align:center;">Failed to load orders.</p>`;
+    console.error("Orders fetch error:", err);
+    modalBody.innerHTML = `
+      <div style="text-align:center; padding:40px;">
+        <i class="fas fa-exclamation-circle" style="font-size:3rem; color:var(--danger-color); margin-bottom:15px;"></i>
+        <h3>Failed to Load Orders</h3>
+        <p style="color:#999;">${err.message}</p>
+        <button class="btn-secondary" onclick="openOrdersModal()" style="margin-top:15px;">
+          Retry
+        </button>
+      </div>`;
   }
 }
-
 function closeOrdersModal() {
   const modal = document.getElementById("orders-modal");
   if (modal) modal.style.display = "none";

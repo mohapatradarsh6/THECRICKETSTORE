@@ -295,11 +295,6 @@
               <button id="search-btn"><i class="fas fa-search"></i></button>
               <div id="search-suggestions" class="suggestions-dropdown"></div>
             </div>
-
-            <button class="mobile-search-toggle" id="mobile-search-toggle">
-              <i class="fas fa-search"></i>
-            </button>
-
             <div class="user-action-item account-dropdown">
               <a href="#" class="user-btn" id="account-btn">
                 <i class="fas fa-user"></i> <span>Account</span>
@@ -818,17 +813,103 @@
 
     <nav class="mobile-nav" id="mobile-nav">
       <div class="mobile-nav-header">
-        <h2>Menu</h2>
+        <h2><i class="fas fa-bars"></i> Menu</h2>
         <button class="close-mobile-nav" id="close-mobile-nav">
           <i class="fas fa-times"></i>
         </button>
       </div>
+
+      <!-- Top Bar Info in Sidebar -->
+      <div class="mobile-top-info">
+        <p><i class="fas fa-phone"></i> +91 98765 43210</p>
+        <p><i class="fas fa-envelope"></i> support@thecricketstore.com</p>
+        <p><i class="fas fa-shipping-fast"></i> Free Shipping â‚¹2000+</p>
+      </div>
+
+      <!-- Wishlist Section -->
+      <div class="mobile-wishlist-section">
+        <h3><i class="fas fa-heart"></i> My Wishlist</h3>
+        <div id="mobile-wishlist-items">
+          <p style="text-align: center; color: #999; font-size: 0.85rem">
+            No items yet
+          </p>
+        </div>
+      </div>
+
+      <!-- Menu List -->
       <ul class="mobile-menu-list">
-        <li><a href="#home">Home</a></li>
-        <li><a href="#products">Products</a></li>
-        <li><a href="#contact">Contact</a></li>
+        <li>
+          <a href="#home"><i class="fas fa-home"></i> Home</a>
+        </li>
+
+        <li class="mobile-dropdown">
+          <a href="#" class="mobile-dropdown-toggle">
+            <i class="fas fa-box"></i> Products
+            <i class="fas fa-chevron-down" style="margin-left: auto"></i>
+          </a>
+          <ul class="mobile-submenu">
+            <li>
+              <a href="#bats"
+                ><i class="fas fa-baseball-bat-ball"></i> Cricket Bats</a
+              >
+            </li>
+            <li>
+              <a href="#balls"><i class="fas fa-circle"></i> Cricket Balls</a>
+            </li>
+            <li>
+              <a href="#pads"
+                ><i class="fas fa-shield-alt"></i> Pads & Guards</a
+              >
+            </li>
+            <li>
+              <a href="#gloves"><i class="fas fa-mitten"></i> Gloves</a>
+            </li>
+            <li>
+              <a href="#helmets"><i class="fas fa-hard-hat"></i> Helmets</a>
+            </li>
+            <li>
+              <a href="#shoes"><i class="fas fa-shoe-prints"></i> Shoes</a>
+            </li>
+            <li>
+              <a href="#bags"><i class="fas fa-briefcase"></i> Kit Bags</a>
+            </li>
+          </ul>
+        </li>
+
+        <li class="mobile-dropdown">
+          <a href="#" class="mobile-dropdown-toggle">
+            <i class="fas fa-star"></i> Brands
+            <i class="fas fa-chevron-down" style="margin-left: auto"></i>
+          </a>
+          <ul class="mobile-submenu">
+            <li><a href="#sg">SG</a></li>
+            <li><a href="#kookaburra">Kookaburra</a></li>
+            <li><a href="#bas">BAS Vampire</a></li>
+            <li><a href="#mrf">MRF</a></li>
+            <li><a href="#ss">SS</a></li>
+          </ul>
+        </li>
+
+        <li>
+          <a href="#offers"><i class="fas fa-tags"></i> Offers</a>
+        </li>
+        <li>
+          <a href="#about"><i class="fas fa-info-circle"></i> About</a>
+        </li>
+        <li>
+          <a href="#contact"><i class="fas fa-phone-alt"></i> Contact</a>
+        </li>
       </ul>
+
+      <!-- Footer -->
+      <div class="mobile-nav-footer">
+        <div class="mobile-contact-info">
+          <p><i class="fas fa-clock"></i> Mon-Sat: 9AM-8PM</p>
+          <p><i class="fas fa-map-marker-alt"></i> Mumbai, India</p>
+        </div>
+      </div>
     </nav>
+
     <div id="mobile-nav-overlay" class="mobile-nav-overlay"></div>
 
     <script src="script.js"></script>
