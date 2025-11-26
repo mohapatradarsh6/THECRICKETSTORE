@@ -556,7 +556,43 @@ class ProductManager {
     // 2. Mobile Search (This was missing!)
     setupSearchListener("mobile-search-input", "mobile-search-btn");
   }
+
+  searchProducts(query) {
+    const searchTerm = query.toLowerCase().trim();
+
+    if (!searchTerm) {
+      // If search is empty, show all products
+      this.filteredProducts = [...this.products];
+    } else {
+      // Filter products based on title, brand, or category
+      this.filteredProducts = this.products.filter((product) => {
+        return (
+          product.title.toLowerCase().includes(searchTerm) ||
+          product.brand.toLowerCase().includes(searchTerm) ||
+          (product.category &&
+            product.category.toLowerCase().includes(searchTerm))
+        );
+      });
+    }
+
+    this.renderProductCards();
+
+    // Show feedback if no results
+    if (this.filteredProducts.length === 0) {
+      const container = document.getElementById("products-container");
+      if (container) {
+        container.innerHTML = `
+        <div style="grid-column: 1 / -1; text-align: center; padding: 40px;">
+          <i class="fas fa-search" style="font-size: 3rem; color: #ccc; margin-bottom: 15px;"></i>
+          <h3>No products found for "${query}"</h3>
+          <p style="color: #666;">Try searching with different keywords</p>
+        </div>
+      `;
+      }
+    }
+  }
 }
+
 // --- 3. Quick View Modal ---
 class QuickViewModal {
   constructor() {
@@ -1576,6 +1612,30 @@ document.addEventListener("DOMContentLoaded", () => {
     toggle.addEventListener("click", (e) => {
       e.preventDefault();
       toggle.closest(".mobile-dropdown").classList.toggle("active");
+    });
+  });
+
+  // Mobile Menu Links - Close sidebar on click
+  document.querySelectorAll(".mobile-menu-list a").forEach((link) => {
+    link.addEventListener("click", (e) => {
+      // Close mobile nav
+      mobileNav.classList.remove("active");
+      mobileNavOverlay.classList.remove("active");
+
+      // Handle anchor links (scroll to section)
+      const href = link.getAttribute("href");
+      if (href && href.startsWith("#")) {
+        e.preventDefault();
+        const targetId = href.substring(1);
+        const targetSection = document.getElementById(targetId);
+
+        if (targetSection) {
+          targetSection.scrollIntoView({ behavior: "smooth", block: "start" });
+        } else {
+          // If target doesn't exist, scroll to top (for #home)
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        }
+      }
     });
   });
 
