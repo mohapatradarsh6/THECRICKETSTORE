@@ -517,7 +517,7 @@ class ProductManager {
       sortFilter.addEventListener("change", () => this.applyFilters());
   }
 
- initializeSearch() {
+  initializeSearch() {
     // Helper to attach listeners to any search input/button pair
     const setupSearchListener = (inputId, btnId) => {
       const input = document.getElementById(inputId);
@@ -531,7 +531,9 @@ class ProductManager {
           if (e.key === "Enter") {
             this.searchProducts(e.target.value);
             document.getElementById("mobile-nav")?.classList.remove("active");
-            document.getElementById("mobile-nav-overlay")?.classList.remove("active");
+            document
+              .getElementById("mobile-nav-overlay")
+              ?.classList.remove("active");
           }
         });
       }
@@ -540,7 +542,9 @@ class ProductManager {
           if (input) {
             this.searchProducts(input.value);
             document.getElementById("mobile-nav")?.classList.remove("active");
-            document.getElementById("mobile-nav-overlay")?.classList.remove("active");
+            document
+              .getElementById("mobile-nav-overlay")
+              ?.classList.remove("active");
           }
         });
       }
@@ -548,10 +552,11 @@ class ProductManager {
 
     // 1. Desktop Search
     setupSearchListener("search-input", "search-btn");
-    
+
     // 2. Mobile Search (This was missing!)
     setupSearchListener("mobile-search-input", "mobile-search-btn");
   }
+}
 // --- 3. Quick View Modal ---
 class QuickViewModal {
   constructor() {
