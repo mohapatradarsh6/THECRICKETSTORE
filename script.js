@@ -517,61 +517,41 @@ class ProductManager {
       sortFilter.addEventListener("change", () => this.applyFilters());
   }
 
-  initializeSearch() {
-    const searchInput = document.getElementById("search-input");
-    const searchBtn = document.getElementById("search-btn");
+ initializeSearch() {
+    // Helper to attach listeners to any search input/button pair
+    const setupSearchListener = (inputId, btnId) => {
+      const input = document.getElementById(inputId);
+      const btn = document.getElementById(btnId);
 
-    if (searchInput) {
-      searchInput.addEventListener("input", (e) =>
-        this.searchProducts(e.target.value)
-      );
-      searchInput.addEventListener("keypress", (e) => {
-        if (e.key === "Enter") this.searchProducts(e.target.value);
-      });
-    }
-    if (searchBtn) {
-      searchBtn.addEventListener("click", () => {
-        if (searchInput) this.searchProducts(searchInput.value);
-      });
-    }
+      if (input) {
+        input.addEventListener("input", (e) =>
+          this.searchProducts(e.target.value)
+        );
+        input.addEventListener("keypress", (e) => {
+          if (e.key === "Enter") {
+            this.searchProducts(e.target.value);
+            document.getElementById("mobile-nav")?.classList.remove("active");
+            document.getElementById("mobile-nav-overlay")?.classList.remove("active");
+          }
+        });
+      }
+      if (btn) {
+        btn.addEventListener("click", () => {
+          if (input) {
+            this.searchProducts(input.value);
+            document.getElementById("mobile-nav")?.classList.remove("active");
+            document.getElementById("mobile-nav-overlay")?.classList.remove("active");
+          }
+        });
+      }
+    };
+
+    // 1. Desktop Search
+    setupSearchListener("search-input", "search-btn");
+    
+    // 2. Mobile Search (This was missing!)
+    setupSearchListener("mobile-search-input", "mobile-search-btn");
   }
-
-  applyFilters() {
-    const category = document.getElementById("category-filter")?.value || "all";
-    const brand = document.getElementById("brand-filter")?.value || "all";
-    const sort = document.getElementById("sort-filter")?.value || "featured";
-
-    this.filteredProducts = this.products.filter((product) => {
-      const catMatch = category === "all" || product.category === category;
-      const brandMatch = brand === "all" || product.brand === brand;
-      return catMatch && brandMatch;
-    });
-
-    switch (sort) {
-      case "price-low":
-        this.filteredProducts.sort((a, b) => a.price - b.price);
-        break;
-      case "price-high":
-        this.filteredProducts.sort((a, b) => b.price - a.price);
-        break;
-      case "rating":
-        this.filteredProducts.sort((a, b) => b.rating - a.rating);
-        break;
-    }
-    this.renderProductCards();
-  }
-
-  searchProducts(query) {
-    const term = query.toLowerCase();
-    this.filteredProducts = this.products.filter(
-      (p) =>
-        p.title.toLowerCase().includes(term) ||
-        p.brand.toLowerCase().includes(term)
-    );
-    this.renderProductCards();
-  }
-}
-
 // --- 3. Quick View Modal ---
 class QuickViewModal {
   constructor() {
