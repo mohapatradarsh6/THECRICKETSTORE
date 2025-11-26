@@ -343,7 +343,11 @@
             </div>
           </div>
 
-          <button class="mobile-menu-toggle" id="mobile-menu-toggle">
+          <div class="mobile-header-actions" style="display:flex; gap:15px; align-items:center;">
+            <button class="mobile-search-toggle" id="mobile-search-toggle">
+               <i class="fas fa-search"></i>
+            </button>
+            <button class="mobile-menu-toggle" id="mobile-menu-toggle">
             <i class="fas fa-bars"></i>
           </button>
         </div>
@@ -1394,6 +1398,15 @@
         </div>
       </div>
     </div>
+
+    <div id="mobile-search-bar" class="mobile-search-overlay">
+        <div class="search-container">
+            <input type="text" id="mobile-search-input-overlay" placeholder="Search for cricket gear..." autocomplete="off">
+            <button id="close-mobile-search"><i class="fas fa-times"></i></button>
+        </div>
+        <div id="mobile-search-suggestions-overlay" class="suggestions-dropdown"></div>
+    </div>
+    
     <script src="script.js"></script>
   </body>
 </html>

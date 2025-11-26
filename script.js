@@ -39,9 +39,7 @@ class CartManager {
     this.updateWishlistUI();
   }
 
-  // UPDATED: Validates stock before adding
   addToCart(product, quantity = 1) {
-    // Check for stock limit (simple client-side check)
     if (product.stock !== undefined && product.stock < quantity) {
       this.showToast(`Sorry, only ${product.stock} items in stock!`, "error");
       return;
@@ -51,24 +49,12 @@ class CartManager {
     const price = parseFloat(product.price) || 0;
 
     if (existingItem) {
-      // UPDATED: Check if adding more would exceed stock
-      const newQuantity = existingItem.quantity + quantity;
-      if (product.stock !== undefined && newQuantity > product.stock) {
-        const canAdd = product.stock - existingItem.quantity;
-        if (canAdd <= 0) {
-          this.showToast(
-            `You already have the maximum stock (${existingItem.quantity}) in cart.`,
-            "warning"
-          );
-        } else {
-          this.showToast(
-            `Can only add ${canAdd} more. You have ${existingItem.quantity} in cart.`,
-            "warning"
-          );
-        }
+      const newQty = existingItem.quantity + quantity;
+      if (product.stock !== undefined && newQty > product.stock) {
+        this.showToast(`Cannot add more! Max stock reached.`, "warning");
         return;
       }
-      existingItem.quantity = newQuantity;
+      existingItem.quantity += quantity;
     } else {
       this.cart.push({
         ...product,
@@ -94,7 +80,6 @@ class CartManager {
       if (quantity <= 0) {
         this.removeFromCart(productTitle);
       } else {
-        // Check stock limit on update
         if (item.stock !== undefined && quantity > item.stock) {
           this.showToast(`Max stock reached (${item.stock})`, "error");
           return;
@@ -125,17 +110,11 @@ class CartManager {
 
     if (index === -1) {
       this.wishlist.push(product);
-      this.showToast(`${product.title} added to wishlist!`, "success");
+      this.showToast("Added to wishlist!", "success");
     } else {
       this.wishlist.splice(index, 1);
-      this.showToast(`${product.title} removed from wishlist!`, "info");
+      this.showToast("Removed from wishlist!", "info");
     }
-
-    this.saveWishlist();
-  }
-
-  clearWishlist() {
-    this.wishlist = [];
     this.saveWishlist();
   }
 
@@ -144,12 +123,6 @@ class CartManager {
   }
 
   updateUI() {
-    this.updateCartCount();
-    this.updateCartDropdown();
-    this.updateWishlistUI();
-  }
-
-  updateCartCount() {
     const cartCount = document.getElementById("cart-count");
     if (cartCount) {
       const totalItems = this.cart.reduce(
@@ -158,22 +131,23 @@ class CartManager {
       );
       cartCount.textContent = totalItems;
     }
+    this.updateCartDropdown();
+    this.updateWishlistUI();
   }
 
   updateCartDropdown() {
-    const cartItemsContainer = document.getElementById("cart-items");
-    const cartTotal = document.getElementById("cart-total");
-
-    if (!cartItemsContainer) return;
+    const container = document.getElementById("cart-items");
+    const totalEl = document.getElementById("cart-total");
+    if (!container) return;
 
     if (this.cart.length === 0) {
-      cartItemsContainer.innerHTML =
+      container.innerHTML =
         '<p style="text-align: center; color: #666;">Your cart is empty</p>';
-      if (cartTotal) cartTotal.textContent = "₹0";
+      if (totalEl) totalEl.textContent = "₹0";
       return;
     }
 
-    cartItemsContainer.innerHTML = this.cart
+    container.innerHTML = this.cart
       .map(
         (item) => `
       <div class="cart-item">
@@ -182,10 +156,6 @@ class CartManager {
           <div class="cart-item-price">₹${parseFloat(item.price).toFixed(
             2
           )}</div>
-          <div class="cart-item-details" style="font-size:0.8rem; color:#666">
-             ${item.selectedSize ? `Size: ${item.selectedSize}` : ""} 
-             ${item.selectedColor ? `| Color: ${item.selectedColor}` : ""}
-          </div>
           <div class="cart-item-quantity">
             <button class="qty-btn" onclick="window.cartManager.updateQuantity('${item.title.replace(
               /'/g,
@@ -207,22 +177,23 @@ class CartManager {
       )
       .join("");
 
-    if (cartTotal) {
-      cartTotal.textContent = `₹${this.getCartTotal().toFixed(2)}`;
-    }
+    if (totalEl) totalEl.textContent = `₹${this.getCartTotal().toFixed(2)}`;
   }
 
-  updateWishlistDropdown() {
-    const wishlistItemsContainer = document.getElementById("wishlist-items");
-    if (!wishlistItemsContainer) return;
+  updateWishlistUI() {
+    const count = document.querySelector(".wishlist-count");
+    if (count) count.textContent = this.wishlist.length;
+
+    const container = document.getElementById("wishlist-items");
+    if (!container) return;
 
     if (this.wishlist.length === 0) {
-      wishlistItemsContainer.innerHTML =
+      container.innerHTML =
         '<p style="text-align: center; color: #666; padding: 10px 0;">Your wishlist is empty</p>';
       return;
     }
 
-    wishlistItemsContainer.innerHTML = this.wishlist
+    container.innerHTML = this.wishlist
       .map(
         (item) => `
         <div class="wishlist-item">
@@ -235,14 +206,6 @@ class CartManager {
       `
       )
       .join("");
-  }
-
-  updateWishlistUI() {
-    const wishlistCount = document.querySelector(".wishlist-count");
-    if (wishlistCount) {
-      wishlistCount.textContent = this.wishlist.length;
-    }
-    this.updateWishlistDropdown();
   }
 
   showToast(message, type = "success") {
@@ -264,16 +227,10 @@ class CartManager {
     const hasHalfStar = rating % 1 !== 0;
     let html = '<div class="stars" style="color: #ffc107; font-size: 0.8rem;">';
 
-    for (let i = 0; i < fullStars; i++) {
-      html += '<i class="fas fa-star"></i>';
-    }
-    if (hasHalfStar) {
-      html += '<i class="fas fa-star-half-alt"></i>';
-    }
+    for (let i = 0; i < fullStars; i++) html += '<i class="fas fa-star"></i>';
+    if (hasHalfStar) html += '<i class="fas fa-star-half-alt"></i>';
     const emptyStars = 5 - Math.ceil(rating);
-    for (let i = 0; i < emptyStars; i++) {
-      html += '<i class="far fa-star"></i>';
-    }
+    for (let i = 0; i < emptyStars; i++) html += '<i class="far fa-star"></i>';
 
     html += `</div><span class="rating-count" style="font-size: 0.7rem; color: #666; margin-left: 4px;">(${
       Math.floor(Math.random() * 200) + 50
@@ -309,6 +266,7 @@ class CartManager {
       if (
         cartDropdown &&
         !cartDropdown.contains(e.target) &&
+        cartBtn &&
         !cartBtn.contains(e.target)
       ) {
         cartDropdown.style.display = "none";
@@ -316,6 +274,7 @@ class CartManager {
       if (
         wishlistDropdown &&
         !wishlistDropdown.contains(e.target) &&
+        wishlistBtn &&
         !wishlistBtn.contains(e.target)
       ) {
         wishlistDropdown.style.display = "none";
@@ -335,7 +294,7 @@ class CartManager {
   }
 }
 
-// --- 2. Product Management ---
+// --- 2. Product Management (Enhanced) ---
 class ProductManager {
   constructor() {
     this.products = [];
@@ -393,7 +352,6 @@ class ProductManager {
   createProductCard(product) {
     const card = document.createElement("div");
     card.className = "product-card";
-
     card.setAttribute("data-title", product.title);
     card.setAttribute("data-price", product.price);
     card.setAttribute("data-product", JSON.stringify(product));
@@ -456,19 +414,15 @@ class ProductManager {
         </div>
       </div>
     `;
-
     return card;
   }
 
   attachCardListeners(container) {
     container.querySelectorAll(".btn-add-cart").forEach((btn) => {
       btn.addEventListener("click", () => {
-        if (btn.disabled) return; // Prevent click if OOS
-
+        if (btn.disabled) return;
         const card = btn.closest(".product-card");
-        // Parse the full product object we saved
         const productData = JSON.parse(card.getAttribute("data-product"));
-
         window.cartManager.addToCart(productData);
       });
     });
@@ -487,8 +441,6 @@ class ProductManager {
         if (btn.disabled) return;
         const card = btn.closest(".product-card");
         const productData = JSON.parse(card.getAttribute("data-product"));
-
-        // Add qty 1 for instant checkout
         productData.quantity = 1;
         openPaymentModal([productData]);
       });
@@ -498,7 +450,6 @@ class ProductManager {
       btn.addEventListener("click", (e) => {
         e.stopPropagation();
         const card = btn.closest(".product-card");
-        // We pass the FULL product object now to support variants
         const productData = JSON.parse(card.getAttribute("data-product"));
         if (window.quickViewModal)
           window.quickViewModal.showQuickView(productData);
@@ -513,11 +464,10 @@ class ProductManager {
 
     // Advanced Filters
     const priceRange = document.getElementById("price-range");
-    const priceNumber = document.getElementById("price-number"); // New
+    const priceNumber = document.getElementById("price-number");
     const stockFilter = document.getElementById("stock-filter");
     const ratingFilter = document.getElementById("rating-filter");
 
-    // Bind Dropdowns
     if (categoryFilter)
       categoryFilter.addEventListener("change", () => this.applyFilters());
     if (brandFilter)
@@ -525,17 +475,15 @@ class ProductManager {
     if (sortFilter)
       sortFilter.addEventListener("change", () => this.applyFilters());
 
-    // Bind Price Slider -> Number
+    // Bind Price Inputs
     if (priceRange && priceNumber) {
       priceRange.addEventListener("input", (e) => {
         priceNumber.value = e.target.value;
         this.applyFilters();
       });
-
-      // Bind Number -> Slider
       priceNumber.addEventListener("input", (e) => {
         let val = parseInt(e.target.value);
-        if (val > 50000) val = 50000; // Max limit
+        if (val > 50000) val = 50000;
         if (val < 0) val = 0;
         priceRange.value = val;
         this.applyFilters();
@@ -573,7 +521,6 @@ class ProductManager {
       return catMatch && brandMatch && priceMatch && stockMatch && ratingMatch;
     });
 
-    // Sorting
     switch (sort) {
       case "price-low":
         this.filteredProducts.sort((a, b) => a.price - b.price);
@@ -584,11 +531,7 @@ class ProductManager {
       case "rating":
         this.filteredProducts.sort((a, b) => b.rating - a.rating);
         break;
-      case "relevance":
-        // Simple relevance: matches keyword first (if search active) or default
-        break;
     }
-
     this.renderProductCards();
   }
 
@@ -598,41 +541,37 @@ class ProductManager {
       const btn = document.getElementById(btnId);
       const suggestions = document.getElementById(suggestionsId);
 
-      // Shared function to perform search and UI updates
+      // Shared Search Logic
       const performSearch = (query) => {
         if (!query) return;
-
         this.searchProducts(query);
 
-        // 1. Close Mobile Nav (if open)
+        // Close mobile UI
         const mobileNav = document.getElementById("mobile-nav");
         const mobileOverlay = document.getElementById("mobile-nav-overlay");
+        const mobileSearchBar = document.getElementById("mobile-search-bar");
+
         if (mobileNav) mobileNav.classList.remove("active");
         if (mobileOverlay) mobileOverlay.classList.remove("active");
-
-        // 2. Close Suggestions
+        if (mobileSearchBar) mobileSearchBar.classList.remove("active");
         if (suggestions) suggestions.classList.remove("active");
 
-        // 3. Scroll to Products Section (Crucial!)
+        // Smooth scroll to products
         const productsSection = document.querySelector(".products-section");
         if (productsSection) {
-          // Add a small timeout to allow DOM updates if needed, or scroll immediately
-          setTimeout(() => {
-            productsSection.scrollIntoView({
-              behavior: "smooth",
-              block: "start",
-            });
-          }, 100);
+          const headerOffset = 100;
+          const elementPosition = productsSection.getBoundingClientRect().top;
+          const offsetPosition =
+            elementPosition + window.pageYOffset - headerOffset;
+          window.scrollTo({ top: offsetPosition, behavior: "smooth" });
         }
       };
 
       if (input) {
-        // History
         input.addEventListener("focus", () => {
           if (!input.value.trim()) this.showSearchHistory(suggestions, input);
         });
 
-        // Input typing
         input.addEventListener("input", (e) => {
           const query = e.target.value;
           if (query.length > 0) {
@@ -642,22 +581,21 @@ class ProductManager {
           }
         });
 
-        // Enter Key
         input.addEventListener("keypress", (e) => {
-          if (e.key === "Enter") {
-            performSearch(input.value);
-          }
+          if (e.key === "Enter") performSearch(input.value);
         });
 
-        // Click outside to close suggestions
         document.addEventListener("click", (e) => {
-          if (!input.contains(e.target) && !suggestions.contains(e.target)) {
+          if (
+            suggestions &&
+            !input.contains(e.target) &&
+            !suggestions.contains(e.target)
+          ) {
             suggestions.classList.remove("active");
           }
         });
       }
 
-      // Button Click
       if (btn) {
         btn.addEventListener("click", () => {
           if (input) performSearch(input.value);
@@ -665,22 +603,45 @@ class ProductManager {
       }
     };
 
+    // 1. Desktop
     setupSearchListener("search-input", "search-btn", "search-suggestions");
+    // 2. Mobile Overlay
     setupSearchListener(
-      "mobile-search-input",
-      "mobile-search-btn",
-      "mobile-search-suggestions"
+      "mobile-search-input-overlay",
+      null,
+      "mobile-search-suggestions-overlay"
     );
+
+    // Mobile Search Toggle Logic
+    const mobileSearchToggle = document.getElementById("mobile-search-toggle");
+    const mobileSearchBar = document.getElementById("mobile-search-bar");
+    const closeMobileSearch = document.getElementById("close-mobile-search");
+
+    if (mobileSearchToggle) {
+      mobileSearchToggle.addEventListener("click", () => {
+        mobileSearchBar.classList.add("active");
+        setTimeout(
+          () => document.getElementById("mobile-search-input-overlay")?.focus(),
+          100
+        );
+      });
+    }
+    if (closeMobileSearch) {
+      closeMobileSearch.addEventListener("click", () => {
+        mobileSearchBar.classList.remove("active");
+      });
+    }
   }
-  // NEW: Show Autocomplete Suggestions
+
   showSuggestions(query, container, inputElement) {
+    if (!container) return;
     const matches = this.products
       .filter(
         (p) =>
           p.title.toLowerCase().includes(query.toLowerCase()) ||
           p.brand.toLowerCase().includes(query.toLowerCase())
       )
-      .slice(0, 5); // Limit to 5
+      .slice(0, 5);
 
     if (matches.length === 0) {
       container.classList.remove("active");
@@ -690,41 +651,44 @@ class ProductManager {
     container.innerHTML = matches
       .map(
         (p) => `
-          <div class="suggestion-item" onclick="window.productManager.selectSuggestion('${p.title.replace(
-            /'/g,
-            "\\'"
-          )}')">
-              <img src="${p.image}" alt="${p.title}">
-              <div class="suggestion-info">
-                  <div>${p.title}</div>
-                  <small style="color:#666">${p.brand}</small>
-              </div>
-          </div>
-      `
+        <div class="suggestion-item" onclick="window.productManager.selectSuggestion('${p.title.replace(
+          /'/g,
+          "\\'"
+        )}')">
+            <img src="${p.image}" alt="${p.title}">
+            <div class="suggestion-info">
+                <div>${p.title}</div>
+                <small style="color:#666">${p.brand}</small>
+            </div>
+        </div>`
       )
       .join("");
 
-    // Helper to handle click (attach to window/class instance)
+    // Global helper for onclick
     window.productManager.selectSuggestion = (title) => {
       inputElement.value = title;
       this.searchProducts(title);
       this.addToSearchHistory(title);
       container.classList.remove("active");
-    };
-    // FIX: Also scroll on suggestion click
-    const productsSection = document.querySelector(".products-section");
-    if (productsSection)
-      productsSection.scrollIntoView({ behavior: "smooth", block: "start" });
 
-    // FIX: Close mobile menu on suggestion click
-    document.getElementById("mobile-nav")?.classList.remove("active");
-    document.getElementById("mobile-nav-overlay")?.classList.remove("active");
+      // Also perform scroll
+      const productsSection = document.querySelector(".products-section");
+      if (productsSection) {
+        const headerOffset = 100;
+        const elementPosition = productsSection.getBoundingClientRect().top;
+        const offsetPosition =
+          elementPosition + window.pageYOffset - headerOffset;
+        window.scrollTo({ top: offsetPosition, behavior: "smooth" });
+      }
+      // Close mobile search if open
+      document.getElementById("mobile-search-bar")?.classList.remove("active");
+    };
+
     container.classList.add("active");
   }
 
-  // NEW: Search History Logic
   showSearchHistory(container, inputElement) {
-    if (this.searchHistory.length === 0) return;
+    if (!container || this.searchHistory.length === 0) return;
 
     container.innerHTML =
       `<div class="search-history-header">Recent Searches</div>` +
@@ -734,8 +698,7 @@ class ProductManager {
           <div class="suggestion-item" onclick="window.productManager.selectSuggestion('${term}')">
               <i class="fas fa-history" style="color:#ccc"></i>
               <span>${term}</span>
-          </div>
-      `
+          </div>`
         )
         .join("");
 
@@ -743,55 +706,38 @@ class ProductManager {
   }
 
   addToSearchHistory(term) {
-    const hero = document.querySelector(".hero-section");
-    if (hero) {
-      if (searchTerm.length > 0) {
-        hero.style.display = "none"; // Hide on search
-        // Add padding to body or main container if needed to prevent jump
-      } else {
-        hero.style.display = "block"; // Show if search cleared
-      }
-    }
-
     if (!term) return;
-    // Remove duplicate and add to top
     this.searchHistory = this.searchHistory.filter((t) => t !== term);
     this.searchHistory.unshift(term);
     if (this.searchHistory.length > 5) this.searchHistory.pop();
     localStorage.setItem("searchHistory", JSON.stringify(this.searchHistory));
   }
+
   searchProducts(query) {
     const searchTerm = query.toLowerCase().trim();
 
+    // Hide/Show Hero
+    const hero = document.querySelector(".hero-section");
+    if (hero) hero.style.display = searchTerm.length > 0 ? "none" : "block";
+
     if (!searchTerm) {
-      // If search is empty, show all products
       this.filteredProducts = [...this.products];
     } else {
-      // Filter products based on title, brand, or category
-      this.filteredProducts = this.products.filter((product) => {
-        return (
+      this.addToSearchHistory(query);
+      this.filteredProducts = this.products.filter(
+        (product) =>
           product.title.toLowerCase().includes(searchTerm) ||
           product.brand.toLowerCase().includes(searchTerm) ||
           (product.category &&
             product.category.toLowerCase().includes(searchTerm))
-        );
-      });
+      );
     }
-
     this.renderProductCards();
 
-    // Show feedback if no results
     if (this.filteredProducts.length === 0) {
       const container = document.getElementById("products-container");
-      if (container) {
-        container.innerHTML = `
-        <div style="grid-column: 1 / -1; text-align: center; padding: 40px;">
-          <i class="fas fa-search" style="font-size: 3rem; color: #ccc; margin-bottom: 15px;"></i>
-          <h3>No products found for "${query}"</h3>
-          <p style="color: #666;">Try searching with different keywords</p>
-        </div>
-      `;
-      }
+      if (container)
+        container.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:40px"><h3>No products found</h3></div>`;
     }
   }
 }
@@ -825,7 +771,6 @@ class QuickViewModal {
     }
     if (qtyPlus) {
       qtyPlus.addEventListener("click", () => {
-        // SMART STOCK LIMIT: Check max stock
         if (this.currentProduct && this.currentProduct.stock !== undefined) {
           if (parseInt(qtyInput.value) >= this.currentProduct.stock) {
             window.cartManager.showToast(`Max stock reached!`, "warning");
@@ -841,7 +786,6 @@ class QuickViewModal {
     if (!this.modal) return;
     this.currentProduct = product;
 
-    // Populate Basic Info
     this.modal.querySelector("#quick-view-title").textContent = product.title;
     this.modal.querySelector("#quick-view-img").src = product.image;
     this.modal.querySelector("#quick-view-description").textContent =
@@ -850,31 +794,24 @@ class QuickViewModal {
       "#quick-view-price"
     ).innerHTML = `<span class="price-current">₹${product.price}</span>`;
 
-    // --- NEW: Variants Logic (Sizes & Colors) ---
     const detailsContainer = this.modal.querySelector(".quick-view-details");
-
-    // FIX: Remove BOTH old selectors AND old stock status to prevent stacking
     const oldElements = detailsContainer.querySelectorAll(
       ".variant-group, .stock-status"
     );
     oldElements.forEach((el) => el.remove());
 
-    // --- SMART STOCK LOGIC ---
+    // Smart Stock Logic
     let stockHTML = "";
     if (product.stock !== undefined) {
-      // Default: No message if stock is plentiful (>= 5)
       if (product.stock <= 0) {
         stockHTML = `<div class="stock-status" style="color:var(--danger-color); font-weight:600; margin:10px 0;">Out of Stock</div>`;
       } else if (product.stock < 5) {
-        // Low Stock Warning
         stockHTML = `<div class="stock-status" style="color:#e67e22; font-weight:600; margin:10px 0;">
                 <i class="fas fa-exclamation-circle"></i> Hurry! Only ${product.stock} left in stock
              </div>`;
       }
-      // If stock >= 5, we show nothing (cleaner look)
     }
 
-    // Create Variant Selectors HTML
     let variantsHTML = stockHTML;
 
     if (product.sizes && product.sizes.length > 0) {
@@ -901,11 +838,9 @@ class QuickViewModal {
         </div>`;
     }
 
-    // Insert before price
     const priceEl = this.modal.querySelector("#quick-view-price");
     priceEl.insertAdjacentHTML("beforebegin", variantsHTML);
 
-    // Button Logic
     const addToCartBtn = this.modal.querySelector(".btn-add-cart-modal");
     const qtyInput = this.modal.querySelector(".qty-input");
     if (qtyInput) qtyInput.value = 1;
@@ -922,42 +857,18 @@ class QuickViewModal {
       } else {
         newBtn.disabled = false;
         newBtn.textContent = "Add to Cart";
-        newBtn.style.background = ""; // Reset to CSS default
+        newBtn.style.background = "";
         newBtn.style.cursor = "pointer";
 
         newBtn.addEventListener("click", () => {
           const quantity = parseInt(qtyInput?.value || 1);
 
-          // Check stock
-          if (product.stock !== undefined && quantity > product.stock) {
+          if (quantity > product.stock) {
             window.cartManager.showToast(
               `Cannot add ${quantity}. Only ${product.stock} left!`,
               "error"
             );
             return;
-          }
-
-          // NEW: Check what's already in cart
-          const existingItem = window.cartManager.cart.find(
-            (item) => item.title === product.title
-          );
-          if (existingItem) {
-            const totalQuantity = existingItem.quantity + quantity;
-            if (product.stock !== undefined && totalQuantity > product.stock) {
-              const canAdd = product.stock - existingItem.quantity;
-              if (canAdd <= 0) {
-                window.cartManager.showToast(
-                  `You already have ${existingItem.quantity} in cart (max stock).`,
-                  "warning"
-                );
-              } else {
-                window.cartManager.showToast(
-                  `Can only add ${canAdd} more. You have ${existingItem.quantity} in cart.`,
-                  "warning"
-                );
-              }
-              return;
-            }
           }
 
           const sizeSelect = this.modal.querySelector("#qv-size");
@@ -1073,11 +984,6 @@ class ProductPagination {
     if (window.productManager) {
       window.productManager.attachCardListeners(container);
     }
-
-    const productsSection = document.querySelector(".products-section");
-    if (productsSection && this.currentPage > 1) {
-      productsSection.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
   }
 
   setupPaginationControls() {
@@ -1146,7 +1052,7 @@ class ProductPagination {
 }
 
 // ====================================================================
-// AUTHENTICATION LOGIC
+// AUTHENTICATION & INITIALIZATION
 // ====================================================================
 
 const AUTH_KEY = "cricketStoreCurrentUser";
@@ -1200,7 +1106,7 @@ function updateAccountUI() {
   }
 }
 
-// GLOBAL: Auth Modal Controls
+// Auth Modals
 function openAuthModal(mode = "login") {
   const modal = document.getElementById("auth-modal");
   const loginTab = document.getElementById("login-tab");
@@ -1251,6 +1157,430 @@ function openForgotPasswordForm() {
 function closeAuthModal() {
   const modal = document.getElementById("auth-modal");
   if (modal) modal.style.display = "none";
+}
+
+// Profile Modals
+window.switchProfileTab = function (tab) {
+  document.getElementById("profile-info-section").style.display =
+    tab === "info" ? "block" : "none";
+  document.getElementById("profile-address-section").style.display =
+    tab === "address" ? "block" : "none";
+
+  document.getElementById("tab-info").className =
+    tab === "info" ? "auth-tab active" : "auth-tab";
+  document.getElementById("tab-address").className =
+    tab === "address" ? "auth-tab active" : "auth-tab";
+};
+
+window.toggleAddressForm = function (show) {
+  document.getElementById("new-address-form").style.display = show
+    ? "block"
+    : "none";
+  document.getElementById("add-address-btn").style.display = show
+    ? "none"
+    : "block";
+};
+
+async function openProfileModal() {
+  const user = getUser();
+  if (!user) {
+    openAuthModal("login");
+    return;
+  }
+
+  const modal = document.getElementById("profile-modal");
+  modal.style.display = "flex";
+
+  const closeBtn = modal.querySelector(".close");
+  if (closeBtn) {
+    const newCloseBtn = closeBtn.cloneNode(true);
+    closeBtn.parentNode.replaceChild(newCloseBtn, closeBtn);
+    newCloseBtn.addEventListener("click", () => (modal.style.display = "none"));
+  }
+
+  try {
+    const token = localStorage.getItem("authToken");
+    const res = await fetch("/api/user", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (res.ok) {
+      const userData = await res.json();
+      const nameInput = document.getElementById("profile-name");
+      const emailInput = document.getElementById("profile-email");
+
+      if (nameInput) nameInput.value = userData.name || "";
+      if (emailInput) emailInput.value = userData.email || "";
+
+      renderAddresses(userData.addresses || []);
+      saveUser(userData);
+    } else {
+      window.cartManager.showToast("Failed to load profile data", "error");
+    }
+  } catch (error) {
+    window.cartManager.showToast("Connection error", "error");
+  }
+}
+
+function renderAddresses(addresses) {
+  const container = document.getElementById("address-list");
+  container.innerHTML = "";
+
+  if (addresses.length === 0) {
+    container.innerHTML =
+      "<p style='text-align:center; color:#999'>No saved addresses.</p>";
+    return;
+  }
+
+  addresses.forEach((addr, index) => {
+    const div = document.createElement("div");
+    div.className = "address-card";
+    div.innerHTML = `
+      <h5>Address #${index + 1}</h5>
+      <p>${addr.street}, ${addr.city}</p>
+      <p>${addr.state} - ${addr.zip}, ${addr.country}</p>
+      <button class="btn-delete-addr" onclick="deleteAddress(${index})">Delete</button>
+    `;
+    container.appendChild(div);
+  });
+}
+
+// Saving Profile Data
+async function saveProfileInfo() {
+  const newName = document.getElementById("profile-name").value;
+  const token = localStorage.getItem("authToken");
+
+  try {
+    const res = await fetch("/api/user", {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ name: newName }),
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      saveUser(data.user);
+      updateAccountUI();
+      window.cartManager.showToast("Profile updated!", "success");
+    }
+  } catch (e) {
+    window.cartManager.showToast("Update failed", "error");
+  }
+}
+
+async function saveNewAddress() {
+  const street = document.getElementById("addr-street").value;
+  const city = document.getElementById("addr-city").value;
+  const state = document.getElementById("addr-state").value;
+  const zip = document.getElementById("addr-zip").value;
+  const country = document.getElementById("addr-country").value;
+
+  if (!street || !city || !zip) {
+    window.cartManager.showToast("Please fill required fields", "error");
+    return;
+  }
+
+  const user = getUser();
+  const newAddress = { street, city, state, zip, country };
+  const updatedAddresses = [...(user.addresses || []), newAddress];
+
+  try {
+    const token = localStorage.getItem("authToken");
+    const res = await fetch("/api/user", {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ addresses: updatedAddresses }),
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      saveUser(data.user);
+      renderAddresses(data.user.addresses);
+      window.toggleAddressForm(false);
+
+      document.getElementById("addr-street").value = "";
+      document.getElementById("addr-city").value = "";
+      document.getElementById("addr-state").value = "";
+      document.getElementById("addr-zip").value = "";
+
+      window.cartManager.showToast("Address saved!", "success");
+    }
+  } catch (e) {
+    window.cartManager.showToast("Failed to save address", "error");
+  }
+}
+
+window.deleteAddress = async function (index) {
+  if (!confirm("Are you sure you want to delete this address?")) return;
+  const user = getUser();
+  const updatedAddresses = user.addresses.filter((_, i) => i !== index);
+
+  try {
+    const token = localStorage.getItem("authToken");
+    const res = await fetch("/api/user", {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ addresses: updatedAddresses }),
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      saveUser(data.user);
+      renderAddresses(data.user.addresses);
+      window.cartManager.showToast("Address deleted", "info");
+    }
+  } catch (e) {
+    window.cartManager.showToast("Failed to delete", "error");
+  }
+};
+
+// Payment Modal Functions (Global)
+function closePaymentModal() {
+  const modal = document.getElementById("demo-payment-modal");
+  if (modal) modal.style.display = "none";
+
+  // Reset Step Indicators
+  const stepAddress = document.getElementById("step-address");
+  const stepPayment = document.getElementById("step-payment");
+  if (stepAddress) stepAddress.classList.remove("active");
+  if (stepPayment) stepPayment.classList.remove("active");
+}
+
+function openPaymentModal(items) {
+  const user = getUser();
+  if (!user) {
+    window.cartManager.showToast("Please login to checkout", "warning");
+    document.getElementById("auth-modal").style.display = "flex";
+    return;
+  }
+
+  const modal = document.getElementById("demo-payment-modal");
+  // FIX: Hide cart dropdown to prevent visual overlap
+  const cartDrop = document.getElementById("cart-dropdown");
+  if (cartDrop) cartDrop.style.display = "none";
+
+  const addressSection = document.getElementById("checkout-address-section");
+  const paymentSection = document.getElementById("checkout-payment-section");
+  const addressList = document.getElementById("checkout-addresses-list");
+  const continueBtn = document.getElementById("btn-continue-payment");
+  const payNowBtn = document.getElementById("pay-now");
+
+  // Reset View (Show Address, Hide Payment)
+  if (addressSection) addressSection.style.display = "block";
+  if (paymentSection) paymentSection.style.display = "none";
+  if (payNowBtn) payNowBtn.style.display = "none";
+
+  // Step Indicators
+  const stepAddress = document.getElementById("step-address");
+  const stepPayment = document.getElementById("step-payment");
+  const stepCart = document.querySelector(".checkout-steps .step");
+  if (stepAddress) stepAddress.classList.remove("active");
+  if (stepPayment) stepPayment.classList.remove("active");
+  if (stepCart) stepCart.classList.add("active");
+
+  let selectedAddress = null;
+
+  // --- RENDER ADDRESSES ---
+  const addresses = user.addresses || [];
+
+  if (addressList) {
+    addressList.innerHTML = "";
+
+    if (addresses.length === 0) {
+      addressList.innerHTML = `
+        <p style="text-align:center; color:#666; margin-bottom:15px">No saved addresses found.</p>
+        <button class="btn-secondary" style="width:100%" onclick="closePaymentModal(); openProfileModal(); window.switchProfileTab('address');">
+          + Add New Address in Profile
+        </button>
+      `;
+      if (continueBtn) continueBtn.style.display = "none";
+    } else {
+      if (continueBtn) continueBtn.style.display = "block";
+      addresses.forEach((addr, index) => {
+        const card = document.createElement("div");
+        card.className = "address-option-card";
+
+        if (index === 0) {
+          card.classList.add("selected");
+          selectedAddress = addr;
+        }
+
+        card.innerHTML = `
+          <div style="font-weight:600">${user.name}</div>
+          <div>${addr.street}, ${addr.city}</div>
+          <div>${addr.state} - ${addr.zip}</div>
+        `;
+
+        card.addEventListener("click", () => {
+          document
+            .querySelectorAll(".address-option-card")
+            .forEach((c) => c.classList.remove("selected"));
+          card.classList.add("selected");
+          selectedAddress = addr;
+        });
+
+        addressList.appendChild(card);
+      });
+    }
+  }
+
+  // --- POPULATE PAYMENT ITEMS (Needed for both steps) ---
+  const paymentItems = document.getElementById("payment-items");
+  if (paymentItems) {
+    paymentItems.innerHTML = items
+      .map(
+        (item) => `
+        <div class="payment-item">
+          <span>${item.title} (x${item.quantity})</span>
+          <span>₹${(item.price * item.quantity).toFixed(2)}</span>
+        </div>
+      `
+      )
+      .join("");
+  }
+
+  // Calculations
+  const subtotal = items.reduce(
+    (sum, item) => sum + item.price * item.quantity,
+    0
+  );
+  const shipping = subtotal > 2000 ? 0 : 150;
+  const tax = subtotal * 0.18;
+  const finalTotal = subtotal + shipping + tax;
+
+  // Update summary text
+  const elSub = document.getElementById("payment-subtotal");
+  const elShip = document.getElementById("payment-shipping");
+  const elTax = document.getElementById("payment-tax");
+  const elTot = document.getElementById("payment-total");
+
+  if (elSub) elSub.textContent = subtotal.toFixed(2);
+  if (elShip) elShip.textContent = shipping.toFixed(2);
+  if (elTax) elTax.textContent = tax.toFixed(2);
+  if (elTot) elTot.textContent = finalTotal.toFixed(2);
+
+  // Payment Toggles
+  const paymentRadios = modal.querySelectorAll('input[name="payment"]');
+  const cardForm = document.getElementById("card-form");
+  const upiForm = document.getElementById("upi-form");
+
+  const updatePaymentForms = () => {
+    const selected = modal.querySelector('input[name="payment"]:checked').value;
+    if (cardForm)
+      cardForm.style.display = selected === "card" ? "block" : "none";
+    if (upiForm) upiForm.style.display = selected === "upi" ? "block" : "none";
+  };
+  paymentRadios.forEach((r) =>
+    r.addEventListener("change", updatePaymentForms)
+  );
+  updatePaymentForms();
+
+  // --- CONTINUE BUTTON LOGIC ---
+  if (continueBtn) {
+    const newContinue = continueBtn.cloneNode(true);
+    continueBtn.parentNode.replaceChild(newContinue, continueBtn);
+
+    newContinue.addEventListener("click", () => {
+      if (!selectedAddress) {
+        window.cartManager.showToast("Please select an address", "warning");
+        return;
+      }
+      // Move to Payment Step
+      addressSection.style.display = "none";
+      paymentSection.style.display = "block";
+      payNowBtn.style.display = "block";
+
+      if (stepAddress) stepAddress.classList.add("active");
+      if (stepPayment) stepPayment.classList.add("active");
+    });
+  }
+
+  // --- FINAL PAY BUTTON LOGIC ---
+  const payNowBtnNew = payNowBtn.cloneNode(true);
+  payNowBtn.parentNode.replaceChild(payNowBtnNew, payNowBtn);
+
+  payNowBtnNew.addEventListener("click", async () => {
+    const selectedMethod = modal.querySelector(
+      'input[name="payment"]:checked'
+    ).value;
+
+    // Validation
+    if (selectedMethod === "card") {
+      if (!cardForm.querySelector("input")?.value?.trim()) {
+        window.cartManager.showToast("Please enter card details", "error");
+        return;
+      }
+    } else if (selectedMethod === "upi") {
+      if (!upiForm.querySelector("input")?.value?.trim()) {
+        window.cartManager.showToast("Please enter UPI ID", "error");
+        return;
+      }
+    }
+
+    try {
+      payNowBtnNew.textContent = "Processing...";
+      payNowBtnNew.disabled = true;
+
+      const token = localStorage.getItem("authToken");
+
+      const res = await fetch("/api/orders", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          items,
+          subtotal,
+          shipping,
+          tax,
+          total: finalTotal,
+          paymentMethod: selectedMethod,
+          shippingAddress: selectedAddress, // SENDING SELECTED ADDRESS
+        }),
+      });
+
+      if (res.ok) {
+        window.cartManager.showToast("Order placed successfully!", "success");
+        window.cartManager.clearCart();
+        closePaymentModal();
+      } else {
+        throw new Error("Order failed");
+      }
+    } catch (e) {
+      window.cartManager.showToast("Failed to place order", "error");
+    } finally {
+      payNowBtnNew.textContent = "Pay Now";
+      payNowBtnNew.disabled = false;
+    }
+  });
+
+  modal.style.display = "flex";
+
+  // Cancel button handler
+  const cancelBtn = document.getElementById("cancel-payment");
+  if (cancelBtn) {
+    const newCancelBtn = cancelBtn.cloneNode(true);
+    cancelBtn.parentNode.replaceChild(newCancelBtn, cancelBtn);
+    newCancelBtn.addEventListener("click", closePaymentModal);
+  }
+
+  // Close X button handler
+  const closeBtn = modal.querySelector(".close");
+  if (closeBtn) {
+    const newCloseBtn = closeBtn.cloneNode(true);
+    closeBtn.parentNode.replaceChild(newCloseBtn, closeBtn);
+    newCloseBtn.addEventListener("click", closePaymentModal);
+  }
 }
 
 async function openOrdersModal() {
@@ -1363,231 +1693,6 @@ function closeOrdersModal() {
   if (modal) modal.style.display = "none";
 }
 
-function formatDate(isoString) {
-  const date = new Date(isoString);
-  return date.toLocaleDateString("en-IN", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
-}
-
-// --- USER PROFILE LOGIC ---
-
-// 1. Tab Switcher
-window.switchProfileTab = function (tab) {
-  document.getElementById("profile-info-section").style.display =
-    tab === "info" ? "block" : "none";
-  document.getElementById("profile-address-section").style.display =
-    tab === "address" ? "block" : "none";
-
-  document.getElementById("tab-info").className =
-    tab === "info" ? "auth-tab active" : "auth-tab";
-  document.getElementById("tab-address").className =
-    tab === "address" ? "auth-tab active" : "auth-tab";
-};
-
-// 2. Toggle Address Form visibility
-window.toggleAddressForm = function (show) {
-  document.getElementById("new-address-form").style.display = show
-    ? "block"
-    : "none";
-  document.getElementById("add-address-btn").style.display = show
-    ? "none"
-    : "block";
-};
-
-// 3. Open Modal & Fetch Data
-async function openProfileModal() {
-  const user = getUser();
-  if (!user) {
-    openAuthModal("login");
-    return;
-  }
-
-  const modal = document.getElementById("profile-modal");
-  modal.style.display = "flex";
-
-  // Close button logic
-  const closeBtn = modal.querySelector(".close");
-  if (closeBtn) {
-    const newCloseBtn = closeBtn.cloneNode(true);
-    closeBtn.parentNode.replaceChild(newCloseBtn, closeBtn);
-    newCloseBtn.addEventListener("click", () => (modal.style.display = "none"));
-  }
-
-  // Load data from API
-  try {
-    const token = localStorage.getItem("authToken");
-    if (!token) {
-      openAuthModal("login");
-      return;
-    }
-
-    const res = await fetch("/api/user", {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-
-    if (res.ok) {
-      const userData = await res.json();
-
-      // Populate Info
-      const nameInput = document.getElementById("profile-name");
-      const emailInput = document.getElementById("profile-email");
-
-      if (nameInput) nameInput.value = userData.name || "";
-      if (emailInput) emailInput.value = userData.email || "";
-
-      // Populate Addresses
-      renderAddresses(userData.addresses || []);
-
-      // Update local storage with complete user data
-      saveUser(userData);
-    } else {
-      const errorData = await res.json();
-      console.error("Failed to load profile:", errorData);
-      window.cartManager.showToast("Failed to load profile data", "error");
-    }
-  } catch (error) {
-    console.error("Profile load error:", error);
-    window.cartManager.showToast("Connection error", "error");
-  }
-}
-// 4. Render Address List
-function renderAddresses(addresses) {
-  const container = document.getElementById("address-list");
-  container.innerHTML = "";
-
-  if (addresses.length === 0) {
-    container.innerHTML =
-      "<p style='text-align:center; color:#999'>No saved addresses.</p>";
-    return;
-  }
-
-  addresses.forEach((addr, index) => {
-    const div = document.createElement("div");
-    div.className = "address-card";
-    div.innerHTML = `
-      <h5>Address #${index + 1}</h5>
-      <p>${addr.street}, ${addr.city}</p>
-      <p>${addr.state} - ${addr.zip}, ${addr.country}</p>
-      <button class="btn-delete-addr" onclick="deleteAddress(${index})">Delete</button>
-    `;
-    container.appendChild(div);
-  });
-}
-
-// 5. Save Profile (Name)
-// 5. Save Profile (Name)
-async function saveProfileInfo() {
-  const newName = document.getElementById("profile-name").value;
-  const token = localStorage.getItem("authToken");
-
-  if (!newName || !newName.trim()) {
-    window.cartManager.showToast("Name cannot be empty", "error");
-    return;
-  }
-
-  try {
-    const res = await fetch("/api/user", {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ name: newName.trim() }),
-    });
-
-    if (res.ok) {
-      const data = await res.json();
-      saveUser(data.user); // Update local storage
-      updateAccountUI(); // Update header name
-      window.cartManager.showToast("Profile updated!", "success");
-    } else {
-      const errorData = await res.json();
-      window.cartManager.showToast(errorData.error || "Update failed", "error");
-    }
-  } catch (e) {
-    console.error("Profile update error:", e);
-    window.cartManager.showToast("Update failed", "error");
-  }
-}
-
-// 6. Save New Address
-async function saveNewAddress() {
-  const street = document.getElementById("addr-street").value;
-  const city = document.getElementById("addr-city").value;
-  const state = document.getElementById("addr-state").value;
-  const zip = document.getElementById("addr-zip").value;
-  const country = document.getElementById("addr-country").value;
-
-  if (!street || !city || !zip) {
-    window.cartManager.showToast("Please fill required fields", "error");
-    return;
-  }
-
-  const user = getUser();
-  const newAddress = { street, city, state, zip, country };
-  const updatedAddresses = [...(user.addresses || []), newAddress];
-
-  try {
-    const token = localStorage.getItem("authToken");
-    const res = await fetch("/api/user", {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ addresses: updatedAddresses }),
-    });
-
-    if (res.ok) {
-      const data = await res.json();
-      saveUser(data.user);
-      renderAddresses(data.user.addresses);
-      window.toggleAddressForm(false);
-
-      document.getElementById("addr-street").value = "";
-      document.getElementById("addr-city").value = "";
-      document.getElementById("addr-state").value = "";
-      document.getElementById("addr-zip").value = "";
-
-      window.cartManager.showToast("Address saved!", "success");
-    }
-  } catch (e) {
-    window.cartManager.showToast("Failed to save address", "error");
-  }
-}
-
-// 7. Delete Address
-window.deleteAddress = async function (index) {
-  if (!confirm("Are you sure you want to delete this address?")) return;
-
-  const user = getUser();
-  const updatedAddresses = user.addresses.filter((_, i) => i !== index);
-
-  try {
-    const token = localStorage.getItem("authToken");
-    const res = await fetch("/api/user", {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ addresses: updatedAddresses }),
-    });
-
-    if (res.ok) {
-      const data = await res.json();
-      saveUser(data.user);
-      renderAddresses(data.user.addresses);
-      window.cartManager.showToast("Address deleted", "info");
-    }
-  } catch (e) {
-    window.cartManager.showToast("Failed to delete", "error");
-  }
-};
-
 // ====================================================================
 // INITIALIZATION
 // ====================================================================
@@ -1601,13 +1706,11 @@ document.addEventListener("DOMContentLoaded", () => {
   window.quickViewModal = new QuickViewModal();
   window.heroCarousel = new HeroCarousel();
 
-  // --- Account Dropdown Logic (Event Delegation) ---
   const accountDropdown = document.querySelector(".account-dropdown");
   const accountBtn = document.getElementById("account-btn");
   const accountMenu = document.querySelector(".account-menu");
 
   if (accountBtn && accountDropdown && accountMenu) {
-    // Toggle Menu
     accountBtn.addEventListener("click", (e) => {
       e.preventDefault();
       e.stopPropagation();
@@ -1615,7 +1718,6 @@ document.addEventListener("DOMContentLoaded", () => {
       accountDropdown.classList.toggle("active");
     });
 
-    // Handle Clicks on Login/Signup/Logout (Delegation)
     accountMenu.addEventListener("click", (e) => {
       if (e.target.classList.contains("auth-action")) {
         e.preventDefault();
@@ -1631,7 +1733,6 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
 
-    // Close when clicking outside
     document.addEventListener("click", (e) => {
       if (
         !accountDropdown.contains(e.target) &&
@@ -1642,7 +1743,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // --- Auth Modal Events ---
+  // Auth Event Listeners
   const closeAuth = document.querySelector(".close-auth");
   if (closeAuth) closeAuth.addEventListener("click", closeAuthModal);
 
@@ -1667,7 +1768,7 @@ document.addEventListener("DOMContentLoaded", () => {
       openAuthModal("login");
     });
 
-  // --- Login Form Submission ---
+  // Form Submissions
   document
     .getElementById("login-form")
     ?.addEventListener("submit", async (e) => {
@@ -1704,7 +1805,6 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
 
-  // --- Signup Form Submission ---
   document
     .getElementById("signup-form")
     ?.addEventListener("submit", async (e) => {
@@ -1724,7 +1824,6 @@ document.addEventListener("DOMContentLoaded", () => {
         const data = await res.json();
 
         if (res.ok) {
-          saveUser(data.user);
           window.cartManager.showToast(
             "Account created! Please login.",
             "success"
@@ -1742,7 +1841,6 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
 
-  // --- Forgot Password Submission ---
   document
     .getElementById("forgot-password-form")
     ?.addEventListener("submit", async (e) => {
@@ -1772,16 +1870,15 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
 
-  // --- View Cart Button Logic ---
+  // View Cart Button Logic
   const viewCartBtn = document.getElementById("view-cart-btn");
   if (viewCartBtn) {
     viewCartBtn.addEventListener("click", () => {
-      // Close cart dropdown
-      const cartDropdown = document.getElementById("cart-dropdown");
-      if (cartDropdown) cartDropdown.style.display = "none";
-
-      // Open cart review modal
-      openCartReviewModal();
+      if (window.cartManager.cart.length === 0) {
+        window.cartManager.showToast("Your cart is empty!", "warning");
+        return;
+      }
+      openPaymentModal(window.cartManager.cart);
     });
   }
 
@@ -1810,7 +1907,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Mobile Dropdowns
   document.querySelectorAll(".mobile-dropdown-toggle").forEach((toggle) => {
     toggle.addEventListener("click", (e) => {
       e.preventDefault();
@@ -1818,26 +1914,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
-  // Mobile Menu Links - Close sidebar ONLY for Home link
-  document.querySelectorAll(".mobile-menu-list a").forEach((link) => {
-    link.addEventListener("click", (e) => {
-      const href = link.getAttribute("href");
-
-      // Only handle the #home link
-      if (href === "#home") {
-        e.preventDefault();
-
-        // Close mobile nav
-        mobileNav.classList.remove("active");
-        mobileNavOverlay.classList.remove("active");
-
-        // Scroll to top
-        window.scrollTo({ top: 0, behavior: "smooth" });
-      }
-    });
-  });
-
-  // Profile Form Listeners
+  // Profile Listeners
   document
     .getElementById("save-profile-btn")
     ?.addEventListener("click", saveProfileInfo);
@@ -1848,355 +1925,5 @@ document.addEventListener("DOMContentLoaded", () => {
     .getElementById("save-address-btn")
     ?.addEventListener("click", saveNewAddress);
 
-  // Update UI on load
   updateAccountUI();
 });
-
-// Payment Modal Functions (Global)
-function closePaymentModal() {
-  const modal = document.getElementById("demo-payment-modal");
-  if (modal) modal.style.display = "none";
-
-  // FIX: Reset Step Indicators when closing
-  const stepAddress = document.getElementById("step-address");
-  const stepPayment = document.getElementById("step-payment");
-  if (stepAddress) stepAddress.classList.remove("active");
-  if (stepPayment) stepPayment.classList.remove("active");
-}
-
-// Cart Review Modal Functions
-function openCartReviewModal() {
-  const modal = document.getElementById("cart-review-modal");
-  const items = window.cartManager.cart;
-
-  if (items.length === 0) {
-    window.cartManager.showToast("Your cart is empty!", "warning");
-    return;
-  }
-
-  // Populate cart items
-  const cartReviewItems = document.getElementById("cart-review-items");
-  cartReviewItems.innerHTML = items
-    .map(
-      (item) => `
-    <div class="payment-item" style="padding: 15px; border-bottom: 1px solid #eee;">
-      <div style="display: flex; justify-content: space-between; align-items: center;">
-        <div>
-          <strong>${item.title}</strong>
-          <div style="font-size: 0.9rem; color: #666;">
-            Quantity: ${item.quantity}
-            ${item.selectedSize ? `| Size: ${item.selectedSize}` : ""}
-            ${item.selectedColor ? `| Color: ${item.selectedColor}` : ""}
-          </div>
-        </div>
-        <div style="font-weight: 600;">₹${(item.price * item.quantity).toFixed(
-          2
-        )}</div>
-      </div>
-    </div>
-  `
-    )
-    .join("");
-
-  // Calculate totals
-  const subtotal = items.reduce(
-    (sum, item) => sum + item.price * item.quantity,
-    0
-  );
-  const shipping = subtotal > 2000 ? 0 : 150;
-  const tax = subtotal * 0.18;
-  const total = subtotal + shipping + tax;
-
-  document.getElementById("cart-review-subtotal").textContent =
-    subtotal.toFixed(2);
-  document.getElementById("cart-review-shipping").textContent =
-    shipping.toFixed(2);
-  document.getElementById("cart-review-tax").textContent = tax.toFixed(2);
-  document.getElementById("cart-review-total").textContent = total.toFixed(2);
-
-  modal.style.display = "flex";
-
-  // Close button
-  const closeBtn = document.getElementById("close-cart-review");
-  const newCloseBtn = closeBtn.cloneNode(true);
-  closeBtn.parentNode.replaceChild(newCloseBtn, closeBtn);
-  newCloseBtn.addEventListener("click", () => (modal.style.display = "none"));
-
-  // Continue Shopping button
-  const continueBtn = document.getElementById("continue-shopping-btn");
-  const newContinueBtn = continueBtn.cloneNode(true);
-  continueBtn.parentNode.replaceChild(newContinueBtn, continueBtn);
-  newContinueBtn.addEventListener(
-    "click",
-    () => (modal.style.display = "none")
-  );
-
-  // Proceed to Checkout button
-  const proceedBtn = document.getElementById("proceed-checkout-btn");
-  const newProceedBtn = proceedBtn.cloneNode(true);
-  proceedBtn.parentNode.replaceChild(newProceedBtn, proceedBtn);
-  newProceedBtn.addEventListener("click", () => {
-    modal.style.display = "none";
-    openPaymentModal(items);
-  });
-}
-
-function openPaymentModal(items) {
-  const user = getUser();
-  if (!user) {
-    window.cartManager.showToast("Please login to checkout", "warning");
-    document.getElementById("auth-modal").style.display = "flex";
-    return;
-  }
-
-  const modal = document.getElementById("demo-payment-modal");
-  // FIX: Hide cart dropdown to prevent visual overlap
-  const cartDropdown = document.getElementById("cart-dropdown");
-  if (cartDropdown) cartDropdown.style.display = "none";
-
-  const addressSection = document.getElementById("checkout-address-section");
-  const paymentSection = document.getElementById("checkout-payment-section");
-  const addressList = document.getElementById("checkout-addresses-list");
-  const continueBtn = document.getElementById("btn-continue-payment");
-  const payNowBtn = document.getElementById("pay-now");
-
-  // Reset View (Show Address, Hide Payment)
-  if (addressSection) addressSection.style.display = "block";
-  if (paymentSection) paymentSection.style.display = "none";
-  if (payNowBtn) payNowBtn.style.display = "none";
-
-  // Step Indicators
-  const stepCart = document.querySelector(".checkout-steps .step:first-child");
-  const stepAddress = document.getElementById("step-address");
-  const stepPayment = document.getElementById("step-payment");
-
-  if (stepCart) stepCart.classList.remove("active");
-  if (stepAddress) stepAddress.classList.remove("active");
-  if (stepPayment) stepPayment.classList.remove("active");
-
-  if (stepAddress) stepAddress.classList.add("active");
-
-  // FIX: Make selectedAddress accessible throughout the function
-  let selectedAddress = null;
-
-  // --- RENDER ADDRESSES ---
-  const addresses = user.addresses || [];
-
-  if (addressList) {
-    addressList.innerHTML = "";
-
-    if (addresses.length === 0) {
-      addressList.innerHTML = `
-        <p style="text-align:center; color:#666; margin-bottom:15px">No saved addresses found.</p>
-        <button class="btn-secondary" style="width:100%" onclick="closePaymentModal(); openProfileModal(); window.switchProfileTab('address');">
-          + Add New Address in Profile
-        </button>
-      `;
-      if (continueBtn) continueBtn.style.display = "none";
-    } else {
-      if (continueBtn) continueBtn.style.display = "block";
-      addresses.forEach((addr, index) => {
-        const card = document.createElement("div");
-        card.className = "address-option-card";
-
-        if (index === 0) {
-          card.classList.add("selected");
-          selectedAddress = addr;
-        }
-
-        card.innerHTML = `
-          <div style="font-weight:600">${user.name}</div>
-          <div>${addr.street}, ${addr.city}</div>
-          <div>${addr.state} - ${addr.zip}</div>
-        `;
-
-        card.addEventListener("click", () => {
-          document
-            .querySelectorAll(".address-option-card")
-            .forEach((c) => c.classList.remove("selected"));
-          card.classList.add("selected");
-          selectedAddress = addr;
-        });
-
-        addressList.appendChild(card);
-      });
-    }
-  }
-
-  // --- POPULATE PAYMENT ITEMS (Needed for both steps) ---
-  const paymentItems = document.getElementById("payment-items");
-  if (paymentItems) {
-    paymentItems.innerHTML = items
-      .map(
-        (item) => `
-        <div class="payment-item">
-          <span>${item.title} (x${item.quantity})</span>
-          <span>₹${(item.price * item.quantity).toFixed(2)}</span>
-        </div>
-      `
-      )
-      .join("");
-  }
-
-  // Calculations
-  const subtotal = items.reduce(
-    (sum, item) => sum + item.price * item.quantity,
-    0
-  );
-  const shipping = subtotal > 2000 ? 0 : 150;
-  const tax = subtotal * 0.18;
-  const finalTotal = subtotal + shipping + tax;
-
-  // Update summary text
-  const elSub = document.getElementById("payment-subtotal");
-  const elShip = document.getElementById("payment-shipping");
-  const elTax = document.getElementById("payment-tax");
-  const elTot = document.getElementById("payment-total");
-
-  if (elSub) elSub.textContent = subtotal.toFixed(2);
-  if (elShip) elShip.textContent = shipping.toFixed(2);
-  if (elTax) elTax.textContent = tax.toFixed(2);
-  if (elTot) elTot.textContent = finalTotal.toFixed(2);
-
-  // Payment Toggles
-  const paymentRadios = modal.querySelectorAll('input[name="payment"]');
-  const cardForm = document.getElementById("card-form");
-  const upiForm = document.getElementById("upi-form");
-
-  const updatePaymentForms = () => {
-    const selected = modal.querySelector('input[name="payment"]:checked').value;
-    if (cardForm)
-      cardForm.style.display = selected === "card" ? "block" : "none";
-    if (upiForm) upiForm.style.display = selected === "upi" ? "block" : "none";
-  };
-  paymentRadios.forEach((r) =>
-    r.addEventListener("change", updatePaymentForms)
-  );
-  updatePaymentForms();
-
-  // --- CONTINUE BUTTON LOGIC ---
-  if (continueBtn) {
-    const newContinue = continueBtn.cloneNode(true);
-    continueBtn.parentNode.replaceChild(newContinue, continueBtn);
-
-    newContinue.addEventListener("click", () => {
-      if (!selectedAddress) {
-        window.cartManager.showToast("Please select an address", "warning");
-        return;
-      }
-      // Move to Payment Step
-      addressSection.style.display = "none";
-      paymentSection.style.display = "block";
-
-      const payBtn = document.getElementById("pay-now"); // Get fresh reference
-      if (payBtn) {
-        payBtn.style.display = "block";
-        payBtn.style.visibility = "visible"; // Extra safety
-      }
-
-      if (stepAddress) stepAddress.classList.add("active");
-      if (stepPayment) stepPayment.classList.add("active");
-    });
-  }
-
-  // --- FINAL PAY BUTTON LOGIC ---
-  if (payNowBtn) {
-    const payNowBtnNew = payNowBtn.cloneNode(true);
-    payNowBtn.parentNode.replaceChild(payNowBtnNew, payNowBtn);
-
-    payNowBtnNew.addEventListener("click", async () => {
-      // FIX: Check if address was selected
-      if (!selectedAddress) {
-        window.cartManager.showToast(
-          "Please select a delivery address",
-          "error"
-        );
-        return;
-      }
-
-      const selectedMethod = modal.querySelector(
-        'input[name="payment"]:checked'
-      )?.value;
-
-      if (!selectedMethod) {
-        window.cartManager.showToast("Please select a payment method", "error");
-        return;
-      }
-
-      // Validation
-      if (selectedMethod === "card") {
-        const cardInput = cardForm?.querySelector("input");
-        if (!cardInput || !cardInput.value?.trim()) {
-          window.cartManager.showToast("Please enter card details", "error");
-          return;
-        }
-      } else if (selectedMethod === "upi") {
-        const upiInput = upiForm?.querySelector("input");
-        if (!upiInput || !upiInput.value?.trim()) {
-          window.cartManager.showToast("Please enter UPI ID", "error");
-          return;
-        }
-      }
-
-      try {
-        payNowBtnNew.textContent = "Processing...";
-        payNowBtnNew.disabled = true;
-
-        const token = localStorage.getItem("authToken");
-
-        const res = await fetch("/api/orders", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            items,
-            subtotal,
-            shipping,
-            tax,
-            total: finalTotal,
-            paymentMethod: selectedMethod,
-            shippingAddress: selectedAddress, // FIX: Now this has the correct address
-          }),
-        });
-
-        if (res.ok) {
-          window.cartManager.showToast("Order placed successfully!", "success");
-          window.cartManager.clearCart();
-          closePaymentModal();
-        } else {
-          const errorData = await res.json();
-          throw new Error(errorData.error || "Order failed");
-        }
-      } catch (e) {
-        console.error("Order error:", e);
-        window.cartManager.showToast(
-          e.message || "Failed to place order",
-          "error"
-        );
-      } finally {
-        payNowBtnNew.textContent = "Pay Now";
-        payNowBtnNew.disabled = false;
-      }
-    });
-  }
-
-  modal.style.display = "flex";
-
-  // Cancel button handler
-  const cancelBtn = document.getElementById("cancel-payment");
-  if (cancelBtn) {
-    const newCancelBtn = cancelBtn.cloneNode(true);
-    cancelBtn.parentNode.replaceChild(newCancelBtn, cancelBtn);
-    newCancelBtn.addEventListener("click", closePaymentModal);
-  }
-
-  // Close X button handler
-  const closeBtn = modal.querySelector(".close");
-  if (closeBtn) {
-    const newCloseBtn = closeBtn.cloneNode(true);
-    closeBtn.parentNode.replaceChild(newCloseBtn, closeBtn);
-    newCloseBtn.addEventListener("click", closePaymentModal);
-  }
-}

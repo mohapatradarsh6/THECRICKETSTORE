@@ -1421,47 +1421,140 @@ body {
   margin-bottom: 10px;
 }
 
-/* Filter Section */
+/* --- Refined Filter Section --- */
 .filter-section {
-  padding: 30px 0;
-  background-color: var(--light-color);
-  border-top: 1px solid var(--border-color);
-  border-bottom: 1px solid var(--border-color);
+  padding: 25px 0;
+  background-color: #fff;
+  border-bottom: 1px solid #f0f0f0;
+  position: sticky;
+  top: 80px;
+  z-index: 900;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.02);
 }
 
 .filter-header {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
+  flex-direction: column;
   gap: 20px;
 }
 
-.filter-header h2 {
-  color: var(--primary-color);
-  font-size: 2rem;
+.filter-controls-wrapper {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between; /* Spread out evenly */
+  gap: 20px;
+  width: 100%;
 }
 
+/* Row 1: Dropdowns (Left Side) */
 .filter-controls {
   display: flex;
   gap: 15px;
   flex-wrap: wrap;
+  flex: 1; /* Take available space */
 }
 
 .filter-select {
   padding: 10px 15px;
-  border: 1px solid var(--border-color);
+  border: 1px solid #e0e0e0;
   border-radius: 8px;
-  background-color: white;
+  background-color: #f8f9fa;
   cursor: pointer;
-  transition: var(--transition);
-  font-size: 1rem;
+  font-size: 0.9rem;
+  color: var(--dark-color);
+  min-width: 140px;
+  transition: all 0.2s ease;
 }
 
-.filter-select:hover,
-.filter-select:focus {
+.filter-select:hover {
+  background-color: #fff;
   border-color: var(--primary-color);
-  outline: none;
+}
+
+/* Row 2: Advanced Filters (Right Side) */
+.advanced-filters {
+  display: flex;
+  align-items: center;
+  gap: 30px;
+  flex-wrap: wrap;
+  justify-content: flex-end; /* Align to right */
+}
+
+.price-group {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  background: #f8f9fa;
+  padding: 5px 15px;
+  border-radius: 8px;
+  border: 1px solid #eee;
+}
+
+.filter-checkboxes {
+  display: flex;
+  gap: 20px;
+}
+
+/* Mobile Optimization for Filters */
+@media (max-width: 768px) {
+  .filter-section {
+    position: static; /* Unstick on mobile */
+    padding: 15px 0;
+  }
+
+  .filter-header h2 {
+    font-size: 1.3rem;
+    margin-bottom: 10px;
+  }
+
+  .filter-controls-wrapper {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 15px;
+  }
+
+  /* Horizontal Scroll for Dropdowns */
+  .filter-controls {
+    width: 100%;
+    display: flex;
+    flex-wrap: nowrap; /* Force single line */
+    overflow-x: auto; /* Enable horizontal scroll */
+    padding-bottom: 10px; /* Space for scrollbar */
+    -webkit-overflow-scrolling: touch;
+    gap: 10px;
+  }
+
+  .filter-select {
+    flex: 0 0 auto; /* Don't shrink */
+    width: auto;
+    min-width: 130px;
+    font-size: 0.85rem;
+  }
+
+  .advanced-filters {
+    width: 100%;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 15px;
+    border-top: 1px solid #eee;
+    padding-top: 15px;
+  }
+
+  .price-group {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .price-inputs {
+    flex: 1;
+    justify-content: flex-end;
+  }
+
+  #price-range {
+    flex: 1;
+    max-width: 150px;
+  }
 }
 
 /* Products Section */
@@ -3803,5 +3896,67 @@ body {
   }
   #price-range {
     flex: 1;
+  }
+}
+
+/* Mobile Search Overlay */
+.mobile-search-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  background: white;
+  z-index: 3000;
+  padding: 15px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.mobile-search-overlay.active {
+  display: block;
+  animation: slideDown 0.3s ease;
+}
+
+.search-container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  position: relative;
+}
+
+.search-container input {
+  flex: 1;
+  padding: 12px 15px;
+  border: 1px solid #ddd;
+  border-radius: 25px;
+  font-size: 1rem;
+  outline: none;
+}
+
+.search-container button {
+  background: none;
+  border: none;
+  font-size: 1.4rem;
+  color: #666;
+}
+
+/* Hide original mobile search inside nav to clean it up */
+.mobile-search-box {
+  display: none !important;
+}
+
+.mobile-header-actions {
+  display: none !important; /* Hidden on desktop */
+}
+
+@media (max-width: 768px) {
+  .mobile-header-actions {
+    display: flex !important;
+  }
+  .mobile-search-toggle {
+    background: none;
+    border: none;
+    font-size: 1.4rem;
+    color: var(--primary-color);
   }
 }
