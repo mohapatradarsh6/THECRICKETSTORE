@@ -12,7 +12,6 @@ class CartManager {
   }
 
   loadCart() {
-    // Use in-memory storage instead of localStorage
     return this._cartData || [];
   }
 
@@ -32,7 +31,6 @@ class CartManager {
   }
 
   addToCart(product, quantity = 1) {
-    // Check stock limit
     if (product.stock !== undefined && product.stock < quantity) {
       this.showToast(`Sorry, only ${product.stock} items in stock!`, "error");
       return;
@@ -239,23 +237,15 @@ class CartManager {
 
   initializeEventListeners() {
     const cartBtn = document.getElementById("cart-btn");
+    const cartDropdown = document.getElementById("cart-dropdown");
+    const wishlistBtn = document.getElementById("wishlist-btn");
+    const wishlistDropdown = document.getElementById("wishlist-dropdown");
+
     if (cartBtn) {
       cartBtn.addEventListener("click", (e) => {
         e.stopPropagation();
         e.preventDefault();
         if (wishlistDropdown) wishlistDropdown.style.display = "none";
-        openCartModal(); // This should always open modal, not dropdown
-      });
-    }
-    const cartDropdown = document.getElementById("cart-dropdown");
-    const wishlistBtn = document.getElementById("wishlist-btn");
-    const wishlistDropdown = document.getElementById("wishlist-dropdown");
-
-    if (cartBtn && cartDropdown) {
-      cartBtn.addEventListener("click", (e) => {
-        e.stopPropagation();
-        if (wishlistDropdown) wishlistDropdown.style.display = "none";
-        // NEW: Always open cart modal
         openCartModal();
       });
     }
@@ -266,13 +256,11 @@ class CartManager {
         const isMobile = window.innerWidth <= 768;
 
         if (isMobile) {
-          // On mobile, open sidebar
           const mobileNav = document.getElementById("mobile-nav");
           const mobileOverlay = document.getElementById("mobile-nav-overlay");
           if (mobileNav) mobileNav.classList.add("active");
           if (mobileOverlay) mobileOverlay.classList.add("active");
         } else {
-          // On desktop, show dropdown
           if (cartDropdown) cartDropdown.style.display = "none";
           wishlistDropdown.style.display =
             wishlistDropdown.style.display === "block" ? "none" : "block";
@@ -324,7 +312,6 @@ function formatDate(dateString) {
   return date.toLocaleDateString("en-US", options);
 }
 
-// Sync Wishlist to Mobile Sidebar
 function updateMobileWishlist() {
   const container = document.getElementById("mobile-wishlist-items");
   if (!container || !window.cartManager) return;
@@ -354,7 +341,7 @@ function updateMobileWishlist() {
     .join("");
 }
 
-// --- 2. Product Management (Enhanced) ---
+// --- 2. Product Management ---
 class ProductManager {
   constructor() {
     this.products = [];
@@ -364,7 +351,7 @@ class ProductManager {
   }
 
   async init() {
-    this.initializeProductEvents(); // Initialize delegation once
+    this.initializeProductEvents();
     await this.fetchProducts();
     this.initializeFilters();
     this.initializeSearch();
@@ -405,7 +392,6 @@ class ProductManager {
       this.filteredProducts.forEach((p) =>
         container.appendChild(this.createProductCard(p))
       );
-      // NOTE: attachCardListeners removed. Event delegation handles this now.
     }
   }
 
@@ -413,9 +399,9 @@ class ProductManager {
     const card = document.createElement("div");
     card.className = "product-card";
 
-    card.setAttribute("data-title", product.title);
-    card.setAttribute("data-price", product.price);
-    card.setAttribute("data-product", JSON.stringify(product));
+    // Escape quotes for safety
+    const productJson = JSON.stringify(product).replace(/'/g, "&#39;");
+    card.setAttribute("data-product", productJson);
 
     let ratingHTML = '<div class="stars"><i class="fas fa-star"></i></div>';
     if (window.cartManager?.generateRatingHTML) {
@@ -439,7 +425,6 @@ class ProductManager {
       ? `<div class="product-badge" style="background:var(--accent-color)">New</div>`
       : "";
 
-    // Added class markers for delegation (e.g. btn-add-cart)
     const btnState = isOutOfStock
       ? 'disabled style="background:#ccc; cursor:not-allowed;"'
       : "";
@@ -479,35 +464,52 @@ class ProductManager {
     return card;
   }
 
-  // FIX: New Method for Event Delegation
+  // FIXED: Improved delegation to catch Quick View and others robustly
   initializeProductEvents() {
     const container = document.getElementById("products-container");
     if (!container) return;
 
     container.addEventListener("click", (e) => {
-      // Find the closest button if clicked on icon/span inside button
+      // 1. Handle Quick View explicitly (class check on closest button)
+      const quickViewBtn = e.target.closest(".btn-quick-view");
+      if (quickViewBtn) {
+        e.stopPropagation();
+        e.preventDefault();
+        const card = quickViewBtn.closest(".product-card");
+        if (card && window.quickViewModal) {
+          try {
+            const productData = JSON.parse(card.getAttribute("data-product"));
+            window.quickViewModal.showQuickView(productData);
+          } catch (err) {
+            console.error("Error parsing product data", err);
+          }
+        }
+        return;
+      }
+
+      // 2. Handle other buttons
       const btn = e.target.closest("button");
       if (!btn) return;
 
       const card = btn.closest(".product-card");
       if (!card) return;
 
-      const productData = JSON.parse(card.getAttribute("data-product"));
+      try {
+        const productData = JSON.parse(card.getAttribute("data-product"));
 
-      if (btn.classList.contains("btn-add-cart")) {
-        if (btn.disabled) return;
-        window.cartManager.addToCart(productData);
-      } else if (btn.classList.contains("btn-wishlist")) {
-        e.stopPropagation();
-        window.cartManager.toggleWishlist(productData);
-      } else if (btn.classList.contains("btn-buy-now")) {
-        if (btn.disabled) return;
-        productData.quantity = 1;
-        openPaymentModal([productData]);
-      } else if (btn.classList.contains("btn-quick-view")) {
-        e.stopPropagation();
-        if (window.quickViewModal)
-          window.quickViewModal.showQuickView(productData);
+        if (btn.classList.contains("btn-add-cart")) {
+          if (btn.disabled) return;
+          window.cartManager.addToCart(productData);
+        } else if (btn.classList.contains("btn-wishlist")) {
+          e.stopPropagation();
+          window.cartManager.toggleWishlist(productData);
+        } else if (btn.classList.contains("btn-buy-now")) {
+          if (btn.disabled) return;
+          productData.quantity = 1;
+          openPaymentModal([productData]);
+        }
+      } catch (err) {
+        console.error("Action failed:", err);
       }
     });
   }
@@ -517,7 +519,6 @@ class ProductManager {
     const brandFilter = document.getElementById("brand-filter");
     const sortFilter = document.getElementById("sort-filter");
 
-    // Advanced Filters
     const priceRange = document.getElementById("price-range");
     const priceNumber = document.getElementById("price-number");
     const stockFilter = document.getElementById("stock-filter");
@@ -530,7 +531,6 @@ class ProductManager {
     if (sortFilter)
       sortFilter.addEventListener("change", () => this.applyFilters());
 
-    // Bind Price Inputs
     if (priceRange && priceNumber) {
       priceRange.addEventListener("input", (e) => {
         priceNumber.value = e.target.value;
@@ -556,7 +556,6 @@ class ProductManager {
     const brand = document.getElementById("brand-filter")?.value || "all";
     const sort = document.getElementById("sort-filter")?.value || "featured";
 
-    // NEW VALUES
     const maxPriceInput = document.getElementById("price-number");
     const maxPrice = maxPriceInput ? parseInt(maxPriceInput.value) : 50000;
     const inStockOnly =
@@ -595,12 +594,10 @@ class ProductManager {
       const btn = document.getElementById(btnId);
       const suggestions = document.getElementById(suggestionsId);
 
-      // Shared Search Logic
       const performSearch = (query) => {
         if (!query) return;
         this.searchProducts(query);
 
-        // Close mobile UI
         const mobileNav = document.getElementById("mobile-nav");
         const mobileOverlay = document.getElementById("mobile-nav-overlay");
         const mobileSearchBar = document.getElementById("mobile-search-bar");
@@ -610,7 +607,6 @@ class ProductManager {
         if (mobileSearchBar) mobileSearchBar.classList.remove("active");
         if (suggestions) suggestions.classList.remove("active");
 
-        // Smooth scroll to products
         const productsSection = document.querySelector(".products-section");
         if (productsSection) {
           const headerOffset = 100;
@@ -657,16 +653,13 @@ class ProductManager {
       }
     };
 
-    // 1. Desktop
     setupSearchListener("search-input", "search-btn", "search-suggestions");
-    // 2. Mobile Overlay
     setupSearchListener(
       "mobile-search-input-overlay",
       null,
       "mobile-search-suggestions-overlay"
     );
 
-    // Mobile Search Toggle Logic
     const mobileSearchToggle = document.getElementById("mobile-search-toggle");
     const mobileSearchBar = document.getElementById("mobile-search-bar");
     const closeMobileSearch = document.getElementById("close-mobile-search");
@@ -718,14 +711,12 @@ class ProductManager {
       )
       .join("");
 
-    // Global helper for onclick
     window.productManager.selectSuggestion = (title) => {
       inputElement.value = title;
       this.searchProducts(title);
       this.addToSearchHistory(title);
       container.classList.remove("active");
 
-      // Also perform scroll
       const productsSection = document.querySelector(".products-section");
       if (productsSection) {
         const headerOffset = 100;
@@ -734,7 +725,6 @@ class ProductManager {
           elementPosition + window.pageYOffset - headerOffset;
         window.scrollTo({ top: offsetPosition, behavior: "smooth" });
       }
-      // Close mobile search if open
       document.getElementById("mobile-search-bar")?.classList.remove("active");
     };
 
@@ -770,7 +760,6 @@ class ProductManager {
   searchProducts(query) {
     const searchTerm = query.toLowerCase().trim();
 
-    // Hide/Show Hero
     const hero = document.querySelector(".hero-section");
     if (hero) hero.style.display = searchTerm.length > 0 ? "none" : "block";
 
@@ -787,12 +776,6 @@ class ProductManager {
       );
     }
     this.renderProductCards();
-
-    if (this.filteredProducts.length === 0) {
-      const container = document.getElementById("products-container");
-      if (container)
-        container.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:40px"><h3>No products found</h3></div>`;
-    }
   }
 }
 
@@ -839,27 +822,25 @@ class QuickViewModal {
   }
 
   showQuickView(product) {
-    if (!this.modal) return;
+    if (!this.modal) {
+      console.error("Quick View Modal ID not found in DOM");
+      return;
+    }
     this.currentProduct = product;
 
-    // 1. Set Content
     this.modal.querySelector("#quick-view-title").textContent = product.title;
     this.modal.querySelector("#quick-view-img").src = product.image;
 
-    // 2. Set Price
     this.modal.querySelector(
       "#quick-view-price"
     ).innerHTML = `<span class="price-current">₹${product.price}</span>`;
 
-    // 3. Set Description
     const desc = this.modal.querySelector("#quick-view-description");
     if (desc)
       desc.textContent = product.description || "No description available.";
 
-    // 4. Handle "Add to Cart" Button inside Modal
     const addToCartBtn = this.modal.querySelector(".btn-add-cart-modal");
     if (addToCartBtn) {
-      // FIX: Use .onclick instead of cloneNode to update the handler without killing listeners
       if (product.stock !== undefined && product.stock <= 0) {
         addToCartBtn.disabled = true;
         addToCartBtn.textContent = "Out of Stock";
@@ -867,7 +848,7 @@ class QuickViewModal {
       } else {
         addToCartBtn.disabled = false;
         addToCartBtn.textContent = "Add to Cart";
-        addToCartBtn.style.background = ""; // Reset color
+        addToCartBtn.style.background = "";
 
         addToCartBtn.onclick = () => {
           const qtyInput = this.modal.querySelector(".qty-input");
@@ -878,7 +859,6 @@ class QuickViewModal {
       }
     }
 
-    // 5. Force Display Flex
     this.modal.style.display = "flex";
   }
 
@@ -974,8 +954,6 @@ class ProductPagination {
       }
     });
 
-    // NOTE: Event delegation in ProductManager handles this now. No attach needed.
-
     const productsSection = document.querySelector(".products-section");
     if (productsSection && this.currentPage > 1) {
       productsSection.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -1051,7 +1029,6 @@ class ProductPagination {
 // AUTHENTICATION & INITIALIZATION
 // ====================================================================
 
-// Use in-memory storage
 let _currentUser = null;
 
 function saveUser(user) {
@@ -1077,7 +1054,7 @@ function logoutUser() {
 }
 
 let _authToken = null;
-// GLOBAL: Update UI text based on login state
+
 function updateAccountUI() {
   const user = getUser();
   const accountName = document.querySelector(".user-btn span");
@@ -1132,8 +1109,9 @@ function openAuthModal(mode = "login") {
       loginForm?.classList.add("active");
     }
 
-    // FIX: Use flex display instead of block
     modal.style.display = "flex";
+  } else {
+    console.error("Auth modal element not found!");
   }
 }
 
@@ -1190,7 +1168,6 @@ async function openProfileModal() {
 
   const closeBtn = modal.querySelector(".close");
   if (closeBtn) {
-    // FIX: Use onclick instead of cloneNode
     closeBtn.onclick = () => (modal.style.display = "none");
   }
 
@@ -1241,7 +1218,6 @@ function renderAddresses(addresses) {
   });
 }
 
-// Saving Profile Data
 async function saveProfileInfo() {
   const newName = document.getElementById("profile-name").value;
   const token = _authToken;
@@ -1338,17 +1314,17 @@ window.deleteAddress = async function (index) {
   }
 };
 
-// Payment Modal Functions (Global)
+// Payment Modal Functions
 function closePaymentModal() {
   const modal = document.getElementById("demo-payment-modal");
   if (modal) modal.style.display = "none";
 
-  // Reset Step Indicators
   const stepAddress = document.getElementById("step-address");
   const stepPayment = document.getElementById("step-payment");
   if (stepAddress) stepAddress.classList.remove("active");
   if (stepPayment) stepPayment.classList.remove("active");
 }
+
 function openCartModal() {
   if (!window.cartManager || window.cartManager.cart.length === 0) {
     window.cartManager.showToast("Your cart is empty!", "warning");
@@ -1358,20 +1334,16 @@ function openCartModal() {
   const modal = document.getElementById("cart-modal");
   if (!modal) return;
 
-  // Hide cart dropdown if open
   const cartDropdown = document.getElementById("cart-dropdown");
   if (cartDropdown) cartDropdown.style.display = "none";
 
   renderCartModal();
 
-  // ✅ Use class instead of inline style for better control
   modal.classList.add("active");
   modal.style.display = "flex";
 
-  // Proceed to Checkout button
   const checkoutBtn = document.getElementById("proceed-to-checkout");
   if (checkoutBtn) {
-    // FIX: Use onclick to avoid cloneNode issues
     checkoutBtn.onclick = () => {
       closeCartModal();
       openPaymentModal(window.cartManager.cart);
@@ -1383,10 +1355,8 @@ function openCartModal() {
     }
   });
 
-  // Close button
   const closeBtn = modal.querySelector(".close");
   if (closeBtn) {
-    // FIX: Use onclick
     closeBtn.onclick = (e) => {
       e.stopPropagation();
       closeCartModal();
@@ -1395,7 +1365,6 @@ function openCartModal() {
 
   const continueBtn = document.getElementById("continue-shopping");
   if (continueBtn) {
-    // FIX: Use onclick
     continueBtn.onclick = (e) => {
       e.stopPropagation();
       closeCartModal();
@@ -1518,6 +1487,7 @@ function removeCartItem(title) {
     }
   }
 }
+
 function openPaymentModal(items) {
   const user = getUser();
   if (!user) {
@@ -1527,8 +1497,6 @@ function openPaymentModal(items) {
   }
 
   const modal = document.getElementById("demo-payment-modal");
-
-  // FIX: Hide cart dropdown to prevent visual overlap
   const cartDrop = document.getElementById("cart-dropdown");
   if (cartDrop) cartDrop.style.display = "none";
 
@@ -1538,12 +1506,10 @@ function openPaymentModal(items) {
   const continueBtn = document.getElementById("btn-continue-payment");
   const payNowBtn = document.getElementById("pay-now");
 
-  // Reset View (Show Address, Hide Payment)
   if (addressSection) addressSection.style.display = "block";
   if (paymentSection) paymentSection.style.display = "none";
   if (payNowBtn) payNowBtn.style.display = "none";
 
-  // Step Indicators
   const stepAddress = document.getElementById("step-address");
   const stepPayment = document.getElementById("step-payment");
   const stepCart = document.querySelector(".checkout-steps .step");
@@ -1553,7 +1519,6 @@ function openPaymentModal(items) {
 
   let selectedAddress = null;
 
-  // --- RENDER ADDRESSES ---
   const addresses = user.addresses || [];
 
   if (addressList) {
@@ -1597,7 +1562,6 @@ function openPaymentModal(items) {
     }
   }
 
-  // --- POPULATE PAYMENT ITEMS (Needed for both steps) ---
   const paymentItems = document.getElementById("payment-items");
   if (paymentItems) {
     paymentItems.innerHTML = items
@@ -1612,7 +1576,6 @@ function openPaymentModal(items) {
       .join("");
   }
 
-  // Calculations
   const subtotal = items.reduce(
     (sum, item) => sum + item.price * item.quantity,
     0
@@ -1621,7 +1584,6 @@ function openPaymentModal(items) {
   const tax = subtotal * 0.18;
   const finalTotal = subtotal + shipping + tax;
 
-  // Update summary text
   const elSub = document.getElementById("payment-subtotal");
   const elShip = document.getElementById("payment-shipping");
   const elTax = document.getElementById("payment-tax");
@@ -1632,7 +1594,6 @@ function openPaymentModal(items) {
   if (elTax) elTax.textContent = tax.toFixed(2);
   if (elTot) elTot.textContent = finalTotal.toFixed(2);
 
-  // Payment Toggles
   const paymentRadios = modal.querySelectorAll('input[name="payment"]');
   const cardForm = document.getElementById("card-form");
   const upiForm = document.getElementById("upi-form");
@@ -1648,19 +1609,14 @@ function openPaymentModal(items) {
   );
   updatePaymentForms();
 
-  // --- CONTINUE BUTTON LOGIC ---
   if (continueBtn) {
-    // FIX: Use onclick instead of cloneNode
     continueBtn.onclick = () => {
       if (!selectedAddress) {
         window.cartManager.showToast("Please select an address", "warning");
         return;
       }
-      // Move to Payment Step
       addressSection.style.display = "none";
       paymentSection.style.display = "block";
-
-      // FIX: Explicitly show the Pay button now
       payNowBtn.style.display = "block";
       continueBtn.style.display = "none";
 
@@ -1669,14 +1625,11 @@ function openPaymentModal(items) {
     };
   }
 
-  // --- FINAL PAY BUTTON LOGIC WITH VALIDATION ---
-  // FIX: Use onclick instead of cloneNode
   payNowBtn.onclick = async () => {
     const selectedMethod = modal.querySelector(
       'input[name="payment"]:checked'
     ).value;
 
-    // ENHANCED VALIDATION
     if (selectedMethod === "card") {
       const cardInputs = cardForm.querySelectorAll("input");
       const cardNumber = cardInputs[0]?.value?.trim();
@@ -1769,22 +1722,17 @@ function openPaymentModal(items) {
     }
   };
 
-  modal.style.display = "flex";
-
-  // Cancel button handler
   const cancelBtn = document.getElementById("cancel-payment");
   if (cancelBtn) {
-    // FIX: Use onclick
     cancelBtn.onclick = closePaymentModal;
   }
 
-  // Close X button handler
   const closeBtn = modal.querySelector(".close");
   if (closeBtn) {
-    // FIX: Use onclick
     closeBtn.onclick = closePaymentModal;
   }
 }
+
 async function openOrdersModal() {
   const user = getUser();
   if (!user) {
@@ -1921,6 +1869,7 @@ async function openOrdersModal() {
       </div>`;
   }
 }
+
 function closeOrdersModal() {
   const modal = document.getElementById("orders-modal");
   if (modal) modal.style.display = "none";
@@ -1933,14 +1882,12 @@ function closeOrdersModal() {
 document.addEventListener("DOMContentLoaded", () => {
   console.log("Initializing App...");
 
-  // 1. INITIALIZE CLASSES
   window.cartManager = new CartManager();
   window.productManager = new ProductManager();
   window.productPagination = new ProductPagination();
   window.quickViewModal = new QuickViewModal();
   window.heroCarousel = new HeroCarousel();
 
-  // 2. FORCE SIDEBAR LOGIC (Moved to Top so it always works)
   const mobileNav = document.getElementById("mobile-nav");
   const mobileOverlay = document.getElementById("mobile-nav-overlay");
   const mobileMenuToggles = document.querySelectorAll(
@@ -1977,9 +1924,37 @@ document.addEventListener("DOMContentLoaded", () => {
   if (mobileOverlay)
     mobileOverlay.addEventListener("click", () => toggleSidebar(false));
 
-  // 3. GLOBAL EVENT DELEGATION (Fixes QuickView, Cart Close, Continue Shopping)
+  // --- GLOBAL EVENT DELEGATION (FIXES LOGIN/SIGNUP & MODALS) ---
   document.addEventListener("click", (e) => {
-    // Fix Cart Modal "Close" (X) and "Continue Shopping"
+    // 1. Handle Account Menu Actions (Login, Signup, Profile, Logout)
+    // This is moved to global scope so it works even if innerHTML changes
+    const authAction = e.target.closest(".auth-action");
+    if (authAction) {
+      e.preventDefault();
+      // Stop propagation to prevent the dropdown from closing immediately
+      e.stopPropagation();
+
+      const action = authAction.getAttribute("data-action");
+      const accountDropdown = document.querySelector(".account-dropdown");
+
+      // Close dropdown
+      if (accountDropdown) accountDropdown.classList.remove("active");
+
+      if (action === "login") openAuthModal("login");
+      if (action === "signup") openAuthModal("signup");
+      if (action === "profile") {
+        if (!getUser()) openAuthModal("login");
+        else openProfileModal();
+      }
+      if (action === "orders") {
+        if (!getUser()) openAuthModal("login");
+        else openOrdersModal();
+      }
+      if (action === "logout") logoutUser();
+      return;
+    }
+
+    // 2. Handle Modal Closing (Clicks on Background)
     if (
       e.target.matches(".close") ||
       e.target.id === "continue-shopping" ||
@@ -1989,7 +1964,10 @@ document.addEventListener("DOMContentLoaded", () => {
       const quickViewModal = document.getElementById("quick-view-modal");
       const ordersModal = document.getElementById("orders-modal");
 
-      if (cartModal) {
+      if (
+        cartModal &&
+        (e.target.id === "cart-modal" || e.target.closest("#cart-modal"))
+      ) {
         cartModal.style.display = "none";
         cartModal.classList.remove("active");
       }
@@ -2001,13 +1979,11 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }
 
-    // Fix Auth Modal Close
     if (e.target.matches(".close-auth") || e.target.id === "auth-modal") {
       closeAuthModal();
     }
   });
 
-  // 4. FIX LOGIN (Mock Login if API fails)
   document
     .getElementById("login-form")
     ?.addEventListener("submit", async (e) => {
@@ -2016,7 +1992,6 @@ document.addEventListener("DOMContentLoaded", () => {
       submitBtn.textContent = "Logging in...";
 
       try {
-        // Try real API
         const email = document.getElementById("login-email").value;
         const password = document.getElementById("login-password").value;
         const res = await fetch("/api/login", {
@@ -2029,7 +2004,6 @@ document.addEventListener("DOMContentLoaded", () => {
         saveUser(data.user);
         _authToken = data.token;
       } catch (error) {
-        // FALLBACK: MOCK LOGIN
         console.warn("API Failed, using Mock User");
         const mockUser = {
           name: "Demo User",
@@ -2046,7 +2020,6 @@ document.addEventListener("DOMContentLoaded", () => {
       submitBtn.textContent = "Login";
     });
 
-  // 5. FIX SIGNUP (Mock Signup if API fails)
   document
     .getElementById("signup-form")
     ?.addEventListener("submit", async (e) => {
@@ -2054,7 +2027,6 @@ document.addEventListener("DOMContentLoaded", () => {
       const submitBtn = e.target.querySelector("button");
       submitBtn.textContent = "Signing up...";
 
-      // Simulate success immediately
       setTimeout(() => {
         window.cartManager.showToast(
           "Account created! Please login.",
@@ -2066,10 +2038,8 @@ document.addEventListener("DOMContentLoaded", () => {
       }, 1000);
     });
 
-  // 6. Account Menu Toggles
   const accountBtn = document.getElementById("account-btn");
   const accountDropdown = document.querySelector(".account-dropdown");
-  const accountMenu = document.querySelector(".account-menu");
 
   if (accountBtn && accountDropdown) {
     accountBtn.addEventListener("click", (e) => {
@@ -2078,32 +2048,8 @@ document.addEventListener("DOMContentLoaded", () => {
       updateAccountUI();
       accountDropdown.classList.toggle("active");
     });
-
-    // Account Menu Actions
-    if (accountMenu) {
-      accountMenu.addEventListener("click", (e) => {
-        const target = e.target.closest(".auth-action");
-        if (target) {
-          e.preventDefault();
-          const action = target.getAttribute("data-action");
-          if (action === "login") openAuthModal("login");
-          if (action === "signup") openAuthModal("signup");
-          if (action === "profile") {
-            if (!getUser()) openAuthModal("login");
-            else openProfileModal();
-          }
-          if (action === "orders") {
-            if (!getUser()) openAuthModal("login");
-            else openOrdersModal();
-          }
-          if (action === "logout") logoutUser();
-          accountDropdown.classList.remove("active");
-        }
-      });
-    }
   }
 
-  // Auth Tab Toggles
   document
     .getElementById("login-tab")
     ?.addEventListener("click", () => openAuthModal("login"));
@@ -2111,7 +2057,6 @@ document.addEventListener("DOMContentLoaded", () => {
     .getElementById("signup-tab")
     ?.addEventListener("click", () => openAuthModal("signup"));
 
-  // Home Reset Logic
   document.querySelectorAll('a[href="#home"], .logo').forEach((link) => {
     link.addEventListener("click", (e) => {
       e.preventDefault();
