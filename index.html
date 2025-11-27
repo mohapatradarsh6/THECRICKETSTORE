@@ -359,18 +359,25 @@
         </div>
         <div class="hero-slide" data-slide="2">
           <div class="hero-content">
-            <h2>Mega Sale</h2>
-            <p>Up to 40% Off</p>
+            <span class="hero-badge">Mega Sale</span>
+            <h2 class="hero-title">Up to 40% Off</h2>
+            <p class="hero-subtitle">
+              Unbeatable prices on premium cricket equipment.
+            </p>
             <button class="btn-hero btn-primary-hero">View Offers</button>
           </div>
           <div class="hero-image">
             <img src="images/bats.png" class="hero-product-img" alt="Bats" />
           </div>
         </div>
+
         <div class="hero-slide" data-slide="3">
           <div class="hero-content">
-            <h2>Pro Collection</h2>
-            <p>English Willow Bats</p>
+            <span class="hero-badge">Pro Collection</span>
+            <h2 class="hero-title">English Willow Bats</h2>
+            <p class="hero-subtitle">
+              Professional-grade bats for serious cricketers.
+            </p>
             <button class="btn-hero btn-primary-hero">Explore</button>
           </div>
           <div class="hero-image">
@@ -580,6 +587,42 @@
       </div>
     </footer>
 
+    <!-- Cart View Modal -->
+<div id="cart-modal" class="modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2><i class="fas fa-shopping-cart"></i> My Cart</h2>
+      <span class="close">&times;</span>
+    </div>
+    <div class="modal-body">
+      <div id="cart-modal-items"></div>
+      
+      <div class="cart-modal-summary">
+        <div class="summary-row">
+          <span>Subtotal:</span>
+          <span>₹<span id="cart-modal-subtotal">0</span></span>
+        </div>
+        <div class="summary-row">
+          <span>Shipping:</span>
+          <span>₹<span id="cart-modal-shipping">0</span></span>
+        </div>
+        <div class="summary-row">
+          <span>Tax (18%):</span>
+          <span>₹<span id="cart-modal-tax">0</span></span>
+        </div>
+        <div class="summary-row total">
+          <span>Total:</span>
+          <span>₹<span id="cart-modal-total">0</span></span>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button id="continue-shopping" class="btn-secondary">Continue Shopping</button>
+      <button id="proceed-to-checkout" class="btn-primary">Proceed to Checkout</button>
+    </div>
+  </div>
+</div>
+
     <div id="demo-payment-modal" class="modal">
       <div class="modal-content">
         <div class="modal-header">
@@ -619,33 +662,40 @@
                 ><span>₹<span id="payment-total">0</span></span>
               </div>
             </div>
-            <h3>Payment Method</h3>
-            <div class="payment-methods-grid">
-              <label class="payment-option"
-                ><input type="radio" name="payment" value="card" checked />
-                Card</label
-              >
-              <label class="payment-option"
-                ><input type="radio" name="payment" value="upi" /> UPI</label
-              >
-              <label class="payment-option"
-                ><input type="radio" name="payment" value="netbanking" /> Net
-                Banking</label
-              >
-              <label class="payment-option"
-                ><input type="radio" name="payment" value="cod" /> COD</label
-              >
-            </div>
-            <div id="payment-details">
-              <div id="card-form" class="payment-form">
-                <input type="text" placeholder="Card Number" />
-              </div>
-              <div id="upi-form" class="payment-form" style="display: none">
-                <input type="text" placeholder="UPI ID" />
-              </div>
-            </div>
-          </div>
-        </div>
+           <h3>Payment Method</h3>
+<div class="payment-methods-grid">
+  <label class="payment-option">
+    <input type="radio" name="payment" value="card" checked />
+    <div class="payment-option-content">
+      <i class="fas fa-credit-card"></i>
+      <span>Card</span>
+    </div>
+  </label>
+  
+  <label class="payment-option">
+    <input type="radio" name="payment" value="upi" />
+    <div class="payment-option-content">
+      <i class="fas fa-mobile-alt"></i>
+      <span>UPI</span>
+    </div>
+  </label>
+  
+  <label class="payment-option">
+    <input type="radio" name="payment" value="netbanking" />
+    <div class="payment-option-content">
+      <i class="fas fa-university"></i>
+      <span>Net Banking</span>
+    </div>
+  </label>
+  
+  <label class="payment-option">
+    <input type="radio" name="payment" value="cod" />
+    <div class="payment-option-content">
+      <i class="fas fa-money-bill-wave"></i>
+      <span>Cash on Delivery</span>
+    </div>
+  </label>
+</div>
         <div class="modal-footer">
           <button id="cancel-payment" class="btn-secondary">Cancel</button>
           <button id="pay-now" class="btn-primary" style="display: none">

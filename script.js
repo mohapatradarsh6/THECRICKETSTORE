@@ -256,17 +256,28 @@ class CartManager {
       cartBtn.addEventListener("click", (e) => {
         e.stopPropagation();
         if (wishlistDropdown) wishlistDropdown.style.display = "none";
-        cartDropdown.style.display =
-          cartDropdown.style.display === "block" ? "none" : "block";
+        // NEW: Always open cart modal
+        openCartModal();
       });
     }
 
     if (wishlistBtn && wishlistDropdown) {
       wishlistBtn.addEventListener("click", (e) => {
         e.stopPropagation();
-        if (cartDropdown) cartDropdown.style.display = "none";
-        wishlistDropdown.style.display =
-          wishlistDropdown.style.display === "block" ? "none" : "block";
+        const isMobile = window.innerWidth <= 768;
+
+        if (isMobile) {
+          // On mobile, open sidebar
+          const mobileNav = document.getElementById("mobile-nav");
+          const mobileOverlay = document.getElementById("mobile-nav-overlay");
+          if (mobileNav) mobileNav.classList.add("active");
+          if (mobileOverlay) mobileOverlay.classList.add("active");
+        } else {
+          // On desktop, show dropdown
+          if (cartDropdown) cartDropdown.style.display = "none";
+          wishlistDropdown.style.display =
+            wishlistDropdown.style.display === "block" ? "none" : "block";
+        }
       });
     }
 
@@ -296,7 +307,7 @@ class CartManager {
           this.showToast("Your cart is empty!", "warning");
           return;
         }
-        openPaymentModal(this.cart);
+        openCartModal();
       });
     }
   }
@@ -838,8 +849,15 @@ class QuickViewModal {
 
     this.modal.querySelector("#quick-view-title").textContent = product.title;
     this.modal.querySelector("#quick-view-img").src = product.image;
-    this.modal.querySelector("#quick-view-description").textContent =
-      product.description || "No description available.";
+    const descriptionEl = this.modal.querySelector("#quick-view-description");
+    if (descriptionEl) {
+      descriptionEl.textContent =
+        product.description || "No description available.";
+      descriptionEl.style.display = "block";
+      descriptionEl.style.marginTop = "20px";
+      descriptionEl.style.paddingTop = "20px";
+      descriptionEl.style.borderTop = "1px solid #e0e0e0";
+    }
 
     this.modal.querySelector(
       "#quick-view-price"
@@ -1419,7 +1437,168 @@ function closePaymentModal() {
   if (stepAddress) stepAddress.classList.remove("active");
   if (stepPayment) stepPayment.classList.remove("active");
 }
+// ===== CART MODAL FUNCTIONS =====
+function openCartModal() {
+  if (!window.cartManager || window.cartManager.cart.length === 0) {
+    window.cartManager.showToast("Your cart is empty!", "warning");
+    return;
+  }
 
+  const modal = document.getElementById("cart-modal");
+  if (!modal) return;
+
+  // Hide cart dropdown if open
+  const cartDropdown = document.getElementById("cart-dropdown");
+  if (cartDropdown) cartDropdown.style.display = "none";
+
+  renderCartModal();
+  modal.style.display = "flex";
+
+  // Close button
+  const closeBtn = modal.querySelector(".close");
+  if (closeBtn) {
+    const newCloseBtn = closeBtn.cloneNode(true);
+    closeBtn.parentNode.replaceChild(newCloseBtn, closeBtn);
+    newCloseBtn.addEventListener("click", closeCartModal);
+  }
+
+  // Continue Shopping button
+  const continueBtn = document.getElementById("continue-shopping");
+  if (continueBtn) {
+    const newContinueBtn = continueBtn.cloneNode(true);
+    continueBtn.parentNode.replaceChild(newContinueBtn, continueBtn);
+    newContinueBtn.addEventListener("click", closeCartModal);
+  }
+
+  // Proceed to Checkout button
+  const checkoutBtn = document.getElementById("proceed-to-checkout");
+  if (checkoutBtn) {
+    const newCheckoutBtn = checkoutBtn.cloneNode(true);
+    checkoutBtn.parentNode.replaceChild(newCheckoutBtn, checkoutBtn);
+    newCheckoutBtn.addEventListener("click", () => {
+      closeCartModal();
+      openPaymentModal(window.cartManager.cart);
+    });
+  }
+
+  // Close on outside click
+  modal.addEventListener("click", (e) => {
+    if (e.target === modal) closeCartModal();
+  });
+}
+
+function closeCartModal() {
+  const modal = document.getElementById("cart-modal");
+  if (modal) modal.style.display = "none";
+}
+
+function renderCartModal() {
+  const container = document.getElementById("cart-modal-items");
+  if (!container || !window.cartManager) return;
+
+  const cart = window.cartManager.cart;
+
+  if (cart.length === 0) {
+    container.innerHTML = `
+      <div class="cart-modal-empty">
+        <i class="fas fa-shopping-cart"></i>
+        <h3>Your cart is empty</h3>
+        <p>Add some items to get started!</p>
+      </div>
+    `;
+    document.getElementById("proceed-to-checkout").disabled = true;
+    return;
+  }
+
+  container.innerHTML = cart
+    .map(
+      (item, index) => `
+    <div class="cart-modal-item" data-index="${index}">
+      <img src="${item.image}" alt="${
+        item.title
+      }" class="cart-modal-item-image" />
+      
+      <div class="cart-modal-item-details">
+        <div class="cart-modal-item-title">${item.title}</div>
+        <div class="cart-modal-item-price">₹${parseFloat(item.price).toFixed(
+          2
+        )}</div>
+        ${
+          item.selectedSize || item.selectedColor
+            ? `<div class="cart-modal-item-meta">
+            ${item.selectedSize ? `Size: ${item.selectedSize}` : ""}
+            ${item.selectedColor ? ` | Color: ${item.selectedColor}` : ""}
+          </div>`
+            : ""
+        }
+        <div class="cart-modal-item-quantity">
+          <button class="cart-modal-qty-btn" onclick="updateCartItemQty('${item.title.replace(
+            /'/g,
+            "\\'"
+          )}', ${item.quantity - 1})">−</button>
+          <span style="font-weight:600; min-width:30px; text-align:center;">Qty: ${
+            item.quantity
+          }</span>
+          <button class="cart-modal-qty-btn" onclick="updateCartItemQty('${item.title.replace(
+            /'/g,
+            "\\'"
+          )}', ${item.quantity + 1})">+</button>
+        </div>
+      </div>
+      
+      <div class="cart-modal-item-actions">
+        <i class="fas fa-trash cart-modal-item-remove" onclick="removeCartItem('${item.title.replace(
+          /'/g,
+          "\\'"
+        )}')"></i>
+        <div class="cart-modal-item-subtotal">₹${(
+          item.price * item.quantity
+        ).toFixed(2)}</div>
+      </div>
+    </div>
+  `
+    )
+    .join("");
+
+  updateCartModalSummary();
+}
+
+function updateCartModalSummary() {
+  if (!window.cartManager) return;
+
+  const subtotal = window.cartManager.cart.reduce(
+    (sum, item) => sum + item.price * item.quantity,
+    0
+  );
+  const shipping = subtotal > 2000 ? 0 : 150;
+  const tax = subtotal * 0.18;
+  const total = subtotal + shipping + tax;
+
+  document.getElementById("cart-modal-subtotal").textContent =
+    subtotal.toFixed(2);
+  document.getElementById("cart-modal-shipping").textContent =
+    shipping.toFixed(2);
+  document.getElementById("cart-modal-tax").textContent = tax.toFixed(2);
+  document.getElementById("cart-modal-total").textContent = total.toFixed(2);
+}
+
+function updateCartItemQty(title, newQty) {
+  if (window.cartManager) {
+    window.cartManager.updateQuantity(title, newQty);
+    renderCartModal();
+  }
+}
+
+function removeCartItem(title) {
+  if (window.cartManager) {
+    window.cartManager.removeFromCart(title);
+    if (window.cartManager.cart.length === 0) {
+      closeCartModal();
+    } else {
+      renderCartModal();
+    }
+  }
+}
 function openPaymentModal(items) {
   const user = getUser();
   if (!user) {
