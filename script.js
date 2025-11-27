@@ -12,30 +12,21 @@ class CartManager {
   }
 
   loadCart() {
-    try {
-      const saved = localStorage.getItem("cricketStoreCart");
-      return saved ? JSON.parse(saved) : [];
-    } catch (e) {
-      return [];
-    }
+    // Use in-memory storage instead of localStorage
+    return this._cartData || [];
   }
 
   saveCart() {
-    localStorage.setItem("cricketStoreCart", JSON.stringify(this.cart));
+    this._cartData = this.cart;
     this.updateUI();
   }
 
   loadWishlist() {
-    try {
-      const saved = localStorage.getItem("cricketStoreWishlist");
-      return saved ? JSON.parse(saved) : [];
-    } catch (e) {
-      return [];
-    }
+    return this._wishlistData || [];
   }
 
   saveWishlist() {
-    localStorage.setItem("cricketStoreWishlist", JSON.stringify(this.wishlist));
+    this._wishlistData = this.wishlist;
     this.updateWishlistUI();
     updateMobileWishlist();
   }
@@ -360,8 +351,7 @@ class ProductManager {
   constructor() {
     this.products = [];
     this.filteredProducts = [];
-    this.searchHistory =
-      JSON.parse(localStorage.getItem("searchHistory")) || [];
+    this.searchHistory = this._searchHistoryData || [];
     this.init();
   }
 
@@ -771,7 +761,7 @@ class ProductManager {
     this.searchHistory = this.searchHistory.filter((t) => t !== term);
     this.searchHistory.unshift(term);
     if (this.searchHistory.length > 5) this.searchHistory.pop();
-    localStorage.setItem("searchHistory", JSON.stringify(this.searchHistory));
+    this._searchHistoryData = this.searchHistory;
   }
 
   searchProducts(query) {
@@ -813,7 +803,9 @@ class QuickViewModal {
 
   initializeQuickView() {
     const closeBtn = document.getElementById("close-quick-view");
-    if (closeBtn) closeBtn.addEventListener("click", () => this.closeModal());
+    if (closeBtn) {
+      closeBtn.addEventListener("click", () => this.closeModal());
+    }
     if (this.modal) {
       this.modal.addEventListener("click", (e) => {
         if (e.target === this.modal) this.closeModal();
@@ -1138,33 +1130,32 @@ class ProductPagination {
 // AUTHENTICATION & INITIALIZATION
 // ====================================================================
 
-const AUTH_KEY = "cricketStoreCurrentUser";
+// Use in-memory storage
+let _currentUser = null;
 
 function saveUser(user) {
-  localStorage.setItem(AUTH_KEY, JSON.stringify(user));
+  _currentUser = user;
 }
 
 function getUser() {
-  try {
-    const user = localStorage.getItem(AUTH_KEY);
-    return user ? JSON.parse(user) : null;
-  } catch (error) {
-    localStorage.removeItem(AUTH_KEY);
-    return null;
-  }
+  return _currentUser;
 }
 
 function logoutUser() {
-  localStorage.removeItem(AUTH_KEY);
-  localStorage.removeItem("authToken");
+  _currentUser = null;
+  _authToken = null;
   if (window.cartManager) {
-    window.cartManager.clearCart();
-    window.cartManager.clearWishlist();
+    window.cartManager.cart = [];
+    window.cartManager.wishlist = [];
+    window.cartManager._cartData = [];
+    window.cartManager._wishlistData = [];
+    window.cartManager.updateUI();
     window.cartManager.showToast("Logged out successfully!");
   }
   updateAccountUI();
 }
 
+let _authToken = null;
 // GLOBAL: Update UI text based on login state
 function updateAccountUI() {
   const user = getUser();
@@ -1282,7 +1273,7 @@ async function openProfileModal() {
   }
 
   try {
-    const token = localStorage.getItem("authToken");
+    const token = _authToken;
     const res = await fetch("/api/user", {
       headers: { Authorization: `Bearer ${token}` },
     });
@@ -1331,8 +1322,7 @@ function renderAddresses(addresses) {
 // Saving Profile Data
 async function saveProfileInfo() {
   const newName = document.getElementById("profile-name").value;
-  const token = localStorage.getItem("authToken");
-
+  const token = _authToken;
   try {
     const res = await fetch("/api/user", {
       method: "PUT",
@@ -1371,7 +1361,7 @@ async function saveNewAddress() {
   const updatedAddresses = [...(user.addresses || []), newAddress];
 
   try {
-    const token = localStorage.getItem("authToken");
+    const token = _authToken;
     const res = await fetch("/api/user", {
       method: "PUT",
       headers: {
@@ -1405,7 +1395,7 @@ window.deleteAddress = async function (index) {
   const updatedAddresses = user.addresses.filter((_, i) => i !== index);
 
   try {
-    const token = localStorage.getItem("authToken");
+    const token = _authToken;
     const res = await fetch("/api/user", {
       method: "PUT",
       headers: {
@@ -1777,7 +1767,7 @@ function openPaymentModal(items) {
       payNowBtnNew.textContent = "Processing...";
       payNowBtnNew.disabled = true;
 
-      const token = localStorage.getItem("authToken");
+      const token = _authToken;
 
       const res = await fetch("/api/orders", {
         method: "POST",
@@ -1870,7 +1860,7 @@ async function openOrdersModal() {
   const modalBody = document.getElementById("orders-modal-body");
 
   try {
-    const token = localStorage.getItem("authToken");
+    const token = _authToken;
     if (!token) {
       modalBody.innerHTML = `
         <div style="text-align:center; padding:40px;">
@@ -2066,7 +2056,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (res.ok) {
           saveUser(data.user);
-          localStorage.setItem("authToken", data.token);
+          _authToken = data.token;
           closeAuthModal();
           updateAccountUI();
           window.cartManager.showToast(
