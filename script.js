@@ -239,6 +239,14 @@ class CartManager {
 
   initializeEventListeners() {
     const cartBtn = document.getElementById("cart-btn");
+    if (cartBtn) {
+      cartBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        if (wishlistDropdown) wishlistDropdown.style.display = "none";
+        openCartModal(); // This should always open modal, not dropdown
+      });
+    }
     const cartDropdown = document.getElementById("cart-dropdown");
     const wishlistBtn = document.getElementById("wishlist-btn");
     const wishlistDropdown = document.getElementById("wishlist-dropdown");
@@ -1448,18 +1456,6 @@ function openCartModal() {
   modal.classList.add("active");
   modal.style.display = "flex";
 
-  // Close button - Direct onclick assignment
-  const closeBtn = modal.querySelector(".close");
-  if (closeBtn) {
-    closeBtn.onclick = closeCartModal;
-  }
-
-  // Continue Shopping button
-  const continueBtn = document.getElementById("continue-shopping");
-  if (continueBtn) {
-    continueBtn.onclick = closeCartModal;
-  }
-
   // Proceed to Checkout button
   const checkoutBtn = document.getElementById("proceed-to-checkout");
   if (checkoutBtn) {
@@ -1468,11 +1464,28 @@ function openCartModal() {
       openPaymentModal(window.cartManager.cart);
     };
   }
+  modal.addEventListener("click", (e) => {
+    if (e.target === modal) {
+      closeCartModal();
+    }
+  });
 
-  // Close on outside click
-  modal.onclick = (e) => {
-    if (e.target === modal) closeCartModal();
-  };
+  // Close button - Use direct assignment instead of cloning
+  const closeBtn = modal.querySelector(".close");
+  if (closeBtn) {
+    closeBtn.onclick = (e) => {
+      e.stopPropagation();
+      closeCartModal();
+    };
+  }
+
+  const continueBtn = document.getElementById("continue-shopping");
+  if (continueBtn) {
+    continueBtn.onclick = (e) => {
+      e.stopPropagation();
+      closeCartModal();
+    };
+  }
 }
 
 function closeCartModal() {
@@ -2033,10 +2046,13 @@ document.addEventListener("DOMContentLoaded", () => {
       accountDropdown.classList.toggle("active");
     });
 
+    // USE EVENT DELEGATION - Listen on parent, not children
     accountMenu.addEventListener("click", (e) => {
-      if (e.target.classList.contains("auth-action")) {
+      const target = e.target.closest(".auth-action");
+      if (target) {
         e.preventDefault();
-        const action = e.target.getAttribute("data-action");
+        e.stopPropagation();
+        const action = target.getAttribute("data-action");
 
         if (action === "login") openAuthModal("login");
         if (action === "signup") openAuthModal("signup");
@@ -2047,7 +2063,6 @@ document.addEventListener("DOMContentLoaded", () => {
         accountDropdown.classList.remove("active");
       }
     });
-
     document.addEventListener("click", (e) => {
       if (
         !accountDropdown.contains(e.target) &&
@@ -2197,43 +2212,67 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Mobile Nav Logic
+  // --- ROBUST MOBILE NAV LOGIC ---
   const mobileNav = document.getElementById("mobile-nav");
-  const mobileMenuToggle = document.getElementById("mobile-menu-toggle");
-  const closeMobileNav = document.getElementById("close-mobile-nav");
   const mobileNavOverlay = document.getElementById("mobile-nav-overlay");
+  // Use a generic selector to catch the button regardless of where it is in the DOM
+  const mobileMenuToggles = document.querySelectorAll(
+    ".mobile-menu-toggle, #mobile-menu-toggle"
+  );
+  const closeMobileNav = document.getElementById("close-mobile-nav");
 
-  if (mobileMenuToggle) {
-    mobileMenuToggle.addEventListener("click", () => {
-      mobileNav.classList.add("active");
-      mobileNavOverlay.classList.add("active");
+  // Open Sidebar
+  if (mobileMenuToggles.length > 0 && mobileNav) {
+    mobileMenuToggles.forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation(); // Stop click from bubbling
+        mobileNav.classList.add("active");
+        if (mobileNavOverlay) {
+          mobileNavOverlay.classList.add("active");
+          mobileNavOverlay.style.display = "block"; // Force display
+        }
+      });
     });
   }
-  if (closeMobileNav) {
-    closeMobileNav.addEventListener("click", () => {
+
+  // Close Sidebar (X Button)
+  if (closeMobileNav && mobileNav) {
+    closeMobileNav.addEventListener("click", (e) => {
+      e.stopPropagation();
       mobileNav.classList.remove("active");
-      mobileNavOverlay.classList.remove("active");
+      if (mobileNavOverlay) {
+        mobileNavOverlay.classList.remove("active");
+        mobileNavOverlay.style.display = "none";
+      }
     });
   }
+
+  // Close Sidebar (Click Overlay)
   if (mobileNavOverlay) {
     mobileNavOverlay.addEventListener("click", () => {
       mobileNav.classList.remove("active");
       mobileNavOverlay.classList.remove("active");
+      mobileNavOverlay.style.display = "none";
     });
   }
 
+  // Dropdown Toggles inside Sidebar
   document.querySelectorAll(".mobile-dropdown-toggle").forEach((toggle) => {
     toggle.addEventListener("click", (e) => {
       e.preventDefault();
-      toggle.closest(".mobile-dropdown").classList.toggle("active");
+      e.stopPropagation();
+      const parent = toggle.closest(".mobile-dropdown");
+      parent.classList.toggle("active");
     });
   });
 
   // --- ADVANCED HOME RESET LOGIC ---
+  // Around line 1320 - Home Reset Logic
   const resetHomeState = (e) => {
     e.preventDefault();
 
-    // 1. Reset Search
+    // 1. Reset Search Inputs
     const searchInput = document.getElementById("search-input");
     const mobileSearchInput = document.getElementById(
       "mobile-search-input-overlay"
@@ -2241,27 +2280,34 @@ document.addEventListener("DOMContentLoaded", () => {
     if (searchInput) searchInput.value = "";
     if (mobileSearchInput) mobileSearchInput.value = "";
 
-    // 2. Reset Filters
+    // 2. Reset ALL Filters (including your new advanced filters)
     const categoryFilter = document.getElementById("category-filter");
-    if (categoryFilter) categoryFilter.value = "all";
-
-    // Reset Advanced Filters
+    const brandFilter = document.getElementById("brand-filter");
+    const sortFilter = document.getElementById("sort-filter");
     const priceRange = document.getElementById("price-range");
     const priceNumber = document.getElementById("price-number");
+    const stockFilter = document.getElementById("stock-filter");
+    const ratingFilter = document.getElementById("rating-filter");
+
+    if (categoryFilter) categoryFilter.value = "all";
+    if (brandFilter) brandFilter.value = "all";
+    if (sortFilter) sortFilter.value = "featured";
     if (priceRange) priceRange.value = 50000;
     if (priceNumber) priceNumber.value = 50000;
+    if (stockFilter) stockFilter.checked = false;
+    if (ratingFilter) ratingFilter.checked = false;
 
-    document.getElementById("stock-filter").checked = false;
-    document.getElementById("rating-filter").checked = false;
-
-    // 3. Reset Logic in ProductManager
+    // 3. Reset Product List
     if (window.productManager) {
-      window.productManager.applyFilters(); // Re-fetches/resets list
+      window.productManager.filteredProducts = [
+        ...window.productManager.products,
+      ];
+      window.productManager.renderProductCards();
     }
 
     // 4. Show Hero Section
     const hero = document.querySelector(".hero-section");
-    if (hero) hero.style.display = "block"; // Bring back hero
+    if (hero) hero.style.display = "block";
 
     // 5. Close Mobile Menu
     const mobileNav = document.getElementById("mobile-nav");
@@ -2273,8 +2319,8 @@ document.addEventListener("DOMContentLoaded", () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  // Attach to ALL Home links (Desktop & Mobile)
-  document.querySelectorAll('a[href="#home"]').forEach((link) => {
+  // Attach to ALL Home links (Desktop, Mobile, Logo)
+  document.querySelectorAll('a[href="#home"], .logo').forEach((link) => {
     link.addEventListener("click", resetHomeState);
   });
   // Profile Listeners
