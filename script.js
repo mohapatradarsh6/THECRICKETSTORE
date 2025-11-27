@@ -1449,34 +1449,28 @@ function openCartModal() {
   // Close button
   const closeBtn = modal.querySelector(".close");
   if (closeBtn) {
-    const newCloseBtn = closeBtn.cloneNode(true);
-    closeBtn.parentNode.replaceChild(newCloseBtn, closeBtn);
-    newCloseBtn.addEventListener("click", closeCartModal);
+    closeBtn.onclick = closeCartModal; // Direct assignment instead of cloneNode
   }
 
   // Continue Shopping button
   const continueBtn = document.getElementById("continue-shopping");
   if (continueBtn) {
-    const newContinueBtn = continueBtn.cloneNode(true);
-    continueBtn.parentNode.replaceChild(newContinueBtn, continueBtn);
-    newContinueBtn.addEventListener("click", closeCartModal);
+    continueBtn.onclick = closeCartModal;
   }
 
   // Proceed to Checkout button
   const checkoutBtn = document.getElementById("proceed-to-checkout");
   if (checkoutBtn) {
-    const newCheckoutBtn = checkoutBtn.cloneNode(true);
-    checkoutBtn.parentNode.replaceChild(newCheckoutBtn, checkoutBtn);
-    newCheckoutBtn.addEventListener("click", () => {
+    checkoutBtn.onclick = () => {
       closeCartModal();
       openPaymentModal(window.cartManager.cart);
-    });
+    };
   }
 
   // Close on outside click
-  modal.addEventListener("click", (e) => {
+  modal.onclick = (e) => {
     if (e.target === modal) closeCartModal();
-  });
+  };
 }
 
 function closeCartModal() {
@@ -1600,6 +1594,7 @@ function openPaymentModal(items) {
   }
 
   const modal = document.getElementById("demo-payment-modal");
+
   // FIX: Hide cart dropdown to prevent visual overlap
   const cartDrop = document.getElementById("cart-dropdown");
   if (cartDrop) cartDrop.style.display = "none";
@@ -1736,14 +1731,14 @@ function openPaymentModal(items) {
 
       // FIX: Explicitly show the Pay button now
       payNowBtn.style.display = "block";
-      continueBtn.style.display = "none";
+      newContinue.style.display = "none";
 
       if (stepAddress) stepAddress.classList.add("active");
       if (stepPayment) stepPayment.classList.add("active");
     });
   }
 
-  // --- FINAL PAY BUTTON LOGIC ---
+  // --- FINAL PAY BUTTON LOGIC WITH VALIDATION ---
   const payNowBtnNew = payNowBtn.cloneNode(true);
   payNowBtn.parentNode.replaceChild(payNowBtnNew, payNowBtn);
 
@@ -1752,15 +1747,57 @@ function openPaymentModal(items) {
       'input[name="payment"]:checked'
     ).value;
 
-    // Validation
+    // ENHANCED VALIDATION
     if (selectedMethod === "card") {
-      if (!cardForm.querySelector("input")?.value?.trim()) {
-        window.cartManager.showToast("Please enter card details", "error");
+      const cardInputs = cardForm.querySelectorAll("input");
+      const cardNumber = cardInputs[0]?.value?.trim();
+      const cardExpiry = cardInputs[1]?.value?.trim();
+      const cardCVV = cardInputs[2]?.value?.trim();
+      const cardName = cardInputs[3]?.value?.trim();
+
+      if (
+        !cardNumber ||
+        cardNumber.length !== 16 ||
+        !/^\d+$/.test(cardNumber)
+      ) {
+        window.cartManager.showToast(
+          "Please enter a valid 16-digit card number",
+          "error"
+        );
+        return;
+      }
+      if (!cardExpiry || !/^\d{2}\/\d{2}$/.test(cardExpiry)) {
+        window.cartManager.showToast(
+          "Please enter expiry in MM/YY format",
+          "error"
+        );
+        return;
+      }
+      if (!cardCVV || cardCVV.length !== 3 || !/^\d+$/.test(cardCVV)) {
+        window.cartManager.showToast(
+          "Please enter a valid 3-digit CVV",
+          "error"
+        );
+        return;
+      }
+      if (!cardName || cardName.length < 3) {
+        window.cartManager.showToast("Please enter cardholder name", "error");
         return;
       }
     } else if (selectedMethod === "upi") {
-      if (!upiForm.querySelector("input")?.value?.trim()) {
+      const upiInput = upiForm.querySelector("input");
+      const upiId = upiInput?.value?.trim();
+      const upiRegex = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9]+$/;
+
+      if (!upiId) {
         window.cartManager.showToast("Please enter UPI ID", "error");
+        return;
+      }
+      if (!upiRegex.test(upiId)) {
+        window.cartManager.showToast(
+          "Please enter a valid UPI ID (e.g., user@paytm)",
+          "error"
+        );
         return;
       }
     }
@@ -1784,7 +1821,7 @@ function openPaymentModal(items) {
           tax,
           total: finalTotal,
           paymentMethod: selectedMethod,
-          shippingAddress: selectedAddress, // SENDING SELECTED ADDRESS
+          shippingAddress: selectedAddress,
         }),
       });
 
@@ -1798,7 +1835,7 @@ function openPaymentModal(items) {
     } catch (e) {
       window.cartManager.showToast("Failed to place order", "error");
     } finally {
-      payNowBtnNew.textContent = "Pay Now";
+      payNowBtnNew.textContent = "Place Order";
       payNowBtnNew.disabled = false;
     }
   });
@@ -1821,7 +1858,6 @@ function openPaymentModal(items) {
     newCloseBtn.addEventListener("click", closePaymentModal);
   }
 }
-
 async function openOrdersModal() {
   const user = getUser();
   if (!user) {

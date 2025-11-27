@@ -654,56 +654,69 @@
             </button>
           </div>
 
-          <div id="checkout-payment-section" style="display: none">
-            <div id="payment-items"></div>
-            <div class="order-summary">
-              <div class="summary-row total">
-                <span>Total:</span
-                ><span>₹<span id="payment-total">0</span></span>
-              </div>
-            </div>
-           <h3>Payment Method</h3>
-<div class="payment-methods-grid">
-  <label class="payment-option">
-    <input type="radio" name="payment" value="card" checked />
-    <div class="payment-option-content">
-      <i class="fas fa-credit-card"></i>
-      <span>Card</span>
+   <div id="checkout-payment-section" style="display: none">
+  <div id="payment-items"></div>
+  <div class="order-summary">
+    <div class="summary-row total">
+      <span>Total:</span
+      ><span>₹<span id="payment-total">0</span></span>
     </div>
-  </label>
+  </div>
   
-  <label class="payment-option">
-    <input type="radio" name="payment" value="upi" />
-    <div class="payment-option-content">
-      <i class="fas fa-mobile-alt"></i>
-      <span>UPI</span>
-    </div>
-  </label>
-  
-  <label class="payment-option">
-    <input type="radio" name="payment" value="netbanking" />
-    <div class="payment-option-content">
-      <i class="fas fa-university"></i>
-      <span>Net Banking</span>
-    </div>
-  </label>
-  
-  <label class="payment-option">
-    <input type="radio" name="payment" value="cod" />
-    <div class="payment-option-content">
-      <i class="fas fa-money-bill-wave"></i>
-      <span>Cash on Delivery</span>
-    </div>
-  </label>
-</div>
-        <div class="modal-footer">
-          <button id="cancel-payment" class="btn-secondary">Cancel</button>
-          <button id="pay-now" class="btn-primary" style="display: none">
-            Place Order
-          </button>
-        </div>
+  <h3>Payment Method</h3>
+  <div class="payment-methods-grid">
+    <label class="payment-option">
+      <input type="radio" name="payment" value="card" checked />
+      <div class="payment-option-content">
+        <i class="fas fa-credit-card"></i>
+        <span>Card</span>
       </div>
+    </label>
+    
+    <label class="payment-option">
+      <input type="radio" name="payment" value="upi" />
+      <div class="payment-option-content">
+        <i class="fas fa-mobile-alt"></i>
+        <span>UPI</span>
+      </div>
+    </label>
+    
+    <label class="payment-option">
+      <input type="radio" name="payment" value="netbanking" />
+      <div class="payment-option-content">
+        <i class="fas fa-university"></i>
+        <span>Net Banking</span>
+      </div>
+    </label>
+    
+    <label class="payment-option">
+      <input type="radio" name="payment" value="cod" />
+      <div class="payment-option-content">
+        <i class="fas fa-money-bill-wave"></i>
+        <span>Cash on Delivery</span>
+      </div>
+    </label>
+  </div>
+
+  <!-- ✅ ADD THESE PAYMENT FORMS HERE -->
+  <div id="card-form" class="payment-form" style="display:block; margin-top:20px;">
+    <input type="text" placeholder="Card Number (16 digits)" maxlength="19" inputmode="numeric" />
+    <div class="form-row">
+      <input type="text" placeholder="MM/YY" maxlength="5" />
+      <input type="text" placeholder="CVV" maxlength="3" inputmode="numeric" />
     </div>
+    <input type="text" placeholder="Cardholder Name" />
+  </div>
+
+  <div id="upi-form" class="payment-form" style="display:none; margin-top:20px;">
+    <input type="text" placeholder="UPI ID (e.g., user@paytm)" />
+    <p style="font-size:0.85rem; color:#666; margin-top:5px;">
+      <i class="fas fa-info-circle"></i> Enter your UPI ID to complete payment
+    </p>
+  </div>
+
+
+</div>
 
     <div id="auth-modal" class="auth-modal">
       <div class="auth-modal-content">
