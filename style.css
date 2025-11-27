@@ -3605,75 +3605,85 @@ body {
   background: var(--secondary-color);
 }
 
-/* ===== PREMIUM MOBILE LAYOUT & AMAZON STYLE HEADER ===== */
+/* ===== MOBILE HEADER - SINGLE ROW LAYOUT ===== */
 @media (max-width: 768px) {
-  /* 1. Reset Desktop Elements */
+  /* 1. RESET DESKTOP ELEMENTS */
   .top-bar,
   .main-nav {
     display: none !important;
   }
 
-  /* 2. Premium Header Container */
+  /* 2. HEADER CONTAINER */
   .main-header {
-    padding: 8px 0 12px 0; /* Tighter padding for mobile */
+    padding: 8px 0;
     position: sticky;
     top: 0;
     z-index: 1000;
     background: var(--primary-color) !important;
-    backdrop-filter: blur(10px); /* Glass effect */
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
   }
 
   .header-content {
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: wrap; /* Allows search bar to wrap to next line */
     align-items: center;
     justify-content: space-between;
-    padding: 0 12px;
+    padding: 0 2px 0 10px;
     gap: 0;
   }
 
-  /* 3. Header Top Row (Menu | Logo | Icons) */
-  .header-actions {
-    display: contents;
-  } /* Unwraps the actions container */
-
-  /* Hamburger Menu */
+  /* --- ROW 1: LEFT (Hamburger + Logo) --- */
   .mobile-menu-toggle {
-    display: flex !important;
     order: 1;
+    display: flex !important;
     font-size: 1.3rem;
-    padding: 8px;
-    color: var(--dark-color);
+    color: white !important;
     background: transparent;
     border: none;
+    padding: 0 8px 0 0;
+    flex-shrink: 0; /* Never shrink the button */
   }
 
-  /* Logo - Fixed Single Line */
   .logo {
     order: 2;
-    flex: 1;
+    flex: 1; /* Takes up remaining space */
+    min-width: 0; /* Allows text to shrink/truncate if needed */
     display: flex;
     align-items: center;
-    padding-left: 5px;
-    overflow: hidden;
+    margin-right: 5px;
   }
 
   .logo h1 {
-    font-size: 1.1rem; /* Perfect mobile size */
+    font-size: 1.1rem;
     margin: 0;
-    white-space: nowrap; /* Prevents wrapping */
-    text-overflow: ellipsis;
-    overflow: hidden;
     color: white !important;
-    font-weight: 700;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis; /* Prevents logo from pushing icons down */
   }
-
   .logo .tagline {
     display: none;
   }
 
-  /* Icons: User, Wishlist, Cart */
+  /* --- ROW 1: RIGHT (Icons) --- */
+  .header-actions {
+    display: contents; /* Removes wrapper to control children directly */
+  }
+
+  /* Icon Grouping */
+  .user-action-item,
+  .wishlist-wrapper,
+  .cart-wrapper {
+    order: 3;
+    flex-shrink: 0;
+    position: relative !important; /* CRITICAL for badge positioning */
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    margin-left: 5px; /* Spacing between icons */
+  }
+
+  /* Specific order */
   .user-action-item {
     order: 3;
   }
@@ -3684,23 +3694,17 @@ body {
     order: 5;
   }
 
-  .user-action-item,
-  .wishlist-wrapper,
-  .cart-wrapper {
-    display: flex !important;
-    align-items: center;
-    justify-content: center;
-  }
-
+  /* Icon Styling - Tighter padding to fit in one row */
   .user-btn,
   .wishlist-btn,
   .cart-btn {
-    background: transparent !important;
-    padding: 8px !important;
-    font-size: 1.2rem !important;
+    padding: 6px 6px !important; /* Reduced padding */
     color: white !important;
+    background: transparent !important;
     border: none !important;
-    position: relative;
+    display: flex !important;
+    align-items: center;
+    font-size: 1.2 rem !important;
   }
 
   /* Hide Text Labels */
@@ -3710,142 +3714,113 @@ body {
     display: none !important;
   }
 
-  /* Premium Badges */
+  /* Badges */
   .cart-count,
   .wishlist-count {
     position: absolute !important;
-    top: 2px !important;
-    right: 2px !important;
-    font-size: 0.65rem;
-    width: 16px;
-    height: 16px;
+    top: -2px !important; /* Move Up */
+    right: -2px !important; /* Move Right */
     background: var(--accent-color);
     color: white;
+    font-size: 0.6rem;
+    font-weight: bold;
+    height: 16px;
+    width: 16px;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
     border: 1px solid white;
-    font-weight: 700;
+    z-index: 10;
   }
 
-  /* 4. Search Bar (Row 2) - Pill Shape */
+  /* --- ROW 2: SEARCH BAR (Full Width) --- */
   .search-box {
     order: 6;
     width: 100%;
-    margin-top: 12px;
-    height: 44px; /* Taller touch target */
+    flex-basis: 100%; /* Forces a line break */
+    margin: 10px 0 5px 0;
+    height: 40px;
+    background: white !important;
+    border-radius: 6px;
     display: flex !important;
-    background: white !important; /* Bright white search bar */
-    border: none;
-    border-radius: 22px; /* Pill shape */
-    transition: all 0.3s ease;
     overflow: hidden;
-  }
-
-  .search-box:focus-within {
-    background: white;
-    border-color: var(--primary-color);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
   }
 
   .search-box input {
     width: 100%;
-    padding: 0 0 0 20px;
-    background: transparent;
     border: none;
+    padding: 0 15px;
     font-size: 0.95rem;
-    color: var(--text-color);
+    background: white;
   }
 
   .search-box button {
-    width: 50px;
-    background: transparent;
-    color: var(--primary-color); /* Colored icon */
+    background: white;
+    color: var(--primary-color);
+    width: 40px;
     border: none;
-    font-size: 1.1rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    font-size: 1rem;
   }
 
-  .search-box button:hover {
-    background: transparent;
-    transform: scale(1.1);
-  }
-
-  /* 5. Product Grid (2-Column Premium) */
+  /* --- PRODUCT CARDS (Optimized) --- */
   .products-container {
     display: grid;
     grid-template-columns: repeat(2, 1fr) !important;
-    gap: 12px !important; /* Perfect gap */
+    gap: 10px !important;
     padding: 10px;
   }
 
   .product-card {
     margin: 0 !important;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06); /* Softer shadow */
-    border: 1px solid #f5f5f5;
-    border-radius: 12px; /* Smoother corners */
+    display: flex;
+    flex-direction: column;
   }
 
   .product-image-wrapper {
-    height: 150px;
-    background: white;
+    height: 140px;
     padding: 10px;
+    background: white;
+    position: relative;
   }
 
   .product-image {
-    object-fit: contain; /* Ensures whole product is visible */
+    object-fit: contain;
+    width: 100%;
+    height: 100%;
   }
 
-  .product-info {
-    padding: 12px;
+  .product-badge {
+    top: 0;
+    left: 0;
+    right: auto;
+    border-radius: 0 0 10px 0;
+    font-size: 0.7rem;
+    padding: 4px 8px;
+    z-index: 5;
   }
 
-  .product-title {
+  .btn-wishlist {
+    top: 5px;
+    right: 5px;
+    width: 28px;
+    height: 28px;
     font-size: 0.9rem;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis; /* ... if title is too long */
-    margin-bottom: 5px;
+    background: rgba(255, 255, 255, 0.95);
+    z-index: 6;
   }
 
-  .product-price {
-    margin: 8px 0;
-  }
-
-  .price-current {
-    font-size: 1rem;
-  }
-
-  /* Mobile Buttons */
   .product-actions {
+    margin-top: auto;
     flex-direction: column;
-    gap: 6px;
+    gap: 5px;
   }
 
   .btn-add-cart,
   .btn-buy-now {
     width: 100%;
-    padding: 8px 0;
+    padding: 8px;
     font-size: 0.8rem;
-    border-radius: 6px;
-  }
-
-  /* Floating Wishlist Heart */
-  .btn-wishlist {
-    position: absolute;
-    top: 8px;
-    right: 8px;
-    width: 28px;
-    height: 28px;
-    background: rgba(255, 255, 255, 0.9);
-    backdrop-filter: blur(4px);
-    border: 1px solid #eee;
-    font-size: 0.9rem;
-    z-index: 5;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
   }
 }
 
