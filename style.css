@@ -1663,7 +1663,7 @@ body {
 }
 
 .product-info {
-padding: 8px !important;
+  padding: 8px !important;
 }
 
 .product-brand {
@@ -1676,10 +1676,11 @@ padding: 8px !important;
 
 .product-title {
   font-size: 0.85rem;
-    white-space: nowrap; /* Force 1 line */
-    overflow: hidden;
-    text-overflow: ellipsis;
-    margin-bottom: 2px;
+  white-space: nowrap; /* Force 1 line */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 2px;
+}
 
 .product-rating {
   gap: 5px;
@@ -1712,7 +1713,8 @@ padding: 8px !important;
   display: flex;
   align-items: center;
   gap: 10px;
-  margin: 15px 0;
+  margin: 4px 0;
+  font-size: 0.9rem;
 }
 
 .price-current {
@@ -3798,18 +3800,18 @@ padding: 8px !important;
     top: 0;
     left: 0;
     right: auto;
-    border-radius: 0 0 10px 0;
+    border-radius: 0 0 8px 0;
     font-size: 0.7rem;
-    padding: 4px 8px;
+    padding: 2px 6px;
     z-index: 5;
   }
 
   .btn-wishlist {
-    top: 5px;
-    right: 5px;
-    width: 28px;
-    height: 28px;
-    font-size: 0.9rem;
+    top: 2px;
+    right: 2px;
+    width: 24px;
+    height: 24px;
+    font-size: 0.8rem;
     background: rgba(255, 255, 255, 0.95);
     z-index: 6;
   }
