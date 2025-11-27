@@ -1429,7 +1429,6 @@ function closePaymentModal() {
   if (stepAddress) stepAddress.classList.remove("active");
   if (stepPayment) stepPayment.classList.remove("active");
 }
-// ===== CART MODAL FUNCTIONS =====
 function openCartModal() {
   if (!window.cartManager || window.cartManager.cart.length === 0) {
     window.cartManager.showToast("Your cart is empty!", "warning");
@@ -1444,12 +1443,15 @@ function openCartModal() {
   if (cartDropdown) cartDropdown.style.display = "none";
 
   renderCartModal();
+
+  // ✅ Use class instead of inline style for better control
+  modal.classList.add("active");
   modal.style.display = "flex";
 
-  // Close button
+  // Close button - Direct onclick assignment
   const closeBtn = modal.querySelector(".close");
   if (closeBtn) {
-    closeBtn.onclick = closeCartModal; // Direct assignment instead of cloneNode
+    closeBtn.onclick = closeCartModal;
   }
 
   // Continue Shopping button
@@ -1473,6 +1475,13 @@ function openCartModal() {
   };
 }
 
+function closeCartModal() {
+  const modal = document.getElementById("cart-modal");
+  if (modal) {
+    modal.classList.remove("active");
+    modal.style.display = "none";
+  }
+}
 function closeCartModal() {
   const modal = document.getElementById("cart-modal");
   if (modal) modal.style.display = "none";
