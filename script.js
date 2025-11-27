@@ -364,6 +364,7 @@ class ProductManager {
   }
 
   async init() {
+    this.initializeProductEvents(); // Initialize delegation once
     await this.fetchProducts();
     this.initializeFilters();
     this.initializeSearch();
@@ -404,7 +405,7 @@ class ProductManager {
       this.filteredProducts.forEach((p) =>
         container.appendChild(this.createProductCard(p))
       );
-      this.attachCardListeners(container);
+      // NOTE: attachCardListeners removed. Event delegation handles this now.
     }
   }
 
@@ -438,6 +439,7 @@ class ProductManager {
       ? `<div class="product-badge" style="background:var(--accent-color)">New</div>`
       : "";
 
+    // Added class markers for delegation (e.g. btn-add-cart)
     const btnState = isOutOfStock
       ? 'disabled style="background:#ccc; cursor:not-allowed;"'
       : "";
@@ -477,43 +479,36 @@ class ProductManager {
     return card;
   }
 
-  attachCardListeners(container) {
-    container.querySelectorAll(".btn-add-cart").forEach((btn) => {
-      btn.addEventListener("click", () => {
+  // FIX: New Method for Event Delegation
+  initializeProductEvents() {
+    const container = document.getElementById("products-container");
+    if (!container) return;
+
+    container.addEventListener("click", (e) => {
+      // Find the closest button if clicked on icon/span inside button
+      const btn = e.target.closest("button");
+      if (!btn) return;
+
+      const card = btn.closest(".product-card");
+      if (!card) return;
+
+      const productData = JSON.parse(card.getAttribute("data-product"));
+
+      if (btn.classList.contains("btn-add-cart")) {
         if (btn.disabled) return;
-        const card = btn.closest(".product-card");
-        const productData = JSON.parse(card.getAttribute("data-product"));
         window.cartManager.addToCart(productData);
-      });
-    });
-
-    container.querySelectorAll(".btn-wishlist").forEach((btn) => {
-      btn.addEventListener("click", (e) => {
+      } else if (btn.classList.contains("btn-wishlist")) {
         e.stopPropagation();
-        const card = btn.closest(".product-card");
-        const productData = JSON.parse(card.getAttribute("data-product"));
         window.cartManager.toggleWishlist(productData);
-      });
-    });
-
-    container.querySelectorAll(".btn-buy-now").forEach((btn) => {
-      btn.addEventListener("click", () => {
+      } else if (btn.classList.contains("btn-buy-now")) {
         if (btn.disabled) return;
-        const card = btn.closest(".product-card");
-        const productData = JSON.parse(card.getAttribute("data-product"));
         productData.quantity = 1;
         openPaymentModal([productData]);
-      });
-    });
-
-    container.querySelectorAll(".btn-quick-view").forEach((btn) => {
-      btn.addEventListener("click", (e) => {
+      } else if (btn.classList.contains("btn-quick-view")) {
         e.stopPropagation();
-        const card = btn.closest(".product-card");
-        const productData = JSON.parse(card.getAttribute("data-product"));
         if (window.quickViewModal)
           window.quickViewModal.showQuickView(productData);
-      });
+      }
     });
   }
 
@@ -864,25 +859,22 @@ class QuickViewModal {
     // 4. Handle "Add to Cart" Button inside Modal
     const addToCartBtn = this.modal.querySelector(".btn-add-cart-modal");
     if (addToCartBtn) {
-      // Clone to clear old listeners
-      const newBtn = addToCartBtn.cloneNode(true);
-      addToCartBtn.parentNode.replaceChild(newBtn, addToCartBtn);
-
+      // FIX: Use .onclick instead of cloneNode to update the handler without killing listeners
       if (product.stock !== undefined && product.stock <= 0) {
-        newBtn.disabled = true;
-        newBtn.textContent = "Out of Stock";
-        newBtn.style.background = "#ccc";
+        addToCartBtn.disabled = true;
+        addToCartBtn.textContent = "Out of Stock";
+        addToCartBtn.style.background = "#ccc";
       } else {
-        newBtn.disabled = false;
-        newBtn.textContent = "Add to Cart";
-        newBtn.style.background = ""; // Reset color
+        addToCartBtn.disabled = false;
+        addToCartBtn.textContent = "Add to Cart";
+        addToCartBtn.style.background = ""; // Reset color
 
-        newBtn.addEventListener("click", () => {
+        addToCartBtn.onclick = () => {
           const qtyInput = this.modal.querySelector(".qty-input");
           const quantity = parseInt(qtyInput?.value || 1);
           window.cartManager.addToCart(product, quantity);
           this.closeModal();
-        });
+        };
       }
     }
 
@@ -982,9 +974,7 @@ class ProductPagination {
       }
     });
 
-    if (window.productManager) {
-      window.productManager.attachCardListeners(container);
-    }
+    // NOTE: Event delegation in ProductManager handles this now. No attach needed.
 
     const productsSection = document.querySelector(".products-section");
     if (productsSection && this.currentPage > 1) {
@@ -1200,9 +1190,8 @@ async function openProfileModal() {
 
   const closeBtn = modal.querySelector(".close");
   if (closeBtn) {
-    const newCloseBtn = closeBtn.cloneNode(true);
-    closeBtn.parentNode.replaceChild(newCloseBtn, closeBtn);
-    newCloseBtn.addEventListener("click", () => (modal.style.display = "none"));
+    // FIX: Use onclick instead of cloneNode
+    closeBtn.onclick = () => (modal.style.display = "none");
   }
 
   try {
@@ -1382,6 +1371,7 @@ function openCartModal() {
   // Proceed to Checkout button
   const checkoutBtn = document.getElementById("proceed-to-checkout");
   if (checkoutBtn) {
+    // FIX: Use onclick to avoid cloneNode issues
     checkoutBtn.onclick = () => {
       closeCartModal();
       openPaymentModal(window.cartManager.cart);
@@ -1393,9 +1383,10 @@ function openCartModal() {
     }
   });
 
-  // Close button - Use direct assignment instead of cloning
+  // Close button
   const closeBtn = modal.querySelector(".close");
   if (closeBtn) {
+    // FIX: Use onclick
     closeBtn.onclick = (e) => {
       e.stopPropagation();
       closeCartModal();
@@ -1404,6 +1395,7 @@ function openCartModal() {
 
   const continueBtn = document.getElementById("continue-shopping");
   if (continueBtn) {
+    // FIX: Use onclick
     continueBtn.onclick = (e) => {
       e.stopPropagation();
       closeCartModal();
@@ -1417,10 +1409,6 @@ function closeCartModal() {
     modal.classList.remove("active");
     modal.style.display = "none";
   }
-}
-function closeCartModal() {
-  const modal = document.getElementById("cart-modal");
-  if (modal) modal.style.display = "none";
 }
 
 function renderCartModal() {
@@ -1662,10 +1650,8 @@ function openPaymentModal(items) {
 
   // --- CONTINUE BUTTON LOGIC ---
   if (continueBtn) {
-    const newContinue = continueBtn.cloneNode(true);
-    continueBtn.parentNode.replaceChild(newContinue, continueBtn);
-
-    newContinue.addEventListener("click", () => {
+    // FIX: Use onclick instead of cloneNode
+    continueBtn.onclick = () => {
       if (!selectedAddress) {
         window.cartManager.showToast("Please select an address", "warning");
         return;
@@ -1676,18 +1662,16 @@ function openPaymentModal(items) {
 
       // FIX: Explicitly show the Pay button now
       payNowBtn.style.display = "block";
-      newContinue.style.display = "none";
+      continueBtn.style.display = "none";
 
       if (stepAddress) stepAddress.classList.add("active");
       if (stepPayment) stepPayment.classList.add("active");
-    });
+    };
   }
 
   // --- FINAL PAY BUTTON LOGIC WITH VALIDATION ---
-  const payNowBtnNew = payNowBtn.cloneNode(true);
-  payNowBtn.parentNode.replaceChild(payNowBtnNew, payNowBtn);
-
-  payNowBtnNew.addEventListener("click", async () => {
+  // FIX: Use onclick instead of cloneNode
+  payNowBtn.onclick = async () => {
     const selectedMethod = modal.querySelector(
       'input[name="payment"]:checked'
     ).value;
@@ -1748,8 +1732,8 @@ function openPaymentModal(items) {
     }
 
     try {
-      payNowBtnNew.textContent = "Processing...";
-      payNowBtnNew.disabled = true;
+      payNowBtn.textContent = "Processing...";
+      payNowBtn.disabled = true;
 
       const token = _authToken;
 
@@ -1780,27 +1764,25 @@ function openPaymentModal(items) {
     } catch (e) {
       window.cartManager.showToast("Failed to place order", "error");
     } finally {
-      payNowBtnNew.textContent = "Place Order";
-      payNowBtnNew.disabled = false;
+      payNowBtn.textContent = "Place Order";
+      payNowBtn.disabled = false;
     }
-  });
+  };
 
   modal.style.display = "flex";
 
   // Cancel button handler
   const cancelBtn = document.getElementById("cancel-payment");
   if (cancelBtn) {
-    const newCancelBtn = cancelBtn.cloneNode(true);
-    cancelBtn.parentNode.replaceChild(newCancelBtn, cancelBtn);
-    newCancelBtn.addEventListener("click", closePaymentModal);
+    // FIX: Use onclick
+    cancelBtn.onclick = closePaymentModal;
   }
 
   // Close X button handler
   const closeBtn = modal.querySelector(".close");
   if (closeBtn) {
-    const newCloseBtn = closeBtn.cloneNode(true);
-    closeBtn.parentNode.replaceChild(newCloseBtn, closeBtn);
-    newCloseBtn.addEventListener("click", closePaymentModal);
+    // FIX: Use onclick
+    closeBtn.onclick = closePaymentModal;
   }
 }
 async function openOrdersModal() {
