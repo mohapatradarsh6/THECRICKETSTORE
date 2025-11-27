@@ -1210,6 +1210,8 @@ function openAuthModal(mode = "login") {
       signupTab?.classList.remove("active");
       loginForm?.classList.add("active");
     }
+
+    // FIX: Use flex display instead of block
     modal.style.display = "flex";
   }
 }

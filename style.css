@@ -2932,9 +2932,21 @@ body {
 }
 
 /* ===== CART MODAL STYLES ===== */
+#cart-modal {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 #cart-modal .modal-content {
-  max-width: 700px;
-  width: 95%;
+  max-width: 750px;
+  width: 90%;
+  max-height: 85vh;
+  margin: auto;
+  background: white;
+  border-radius: 15px;
+  overflow: hidden;
+  box-shadow: 0 10px 50px rgba(0, 0, 0, 0.3);
 }
 
 #cart-modal-items {
@@ -3124,6 +3136,69 @@ body {
   .modal-footer button {
     width: 100%;
   }
+}
+
+#cart-modal .modal-header {
+  background: linear-gradient(
+    135deg,
+    var(--primary-color),
+    var(--secondary-color)
+  );
+  padding: 25px 30px;
+}
+
+#cart-modal .modal-header h2 {
+  font-size: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+#cart-modal .modal-body {
+  padding: 25px;
+}
+
+.cart-modal-summary {
+  background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+  border: 2px solid var(--primary-color);
+  margin-top: 25px;
+}
+
+#cart-modal .modal-footer {
+  padding: 20px 30px;
+  background: #f8f9fa;
+  border-top: 2px solid #e0e0e0;
+}
+
+#cart-modal .modal-footer button {
+  padding: 14px 28px;
+  font-size: 1rem;
+  border-radius: 8px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+#continue-shopping {
+  background: white;
+  color: var(--primary-color);
+  border: 2px solid var(--primary-color);
+}
+
+#continue-shopping:hover {
+  background: var(--primary-color);
+  color: white;
+  transform: translateY(-2px);
+}
+
+#proceed-to-checkout {
+  background: var(--primary-color);
+  color: white;
+}
+
+#proceed-to-checkout:hover {
+  background: var(--secondary-color);
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(46, 204, 113, 0.4);
 }
 
 /* Responsive Design */
@@ -3444,10 +3519,15 @@ body {
   display: none;
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.6);
   z-index: 2000;
   align-items: center;
   justify-content: center;
+  backdrop-filter: blur(3px);
+}
+
+.auth-modal.active {
+  display: flex !important;
 }
 
 .auth-modal-content {
