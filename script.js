@@ -2,10 +2,11 @@
 // GLOBAL CONFIGURATION
 // ====================================================================
 
+// [FIX]: Ensure this points to the correct API path
 const API_BASE_URL = "/api";
 
 // ====================================================================
-// IN-MEMORY STORAGE (Simulates Database/LocalStorage)
+// IN-MEMORY STORAGE & STATE MANAGEMENT
 // ====================================================================
 
 let _cartData = [];
@@ -13,6 +14,14 @@ let _wishlistData = [];
 let _searchHistoryData = [];
 let _currentUser = null;
 let _authToken = null;
+
+// Initialize state from LocalStorage if available (Keeps you logged in)
+const storedUser = localStorage.getItem("user");
+const storedToken = localStorage.getItem("token");
+if (storedUser && storedToken) {
+  _currentUser = JSON.parse(storedUser);
+  _authToken = storedToken;
+}
 
 // ====================================================================
 // 1. CART MANAGEMENT SYSTEM
@@ -26,7 +35,7 @@ class CartManager {
     this.updateUI();
   }
 
-  // --- Data Persistence  ---
+  // --- Data Persistence ---
   saveCart() {
     _cartData = this.cart;
     this.updateUI();
@@ -38,35 +47,38 @@ class CartManager {
   }
 
   // --- Cart Actions ---
-  // [FIX 4 Part A: Accept Variants in Add to Cart]
   addToCart(product, quantity = 1, variants = {}) {
-    // 1. Check Global Stock
-    if (product.stock !== undefined && product.stock < quantity) {
-      this.showToast(`Sorry, only ${product.stock} items in stock!`, "error");
+    // FIX: Inventory Validation - Ensure numbers are integers
+    const stock = parseInt(product.stock);
+    const qty = parseInt(quantity);
+
+    // 1. Check Global Stock (Initial add)
+    if (!isNaN(stock) && stock < qty) {
+      this.showToast(`Sorry, only ${stock} items in stock!`, "error");
       return;
     }
 
-    // Check for existing item (matches ID/Title AND Variants)
-    // For simplicity, we match by Title here, but ideally match by ID + variant
+    // Check for existing item
     const existingItem = this.cart.find((item) => item.title === product.title);
     const price = parseFloat(product.price) || 0;
 
     if (existingItem) {
-      // 2. Check Cumulative Stock
-      if (
-        product.stock !== undefined &&
-        existingItem.quantity + quantity > product.stock
-      ) {
-        this.showToast(`Cannot add more! Max stock reached.`, "warning");
+      // 2. Check Cumulative Stock (Existing + New)
+      const currentQty = parseInt(existingItem.quantity);
+      if (!isNaN(stock) && currentQty + qty > stock) {
+        this.showToast(
+          `Cannot add more! Max stock reached (${stock}).`,
+          "warning"
+        );
         return;
       }
-      existingItem.quantity += quantity;
+      existingItem.quantity = currentQty + qty;
     } else {
       // 3. Add New Item
       this.cart.push({
         ...product,
         price: price,
-        quantity: quantity,
+        quantity: qty,
         selectedSize: variants.size || product.selectedSize || null,
         selectedColor: variants.color || product.selectedColor || null,
       });
@@ -84,14 +96,17 @@ class CartManager {
   updateQuantity(productTitle, quantity) {
     const item = this.cart.find((item) => item.title === productTitle);
     if (item) {
-      if (quantity <= 0) {
+      const qty = parseInt(quantity);
+      if (qty <= 0) {
         this.removeFromCart(productTitle);
       } else {
-        if (item.stock !== undefined && quantity > item.stock) {
-          this.showToast(`Max stock reached (${item.stock})`, "error");
+        // FIX: Inventory Check on Update
+        const stock = parseInt(item.stock);
+        if (!isNaN(stock) && qty > stock) {
+          this.showToast(`Max stock reached (${stock})`, "error");
           return;
         }
-        item.quantity = quantity;
+        item.quantity = qty;
         this.saveCart();
       }
     }
@@ -107,7 +122,7 @@ class CartManager {
   clearCart() {
     this.cart = [];
     this.saveCart();
-    this.showToast("Cart cleared!", "info");
+    // this.showToast("Cart cleared!", "info"); // Optional toast
   }
 
   // --- Wishlist Actions ---
@@ -146,9 +161,6 @@ class CartManager {
     this.updateWishlistUI();
   }
 
-  // [FIX 2: Fix Cart Picture/Card Layout]
-  // Used the new CSS classes (cart-modal-item, cart-modal-item-image)
-  // to ensure images are small and items are rows.
   updateCartDropdown() {
     const container = document.getElementById("cart-modal-items");
     const totalEl = document.getElementById("cart-modal-total");
@@ -977,6 +989,9 @@ class HeroCarousel {
 
 function saveUser(user) {
   _currentUser = user;
+  // FIX: Persist User in LocalStorage so it saves on reload
+  localStorage.setItem("user", JSON.stringify(user));
+  if (_authToken) localStorage.setItem("token", _authToken);
 }
 
 function getUser() {
@@ -986,6 +1001,10 @@ function getUser() {
 function logoutUser() {
   _currentUser = null;
   _authToken = null;
+  // Clear storage
+  localStorage.removeItem("user");
+  localStorage.removeItem("token");
+
   if (window.cartManager) {
     window.cartManager.cart = [];
     window.cartManager.wishlist = [];
@@ -1183,18 +1202,42 @@ function openPaymentModal(items) {
     newPayBtn.textContent = "Processing...";
     newPayBtn.disabled = true;
 
+    // FIX: REAL ORDER SAVE TO BACKEND
     try {
-      // Simulating API call
-      setTimeout(() => {
-        window.cartManager.showToast("Order placed successfully!", "success");
-        window.cartManager.clearCart();
-        closePaymentModal();
-        closeCartModal();
-        newPayBtn.textContent = "Place Order";
-        newPayBtn.disabled = false;
-      }, 2000);
+      const orderData = {
+        items: items,
+        total: finalTotal,
+        subtotal: subtotal,
+        shipping: shipping,
+        tax: tax,
+        paymentMethod: method,
+        address: user.addresses[0], // ideally get selected address
+      };
+
+      const res = await fetch(`${API_BASE_URL}/orders`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${_authToken}`,
+        },
+        body: JSON.stringify(orderData),
+      });
+
+      if (!res.ok) throw new Error("Order creation failed");
+      const data = await res.json();
+
+      window.cartManager.showToast("Order placed successfully!", "success");
+      window.cartManager.clearCart();
+      closePaymentModal();
+      closeCartModal();
+      newPayBtn.textContent = "Place Order";
+      newPayBtn.disabled = false;
     } catch (e) {
-      window.cartManager.showToast("Failed to place order", "error");
+      console.error(e);
+      window.cartManager.showToast(
+        "Failed to place order. Try again.",
+        "error"
+      );
       newPayBtn.textContent = "Place Order";
       newPayBtn.disabled = false;
     }
@@ -1308,7 +1351,8 @@ async function openOrdersModal() {
   }
 
   const modal = document.getElementById("orders-modal");
-  // Initial loading state
+
+  // 1. Initial Loading State
   modal.innerHTML = `
       <div class="modal-content">
         <div class="modal-header"><h2>My Orders</h2><span class="close" onclick="this.closest('.modal').style.display='none'">&times;</span></div>
@@ -1317,15 +1361,62 @@ async function openOrdersModal() {
     `;
   modal.style.display = "flex";
 
-  // Simulate fetch
-  setTimeout(() => {
-    modal.querySelector(".modal-body").innerHTML = `
+  // FIX: Fetch Orders from Backend
+  try {
+    const res = await fetch(`${API_BASE_URL}/orders`, {
+      method: "GET",
+      headers: { Authorization: `Bearer ${_authToken}` },
+    });
+
+    if (!res.ok) throw new Error("Failed to fetch");
+    const orders = await res.json();
+
+    if (orders.length === 0) {
+      modal.querySelector(".modal-body").innerHTML = `
                 <div style="text-align:center; padding:40px;">
                     <i class="fas fa-box-open" style="font-size:3rem; color:#ccc;"></i>
                     <p>No past orders found.</p>
-                </div>
-            `;
-  }, 1000);
+                </div>`;
+    } else {
+      const ordersHTML = orders
+        .map(
+          (o) => `
+               <div class="order-card">
+                   <div class="order-header">
+                       <div><strong>Order #${o._id
+                         .slice(-6)
+                         .toUpperCase()}</strong> <span style="font-size:0.8rem; color:#666;">${new Date(
+            o.orderDate
+          ).toLocaleDateString()}</span></div>
+                       <div class="order-status status-${
+                         o.status?.toLowerCase() || "processing"
+                       }">${o.status || "Processing"}</div>
+                   </div>
+                   <div class="order-items">
+                       ${o.items
+                         .map(
+                           (i) =>
+                             `<div class="order-item"><span>${i.title} x${i.quantity}</span><span>₹${i.price}</span></div>`
+                         )
+                         .join("")}
+                   </div>
+                   <div class="order-footer">Total: <strong>₹${o.total.toFixed(
+                     2
+                   )}</strong></div>
+               </div>
+           `
+        )
+        .join("");
+      modal.querySelector(
+        ".modal-body"
+      ).innerHTML = `<div class="orders-list">${ordersHTML}</div>`;
+    }
+  } catch (error) {
+    console.error(error);
+    modal.querySelector(
+      ".modal-body"
+    ).innerHTML = `<p style="text-align:center; color:red;">Failed to load orders.</p>`;
+  }
 }
 
 // ====================================================================
@@ -1381,8 +1472,9 @@ document.addEventListener("DOMContentLoaded", () => {
         });
         if (!res.ok) throw new Error("Login failed");
         const data = await res.json();
-        saveUser(data.user);
-        _authToken = data.token;
+        _authToken = data.token; // Save Token
+        saveUser(data.user); // Save User & Token to Storage
+
         closeAuthModal();
         updateAccountUI();
         window.cartManager.showToast("Welcome back!", "success");
@@ -1415,30 +1507,56 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
 
-  // 3. Address Saving (Local Mock)
-  document.getElementById("save-address-btn")?.addEventListener("click", () => {
-    const street = document.getElementById("addr-street").value;
-    const city = document.getElementById("addr-city").value;
-    const state = document.getElementById("addr-state").value;
-    const zip = document.getElementById("addr-zip").value;
+  // 3. Address Saving (FIXED: Real Backend Call)
+  document
+    .getElementById("save-address-btn")
+    ?.addEventListener("click", async () => {
+      const street = document.getElementById("addr-street").value;
+      const city = document.getElementById("addr-city").value;
+      const state = document.getElementById("addr-state").value;
+      const zip = document.getElementById("addr-zip").value;
 
-    if (!street || !city) {
-      window.cartManager.showToast("Fill required fields", "error");
-      return;
-    }
+      if (!street || !city) {
+        window.cartManager.showToast("Fill required fields", "error");
+        return;
+      }
 
-    const user = getUser();
-    user.addresses = user.addresses || [];
-    user.addresses.push({ street, city, state, zip, country: "India" });
+      const user = getUser();
+      if (!user) return;
 
-    saveUser(user);
-    renderAddresses(user.addresses);
+      // Create updated addresses array
+      const newAddresses = [
+        ...(user.addresses || []),
+        { street, city, state, zip, country: "India" },
+      ];
 
-    // Hide form
-    document.getElementById("new-address-form").style.display = "none";
-    document.getElementById("add-address-btn").style.display = "block";
-    window.cartManager.showToast("Address Saved", "success");
-  });
+      try {
+        const res = await fetch(`${API_BASE_URL}/user`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${_authToken}`,
+          },
+          body: JSON.stringify({ addresses: newAddresses }),
+        });
+
+        if (!res.ok) throw new Error("Failed to save address");
+        const data = await res.json(); // Get updated user
+
+        // Update local state
+        user.addresses = newAddresses;
+        saveUser(user);
+        renderAddresses(user.addresses);
+
+        // Hide form
+        document.getElementById("new-address-form").style.display = "none";
+        document.getElementById("add-address-btn").style.display = "block";
+        window.cartManager.showToast("Address Saved to Profile", "success");
+      } catch (e) {
+        console.error(e);
+        window.cartManager.showToast("Failed to save address", "error");
+      }
+    });
 
   document.getElementById("add-address-btn")?.addEventListener("click", () => {
     document.getElementById("new-address-form").style.display = "block";
