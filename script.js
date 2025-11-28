@@ -1095,12 +1095,12 @@ function closePaymentModal() {
 }
 
 function closeCartModal() {
-  document.getElementById("cart-modal").style.display = "none";
+  document.getElementById("cart-modal").classList.remove("active");
 }
 
 function openCartModal() {
   window.cartManager.updateCartDropdown();
-  document.getElementById("cart-modal").style.display = "flex";
+  document.getElementById("cart-modal").classList.add("active");
 }
 
 // --- Profile & Orders ---
@@ -1140,12 +1140,16 @@ function renderAddresses(addresses) {
   }
   addresses.forEach((addr, index) => {
     const div = document.createElement("div");
-    div.style.cssText =
-      "border:1px solid #ccc; padding:10px; margin-bottom:5px; border-radius:5px;";
+    div.className = "address-card"; // This uses the new CSS class
     div.innerHTML = `
-      <p><b>Address #${index + 1}</b></p>
-      <p>${addr.street}, ${addr.city}</p>
-      <p>${addr.state} - ${addr.zip}, ${addr.country}</p>
+      <h5 style="color:var(--primary-color); margin-bottom:5px; font-size:1rem;">Address #${
+        index + 1
+      }</h5>
+      <p style="color:#555; margin-bottom:2px;">${addr.street}, ${addr.city}</p>
+      <p style="color:#777; font-size:0.9rem;">${addr.state} - ${addr.zip}, ${
+      addr.country
+    }</p>
+      <button class="btn-delete-addr" onclick="deleteAddress(${index})" style="position:absolute; top:15px; right:15px; color:#dc3545; background:none; border:none; cursor:pointer;"><i class="fas fa-trash"></i></button>
     `;
     container.appendChild(div);
   });
@@ -1310,11 +1314,6 @@ document.addEventListener("DOMContentLoaded", () => {
       e.target.reset();
     });
 
-  // In script.js, inside document.addEventListener("DOMContentLoaded", () => { ...
-
-  // ... existing code ...
-
-  // ADD THESE LINES to make the tabs inside the modal switch the forms
   const loginTab = document.getElementById("login-tab");
   const signupTab = document.getElementById("signup-tab");
 
@@ -1334,4 +1333,32 @@ document.addEventListener("DOMContentLoaded", () => {
 
   updateAccountUI();
   console.log("✅ App fully initialized");
+
+  // ============================================================
+  // CLOSE ON OUTSIDE CLICK (Backdrop Click)
+  // ============================================================
+
+  window.addEventListener("click", (e) => {
+    // 1. Close Standard Modals (Cart, Payment, Profile, QuickView, Orders)
+    if (e.target.classList.contains("modal")) {
+      e.target.classList.remove("active");
+    }
+
+    // 2. Close Auth Modal (Login/Signup)
+    if (e.target.classList.contains("auth-modal")) {
+      if (typeof closeAuthModal === "function") {
+        closeAuthModal();
+      } else {
+        e.target.classList.remove("active");
+        e.target.style.display = "none"; // Fallback for older logic
+      }
+    }
+
+    // 3. Close Mobile Sidebar (Double Check)
+    if (e.target.classList.contains("mobile-nav-overlay")) {
+      if (typeof toggleMobileMenu === "function") {
+        toggleMobileMenu(false);
+      }
+    }
+  });
 });
