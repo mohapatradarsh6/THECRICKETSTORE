@@ -2450,42 +2450,44 @@ body {
 .quantity-selector {
   display: flex;
   align-items: center;
-  border: 2px solid var(--border-color);
-  border-radius: 8px;
+  border: 1px solid #ddd;
+  border-radius: 50px; /* Pill shape */
   overflow: hidden;
-  height: 45px;
+  height: 40px;
+  width: 120px; /* Fixed width prevents squashing */
+  background: white;
 }
 
 .qty-minus,
 .qty-plus {
-  background: var(--light-color);
-  border: none;
-  width: 40px;
+  width: 35px;
   height: 100%;
+  border: none;
+  background: #f8f9fa;
   cursor: pointer;
-  font-size: 1.2rem;
-  font-weight: bold;
-  transition: all 0.3s ease;
+  font-size: 1.1rem;
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: background 0.2s;
 }
 
 .qty-minus:hover,
 .qty-plus:hover {
-  background: var(--primary-color);
-  color: white;
+  background: #e9ecef;
+  color: var(--primary-color);
 }
 
 .qty-input {
-  width: 60px;
+  flex: 1;
   text-align: center;
   border: none;
-  font-size: 1.1rem;
   font-weight: 600;
+  font-size: 1rem;
+  color: var(--text-color);
   background: white;
+  pointer-events: none; /* User must use buttons */
 }
-
 .btn-add-cart-modal {
   flex: 1;
   height: 45px;
@@ -3886,69 +3888,6 @@ body {
     border: none;
     font-size: 1rem;
   }
-
-  /* --- PRODUCT CARDS (Optimized) --- */
-  .products-container {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr) !important;
-    gap: 10px !important;
-    padding: 10px;
-  }
-
-  .product-card {
-    margin: 0 !important;
-    display: flex;
-    flex-direction: column;
-    height: auto !important; /* Let height shrink to fit content */
-    min-height: 260px;
-  }
-
-  .product-image-wrapper {
-    height: 140px;
-    padding: 10px;
-    background: white;
-    position: relative;
-    width: 100%;
-  }
-
-  .product-image {
-    object-fit: contain;
-    width: 100%;
-    height: 100%;
-  }
-
-  .product-badge {
-    top: 0;
-    left: 0;
-    right: auto;
-    border-radius: 0 0 8px 0;
-    font-size: 0.7rem;
-    padding: 2px 6px;
-    z-index: 5;
-  }
-
-  .btn-wishlist {
-    top: 2px;
-    right: 2px;
-    width: 24px;
-    height: 24px;
-    font-size: 0.8rem;
-    background: rgba(255, 255, 255, 0.95);
-    z-index: 6;
-  }
-
-  .product-actions {
-    margin-top: auto;
-    flex-direction: column;
-    gap: 5px;
-  }
-
-  .btn-add-cart,
-  .btn-buy-now {
-    width: 100%;
-    padding: 8px;
-    font-size: 0.8rem;
-  }
 }
 
 /* Payment Modal adjustment */
@@ -4644,5 +4583,87 @@ body {
 
   .mobile-nav-overlay.active {
     display: block !important;
+  }
+}
+
+@media (max-width: 768px) {
+  /* 2 Columns, tight spacing */
+  .products-container {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 10px !important;
+    padding: 0 10px;
+  }
+
+  .product-card {
+    display: flex;
+    flex-direction: column;
+    height: 100%; /* Fill the grid cell */
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  }
+
+  /* Image Area */
+  .product-image-wrapper {
+    height: 150px; /* Fixed height for consistency */
+    padding: 10px;
+  }
+
+  /* Content Area - Reduce padding to prevent overflow */
+  .product-info {
+    padding: 10px !important;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+  }
+
+  /* Typography Scaling */
+  .product-brand {
+    font-size: 0.75rem;
+    margin-bottom: 2px;
+  }
+
+  .product-title {
+    font-size: 0.85rem;
+    line-height: 1.3;
+    height: 2.6em; /* Limit to 2 lines */
+    overflow: hidden;
+    white-space: normal; /* Allow wrapping */
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    margin-bottom: 5px;
+  }
+
+  .product-price {
+    font-size: 0.9rem;
+    flex-wrap: wrap; /* Wrap if price is long */
+  }
+
+  .price-current {
+    font-size: 1rem;
+  }
+
+  .price-original {
+    font-size: 0.8rem;
+  }
+
+  /* Actions - Stack buttons */
+  .product-actions {
+    margin-top: auto; /* Push to bottom */
+    gap: 8px;
+  }
+
+  .btn-add-cart,
+  .btn-buy-now {
+    padding: 8px 0;
+    font-size: 0.8rem;
+    height: 32px;
+  }
+
+  /* Hide specific elements on mobile if needed to save space */
+  .product-rating {
+    font-size: 0.7rem;
+    margin: 4px 0;
   }
 }

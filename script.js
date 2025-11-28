@@ -499,13 +499,17 @@ class ProductManager {
     }
 
     const isOutOfStock = product.stock !== undefined && product.stock <= 0;
-    const stockBadge = isOutOfStock
-      ? `<div class="product-badge" style="background:#666">Sold Out</div>`
-      : product.isBestSeller
-      ? `<div class="product-badge">Bestseller</div>`
-      : product.isNewArrival
-      ? `<div class="product-badge" style="background:var(--accent-color)">New</div>`
-      : "";
+    let stockBadge = "";
+
+    if (isOutOfStock) {
+      stockBadge = `<div class="product-badge" style="background:#666">Sold Out</div>`;
+    } else if (product.stock <= 3) {
+      // Low Stock Warning
+      stockBadge = `<div class="product-badge" style="background:var(--accent-color); font-size:0.75rem;">Hurry! Only ${product.stock} Left</div>`;
+    } else {
+      // Sufficient Stock
+      stockBadge = `<div class="product-badge" style="background:var(--success-color)">In Stock</div>`;
+    }
 
     const btnState = isOutOfStock
       ? 'disabled style="background:#ccc; cursor:not-allowed;"'
@@ -805,10 +809,20 @@ class QuickViewModal {
 
     if (qtyPlus) {
       qtyPlus.onclick = () => {
-        // Check Stock before increasing
+        // FIX: Check Stock before increasing (Ignore variants, use main product stock)
         if (this.currentProduct && this.currentProduct.stock !== undefined) {
           if (this.currentQuantity >= this.currentProduct.stock) {
-            window.cartManager.showToast("Max stock reached!", "warning");
+            // Error message right there
+            window.cartManager.showToast(
+              `Cannot add more! Only ${this.currentProduct.stock} available.`,
+              "error"
+            );
+
+            // Optional: Shake animation on input to indicate error visually
+            if (qtyInput) {
+              qtyInput.style.borderColor = "red";
+              setTimeout(() => (qtyInput.style.borderColor = ""), 500);
+            }
             return;
           }
         }
