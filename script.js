@@ -5,7 +5,7 @@
 const API_BASE_URL = "/api"; // Change this to your actual API base URL if deployed
 
 // ====================================================================
-// IN-MEMORY STORAGE (Replaces localStorage)
+// IN-MEMORY STORAGE (Simulates Database/LocalStorage)
 // ====================================================================
 
 let _cartData = [];
@@ -15,40 +15,31 @@ let _currentUser = null;
 let _authToken = null;
 
 // ====================================================================
-// CORE FUNCTIONS AND CLASSES
+// 1. CART MANAGEMENT SYSTEM
 // ====================================================================
 
-// --- 1. Cart Management System ---
 class CartManager {
   constructor() {
     this.cart = _cartData;
     this.wishlist = _wishlistData;
-    this.initializeEventListeners();
+    // We update UI immediately upon instantiation
     this.updateUI();
   }
 
-  loadCart() {
-    return _cartData;
-  }
-
+  // --- Data Persistence (Mock) ---
   saveCart() {
     _cartData = this.cart;
     this.updateUI();
   }
 
-  loadWishlist() {
-    return _wishlistData;
-  }
-
   saveWishlist() {
     _wishlistData = this.wishlist;
     this.updateWishlistUI();
-    if (typeof updateMobileWishlist === "function") {
-      updateMobileWishlist();
-    }
   }
 
+  // --- Cart Actions ---
   addToCart(product, quantity = 1) {
+    // 1. Check Global Stock
     if (product.stock !== undefined && product.stock < quantity) {
       this.showToast(`Sorry, only ${product.stock} items in stock!`, "error");
       return;
@@ -58,6 +49,7 @@ class CartManager {
     const price = parseFloat(product.price) || 0;
 
     if (existingItem) {
+      // 2. Check Cumulative Stock
       if (
         product.stock !== undefined &&
         existingItem.quantity + quantity > product.stock
@@ -67,6 +59,7 @@ class CartManager {
       }
       existingItem.quantity += quantity;
     } else {
+      // 3. Add New Item
       this.cart.push({
         ...product,
         price: price,
@@ -114,6 +107,7 @@ class CartManager {
     this.showToast("Cart cleared!", "info");
   }
 
+  // --- Wishlist Actions ---
   toggleWishlist(product) {
     const index = this.wishlist.findIndex(
       (item) => item.title === product.title
@@ -133,7 +127,9 @@ class CartManager {
     return this.wishlist.some((item) => item.title === productTitle);
   }
 
+  // --- UI Updates ---
   updateUI() {
+    // Update Badge
     const cartCount = document.getElementById("cart-count");
     if (cartCount) {
       const totalItems = this.cart.reduce(
@@ -142,57 +138,84 @@ class CartManager {
       );
       cartCount.textContent = totalItems;
     }
+    // Update Dropdown/Modal Content
     this.updateCartDropdown();
     this.updateWishlistUI();
   }
 
   updateCartDropdown() {
-    const container = document.getElementById("cart-items");
-    const totalEl = document.getElementById("cart-total");
-    if (!container) return;
+    // This updates the Cart Modal items list
+    const container = document.getElementById("cart-modal-items"); // Targeting Modal ID
+    const totalEl = document.getElementById("cart-modal-total");
 
-    if (this.cart.length === 0) {
-      container.innerHTML =
-        '<p style="text-align: center; color: #666;">Your cart is empty</p>';
-      if (totalEl) totalEl.textContent = "₹0";
-      return;
-    }
+    // Also update header dropdown if it exists (legacy)
+    const headerContainer = document.getElementById("cart-items");
+    const headerTotal = document.getElementById("cart-total");
 
-    container.innerHTML = this.cart
-      .map(
-        (item) => `
-      <div class="cart-item">
-        <div class="cart-item-info">
-          <div class="cart-item-title">${item.title}</div>
-          <div class="cart-item-price">₹${parseFloat(item.price).toFixed(
-            2
-          )}</div>
-          <div class="cart-item-details" style="font-size:0.8rem; color:#666">
-             ${item.selectedSize ? `Size: ${item.selectedSize}` : ""} 
-             ${item.selectedColor ? `| Color: ${item.selectedColor}` : ""}
-          </div>
-          <div class="cart-item-quantity">
-            <button class="qty-btn" onclick="window.cartManager.updateQuantity('${item.title.replace(
+    const htmlContent =
+      this.cart.length === 0
+        ? '<div class="empty-cart-msg"><i class="fas fa-shopping-basket"></i><p>Your cart is empty</p></div>'
+        : this.cart
+            .map(
+              (item, index) => `
+          <div class="cart-item">
+            <img src="${item.image}" alt="product" class="cart-item-img">
+            <div class="cart-item-info">
+              <div class="cart-item-title">${item.title}</div>
+              <div class="cart-item-price">₹${parseFloat(item.price).toFixed(
+                2
+              )}</div>
+              <div class="cart-item-quantity">
+                <button class="qty-btn" onclick="window.cartManager.updateQuantity('${item.title.replace(
+                  /'/g,
+                  "\\'"
+                )}', ${item.quantity - 1})">-</button>
+                <span>${item.quantity}</span>
+                <button class="qty-btn" onclick="window.cartManager.updateQuantity('${item.title.replace(
+                  /'/g,
+                  "\\'"
+                )}', ${item.quantity + 1})">+</button>
+              </div>
+            </div>
+            <i class="fas fa-trash cart-item-remove" onclick="window.cartManager.removeFromCart('${item.title.replace(
               /'/g,
               "\\'"
-            )}', ${item.quantity - 1})">-</button>
-            <span>Qty: ${item.quantity}</span>
-            <button class="qty-btn" onclick="window.cartManager.updateQuantity('${item.title.replace(
-              /'/g,
-              "\\'"
-            )}', ${item.quantity + 1})">+</button>
+            )}')"></i>
           </div>
-        </div>
-        <i class="fas fa-trash cart-item-remove" onclick="window.cartManager.removeFromCart('${item.title.replace(
-          /'/g,
-          "\\'"
-        )}')"></i>
-      </div>
-    `
-      )
-      .join("");
+        `
+            )
+            .join("");
 
-    if (totalEl) totalEl.textContent = `₹${this.getCartTotal().toFixed(2)}`;
+    const totalVal = this.getCartTotal().toFixed(2);
+
+    // Update Modal
+    if (container) container.innerHTML = htmlContent;
+    if (totalEl) totalEl.textContent = totalVal;
+
+    // Update Legacy Header Dropdown
+    if (headerContainer) headerContainer.innerHTML = htmlContent;
+    if (headerTotal) headerTotal.textContent = totalVal;
+
+    // Update Summary in Modal
+    const tax = this.getCartTotal() * 0.18;
+    const shipping =
+      this.getCartTotal() > 2000 ? 0 : this.getCartTotal() > 0 ? 150 : 0;
+    const sub = this.getCartTotal();
+
+    if (document.getElementById("cart-modal-subtotal"))
+      document.getElementById("cart-modal-subtotal").textContent =
+        sub.toFixed(2);
+    if (document.getElementById("cart-modal-tax"))
+      document.getElementById("cart-modal-tax").textContent = tax.toFixed(2);
+    if (document.getElementById("cart-modal-shipping"))
+      document.getElementById("cart-modal-shipping").textContent =
+        shipping.toFixed(2);
+    if (document.getElementById("cart-modal-total"))
+      document.getElementById("cart-modal-total").textContent = (
+        sub +
+        tax +
+        shipping
+      ).toFixed(2);
   }
 
   updateWishlistUI() {
@@ -204,7 +227,7 @@ class CartManager {
 
     if (this.wishlist.length === 0) {
       container.innerHTML =
-        '<p style="text-align: center; color: #666; padding: 10px 0;">Your wishlist is empty</p>';
+        '<p style="text-align: center; color: #999; padding: 10px;">No items in wishlist</p>';
       return;
     }
 
@@ -247,82 +270,115 @@ class CartManager {
     const emptyStars = 5 - Math.ceil(rating);
     for (let i = 0; i < emptyStars; i++) html += '<i class="far fa-star"></i>';
 
-    html += `</div><span class="rating-count" style="font-size: 0.7rem; color: #666; margin-left: 4px;">(${
-      Math.floor(Math.random() * 200) + 50
-    })</span>`;
+    html += `</div>`;
     return html;
-  }
-
-  initializeEventListeners() {
-    const cartBtn = document.getElementById("cart-btn");
-    const wishlistBtn = document.getElementById("wishlist-btn");
-    const wishlistDropdown = document.getElementById("wishlist-dropdown");
-
-    if (cartBtn) {
-      cartBtn.addEventListener("click", (e) => {
-        e.stopPropagation();
-        e.preventDefault();
-        if (wishlistDropdown) wishlistDropdown.style.display = "none";
-        openCartModal();
-      });
-    }
-
-    if (wishlistBtn && wishlistDropdown) {
-      wishlistBtn.addEventListener("click", (e) => {
-        e.stopPropagation();
-        const isMobile = window.innerWidth <= 768;
-
-        if (isMobile) {
-          const mobileNav = document.getElementById("mobile-nav");
-          const mobileOverlay = document.getElementById("mobile-nav-overlay");
-          if (mobileNav) mobileNav.classList.add("active");
-          if (mobileOverlay) {
-            mobileOverlay.classList.add("active");
-            mobileOverlay.style.display = "block";
-          }
-        } else {
-          const cartDropdown = document.getElementById("cart-dropdown");
-          if (cartDropdown) cartDropdown.style.display = "none";
-          wishlistDropdown.style.display =
-            wishlistDropdown.style.display === "block" ? "none" : "block";
-        }
-      });
-    }
-
-    document.addEventListener("click", (e) => {
-      const cartDropdown = document.getElementById("cart-dropdown");
-      if (
-        cartDropdown &&
-        !cartDropdown.contains(e.target) &&
-        cartBtn &&
-        !cartBtn.contains(e.target)
-      ) {
-        cartDropdown.style.display = "none";
-      }
-      if (
-        wishlistDropdown &&
-        !wishlistDropdown.contains(e.target) &&
-        wishlistBtn &&
-        !wishlistBtn.contains(e.target)
-      ) {
-        wishlistDropdown.style.display = "none";
-      }
-    });
-
-    const checkoutBtn = document.getElementById("checkout-btn");
-    if (checkoutBtn) {
-      checkoutBtn.addEventListener("click", () => {
-        if (this.cart.length === 0) {
-          this.showToast("Your cart is empty!", "warning");
-          return;
-        }
-        openCartModal();
-      });
-    }
   }
 }
 
-// --- 2. Product Management ---
+// ====================================================================
+// 2. PAGINATION SYSTEM (Restored)
+// ====================================================================
+
+class ProductPagination {
+  constructor() {
+    this.currentPage = 1;
+    this.productsPerPage = 6;
+    this.currentProducts = [];
+  }
+
+  updateProducts(products) {
+    this.currentProducts = products;
+    this.currentPage = 1;
+    this.render();
+    this.setupPaginationControls();
+  }
+
+  render() {
+    const container = document.getElementById("products-container");
+    if (!container) return;
+
+    container.innerHTML = "";
+
+    const startIndex = (this.currentPage - 1) * this.productsPerPage;
+    const endIndex = startIndex + this.productsPerPage;
+    const productsToShow = this.currentProducts.slice(startIndex, endIndex);
+
+    productsToShow.forEach((product) => {
+      if (window.productManager) {
+        container.appendChild(window.productManager.createProductCard(product));
+      }
+    });
+
+    // Optional: Scroll to top of products on page change
+    // const productsSection = document.querySelector(".products-section");
+    // if (productsSection && this.currentPage > 1) {
+    //   productsSection.scrollIntoView({ behavior: "smooth", block: "start" });
+    // }
+  }
+
+  setupPaginationControls() {
+    const container = document.getElementById("products-container");
+    if (!container) return;
+
+    const existingWrapper = document.querySelector(".pagination-wrapper");
+    if (existingWrapper) existingWrapper.remove();
+
+    const totalPages = Math.ceil(
+      this.currentProducts.length / this.productsPerPage
+    );
+
+    // Only show pagination if more than 1 page
+    if (totalPages <= 1) return;
+
+    const paginationWrapper = document.createElement("div");
+    paginationWrapper.className = "pagination-wrapper";
+    paginationWrapper.style.cssText =
+      "display: flex; justify-content: center; align-items: center; gap: 15px; margin-top: 40px; grid-column: 1 / -1;";
+
+    const prevBtn = document.createElement("button");
+    prevBtn.className = "btn-secondary pagination-btn";
+    prevBtn.innerHTML = '<i class="fas fa-chevron-left"></i> Prev';
+    prevBtn.disabled = this.currentPage === 1;
+    prevBtn.style.opacity = this.currentPage === 1 ? "0.5" : "1";
+
+    prevBtn.addEventListener("click", () => {
+      if (this.currentPage > 1) {
+        this.currentPage--;
+        this.render();
+        this.setupPaginationControls();
+      }
+    });
+
+    const nextBtn = document.createElement("button");
+    nextBtn.className = "btn-secondary pagination-btn";
+    nextBtn.innerHTML = 'Next <i class="fas fa-chevron-right"></i>';
+    nextBtn.disabled = this.currentPage === totalPages;
+    nextBtn.style.opacity = this.currentPage === totalPages ? "0.5" : "1";
+
+    nextBtn.addEventListener("click", () => {
+      if (this.currentPage < totalPages) {
+        this.currentPage++;
+        this.render();
+        this.setupPaginationControls();
+      }
+    });
+
+    const pageInfo = document.createElement("span");
+    pageInfo.innerText = `Page ${this.currentPage} of ${totalPages}`;
+    pageInfo.style.fontWeight = "600";
+
+    paginationWrapper.appendChild(prevBtn);
+    paginationWrapper.appendChild(pageInfo);
+    paginationWrapper.appendChild(nextBtn);
+
+    container.parentNode.insertBefore(paginationWrapper, container.nextSibling);
+  }
+}
+
+// ====================================================================
+// 3. PRODUCT MANAGEMENT
+// ====================================================================
+
 class ProductManager {
   constructor() {
     this.products = [];
@@ -365,6 +421,7 @@ class ProductManager {
   }
 
   renderProductCards() {
+    // Check if pagination is active
     if (window.productPagination) {
       window.productPagination.updateProducts(this.filteredProducts);
     } else {
@@ -454,6 +511,7 @@ class ProductManager {
     if (!container) return;
 
     container.addEventListener("click", (e) => {
+      // 1. Quick View
       const quickViewBtn = e.target.closest(".btn-quick-view");
       if (quickViewBtn) {
         e.stopPropagation();
@@ -468,6 +526,7 @@ class ProductManager {
         return;
       }
 
+      // 2. Buttons
       const btn = e.target.closest("button");
       if (!btn) return;
 
@@ -567,96 +626,39 @@ class ProductManager {
   }
 
   initializeSearch() {
-    const setupSearchListener = (inputId, btnId, suggestionsId) => {
-      const input = document.getElementById(inputId);
-      const btn = document.getElementById(btnId);
-      const suggestions = document.getElementById(suggestionsId);
+    const input = document.getElementById("search-input");
+    const btn = document.getElementById("search-btn");
+    const suggestions = document.getElementById("search-suggestions");
 
-      const performSearch = (query) => {
-        if (!query) return;
-        this.searchProducts(query);
+    const performSearch = (query) => {
+      if (!query) return;
+      this.searchProducts(query);
+      if (suggestions) suggestions.classList.remove("active");
 
-        const mobileNav = document.getElementById("mobile-nav");
-        const mobileOverlay = document.getElementById("mobile-nav-overlay");
-        const mobileSearchBar = document.getElementById("mobile-search-bar");
-
-        if (mobileNav) mobileNav.classList.remove("active");
-        if (mobileOverlay) {
-          mobileOverlay.classList.remove("active");
-          mobileOverlay.style.display = "none";
-        }
-        if (mobileSearchBar) mobileSearchBar.classList.remove("active");
-        if (suggestions) suggestions.classList.remove("active");
-
-        const productsSection = document.querySelector(".products-section");
-        if (productsSection) {
-          const headerOffset = 100;
-          const elementPosition = productsSection.getBoundingClientRect().top;
-          const offsetPosition =
-            elementPosition + window.pageYOffset - headerOffset;
-          window.scrollTo({ top: offsetPosition, behavior: "smooth" });
-        }
-      };
-
-      if (input) {
-        input.addEventListener("focus", () => {
-          if (!input.value.trim()) this.showSearchHistory(suggestions, input);
-        });
-
-        input.addEventListener("input", (e) => {
-          const query = e.target.value;
-          if (query.length > 0) {
-            this.showSuggestions(query, suggestions, input);
-          } else {
-            this.showSearchHistory(suggestions, input);
-          }
-        });
-
-        input.addEventListener("keypress", (e) => {
-          if (e.key === "Enter") performSearch(input.value);
-        });
-
-        document.addEventListener("click", (e) => {
-          if (
-            suggestions &&
-            !input.contains(e.target) &&
-            !suggestions.contains(e.target)
-          ) {
-            suggestions.classList.remove("active");
-          }
-        });
-      }
-
-      if (btn) {
-        btn.addEventListener("click", () => {
-          if (input) performSearch(input.value);
-        });
+      const productsSection = document.querySelector(".products-section");
+      if (productsSection) {
+        productsSection.scrollIntoView({ behavior: "smooth" });
       }
     };
 
-    setupSearchListener("search-input", "search-btn", "search-suggestions");
-    setupSearchListener(
-      "mobile-search-input-overlay",
-      null,
-      "mobile-search-suggestions-overlay"
-    );
+    if (input) {
+      input.addEventListener("input", (e) => {
+        const query = e.target.value;
+        if (query.length > 0) {
+          this.showSuggestions(query, suggestions, input);
+        } else {
+          suggestions.classList.remove("active");
+        }
+      });
 
-    const mobileSearchToggle = document.getElementById("mobile-search-toggle");
-    const mobileSearchBar = document.getElementById("mobile-search-bar");
-    const closeMobileSearch = document.getElementById("close-mobile-search");
-
-    if (mobileSearchToggle && mobileSearchBar) {
-      mobileSearchToggle.addEventListener("click", () => {
-        mobileSearchBar.classList.add("active");
-        setTimeout(
-          () => document.getElementById("mobile-search-input-overlay")?.focus(),
-          100
-        );
+      input.addEventListener("keypress", (e) => {
+        if (e.key === "Enter") performSearch(input.value);
       });
     }
-    if (closeMobileSearch && mobileSearchBar) {
-      closeMobileSearch.addEventListener("click", () => {
-        mobileSearchBar.classList.remove("active");
+
+    if (btn) {
+      btn.addEventListener("click", () => {
+        if (input) performSearch(input.value);
       });
     }
   }
@@ -683,7 +685,9 @@ class ProductManager {
           /'/g,
           "\\'"
         )}')">
-            <img src="${p.image}" alt="${p.title}">
+            <img src="${p.image}" alt="${
+          p.title
+        }" style="width:30px; height:30px; object-fit:contain; margin-right:10px;">
             <div class="suggestion-info">
                 <div>${p.title}</div>
                 <small style="color:#666">${p.brand}</small>
@@ -695,47 +699,13 @@ class ProductManager {
     window.productManager.selectSuggestion = (title) => {
       inputElement.value = title;
       this.searchProducts(title);
-      this.addToSearchHistory(title);
       container.classList.remove("active");
-
       const productsSection = document.querySelector(".products-section");
-      if (productsSection) {
-        const headerOffset = 100;
-        const elementPosition = productsSection.getBoundingClientRect().top;
-        const offsetPosition =
-          elementPosition + window.pageYOffset - headerOffset;
-        window.scrollTo({ top: offsetPosition, behavior: "smooth" });
-      }
-      document.getElementById("mobile-search-bar")?.classList.remove("active");
+      if (productsSection)
+        productsSection.scrollIntoView({ behavior: "smooth" });
     };
 
     container.classList.add("active");
-  }
-
-  showSearchHistory(container, inputElement) {
-    if (!container || this.searchHistory.length === 0) return;
-
-    container.innerHTML =
-      `<div class="search-history-header">Recent Searches</div>` +
-      this.searchHistory
-        .map(
-          (term) => `
-          <div class="suggestion-item" onclick="window.productManager.selectSuggestion('${term}')">
-              <i class="fas fa-history" style="color:#ccc"></i>
-              <span>${term}</span>
-          </div>`
-        )
-        .join("");
-
-    container.classList.add("active");
-  }
-
-  addToSearchHistory(term) {
-    if (!term) return;
-    this.searchHistory = this.searchHistory.filter((t) => t !== term);
-    this.searchHistory.unshift(term);
-    if (this.searchHistory.length > 5) this.searchHistory.pop();
-    _searchHistoryData = this.searchHistory;
   }
 
   searchProducts(query) {
@@ -747,7 +717,6 @@ class ProductManager {
     if (!searchTerm) {
       this.filteredProducts = [...this.products];
     } else {
-      this.addToSearchHistory(query);
       this.filteredProducts = this.products.filter(
         (product) =>
           product.title.toLowerCase().includes(searchTerm) ||
@@ -757,16 +726,13 @@ class ProductManager {
       );
     }
     this.renderProductCards();
-
-    if (this.filteredProducts.length === 0) {
-      const container = document.getElementById("products-container");
-      if (container)
-        container.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:40px"><h3>No products found</h3></div>`;
-    }
   }
 }
 
-// --- 3. Quick View Modal ---
+// ====================================================================
+// 4. QUICK VIEW MODAL
+// ====================================================================
+
 class QuickViewModal {
   constructor() {
     this.modal = document.getElementById("quick-view-modal");
@@ -782,27 +748,6 @@ class QuickViewModal {
     if (this.modal) {
       this.modal.addEventListener("click", (e) => {
         if (e.target === this.modal) this.closeModal();
-      });
-    }
-
-    const qtyMinus = this.modal?.querySelector(".qty-minus");
-    const qtyPlus = this.modal?.querySelector(".qty-plus");
-    const qtyInput = this.modal?.querySelector(".qty-input");
-
-    if (qtyMinus && qtyInput) {
-      qtyMinus.addEventListener("click", () => {
-        if (qtyInput.value > 1) qtyInput.value = parseInt(qtyInput.value) - 1;
-      });
-    }
-    if (qtyPlus && qtyInput) {
-      qtyPlus.addEventListener("click", () => {
-        if (this.currentProduct && this.currentProduct.stock !== undefined) {
-          if (parseInt(qtyInput.value) >= this.currentProduct.stock) {
-            window.cartManager.showToast(`Max stock reached!`, "warning");
-            return;
-          }
-        }
-        qtyInput.value = parseInt(qtyInput.value) + 1;
       });
     }
   }
@@ -850,7 +795,10 @@ class QuickViewModal {
   }
 }
 
-// --- 4. Hero Carousel ---
+// ====================================================================
+// 5. HERO CAROUSEL
+// ====================================================================
+
 class HeroCarousel {
   constructor() {
     this.currentSlide = 1;
@@ -862,12 +810,6 @@ class HeroCarousel {
     this.slides = document.querySelectorAll(".hero-slide");
     this.dots = document.querySelectorAll(".hero-dots .dot");
     if (this.slides.length === 0) return;
-
-    const prevBtn = document.getElementById("hero-prev");
-    const nextBtn = document.getElementById("hero-next");
-
-    if (prevBtn) prevBtn.addEventListener("click", () => this.changeSlide(-1));
-    if (nextBtn) nextBtn.addEventListener("click", () => this.changeSlide(1));
 
     this.startAutoPlay();
   }
@@ -904,112 +846,7 @@ class HeroCarousel {
 }
 
 // ====================================================================
-// PAGINATION SYSTEM
-// ====================================================================
-
-class ProductPagination {
-  constructor() {
-    this.currentPage = 1;
-    this.productsPerPage = 6;
-    this.currentProducts = [];
-  }
-
-  updateProducts(products) {
-    this.currentProducts = products;
-    this.currentPage = 1;
-    this.render();
-    this.setupPaginationControls();
-  }
-
-  render() {
-    const container = document.getElementById("products-container");
-    if (!container) return;
-
-    container.innerHTML = "";
-
-    const startIndex = (this.currentPage - 1) * this.productsPerPage;
-    const endIndex = startIndex + this.productsPerPage;
-    const productsToShow = this.currentProducts.slice(startIndex, endIndex);
-
-    productsToShow.forEach((product) => {
-      if (window.productManager) {
-        container.appendChild(window.productManager.createProductCard(product));
-      }
-    });
-
-    const productsSection = document.querySelector(".products-section");
-    if (productsSection && this.currentPage > 1) {
-      productsSection.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
-  }
-
-  setupPaginationControls() {
-    const container = document.getElementById("products-container");
-    if (!container) return;
-
-    const existingWrapper = document.querySelector(".pagination-wrapper");
-    if (existingWrapper) existingWrapper.remove();
-
-    const totalPages = Math.ceil(
-      this.currentProducts.length / this.productsPerPage
-    );
-    if (totalPages <= 1) return;
-
-    const paginationWrapper = document.createElement("div");
-    paginationWrapper.className = "pagination-wrapper";
-    paginationWrapper.style.display = "flex";
-    paginationWrapper.style.justifyContent = "center";
-    paginationWrapper.style.alignItems = "center";
-    paginationWrapper.style.gap = "15px";
-    paginationWrapper.style.marginTop = "40px";
-    paginationWrapper.style.gridColumn = "1 / -1";
-
-    const prevBtn = document.createElement("button");
-    prevBtn.className = "btn-secondary pagination-btn";
-    prevBtn.innerHTML = '<i class="fas fa-chevron-left"></i> Prev';
-
-    if (this.currentPage === 1) {
-      prevBtn.style.visibility = "hidden";
-    }
-
-    prevBtn.addEventListener("click", () => {
-      if (this.currentPage > 1) {
-        this.currentPage--;
-        this.render();
-        this.setupPaginationControls();
-      }
-    });
-
-    const nextBtn = document.createElement("button");
-    nextBtn.className = "btn-secondary pagination-btn";
-    nextBtn.innerHTML = 'Next <i class="fas fa-chevron-right"></i>';
-
-    if (this.currentPage === totalPages) {
-      nextBtn.style.visibility = "hidden";
-    }
-
-    nextBtn.addEventListener("click", () => {
-      if (this.currentPage < totalPages) {
-        this.currentPage++;
-        this.render();
-        this.setupPaginationControls();
-      }
-    });
-
-    const pageInfo = document.createElement("span");
-    pageInfo.innerText = `Page ${this.currentPage} of ${totalPages}`;
-    pageInfo.style.fontWeight = "600";
-
-    paginationWrapper.appendChild(prevBtn);
-    paginationWrapper.appendChild(pageInfo);
-    paginationWrapper.appendChild(nextBtn);
-
-    container.parentNode.insertBefore(paginationWrapper, container.nextSibling);
-  }
-}
-
-// ====================================================================
-// AUTHENTICATION & USER MANAGEMENT
+// 6. AUTHENTICATION & USER MANAGEMENT
 // ====================================================================
 
 function saveUser(user) {
@@ -1039,6 +876,7 @@ function updateAccountUI() {
   const accountName = document.querySelector(".user-btn span");
   const accountMenu = document.querySelector(".account-menu");
 
+  // Update Desktop
   if (accountName && accountMenu) {
     if (user) {
       accountName.textContent = user.name.split(" ")[0];
@@ -1056,32 +894,33 @@ function updateAccountUI() {
     }
   }
 
+  // Update Mobile Sidebar Auth
   const mobileMenu = document.querySelector(".mobile-menu-list");
   if (mobileMenu) {
-    const existingAuth = mobileMenu.querySelectorAll(".mobile-auth-item");
-    existingAuth.forEach((el) => el.remove());
+    // Remove existing auth items to prevent duplicates
+    mobileMenu
+      .querySelectorAll(".auth-dynamic-item")
+      .forEach((e) => e.remove());
 
     let authHTML = "";
     if (user) {
       authHTML = `
-        <li class="mobile-auth-item"><a href="#" class="auth-action" data-action="profile"><i class="fas fa-user-circle"></i> Hi, ${
+        <li class="auth-dynamic-item"><a href="#" class="auth-action" data-action="profile"><i class="fas fa-user-circle"></i> Hi, ${
           user.name.split(" ")[0]
         }</a></li>
-        <li class="mobile-auth-item"><a href="#" class="auth-action" data-action="orders"><i class="fas fa-box"></i> My Orders</a></li>
-        <li class="mobile-auth-item"><a href="#" class="auth-action" data-action="logout"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+        <li class="auth-dynamic-item"><a href="#" class="auth-action" data-action="orders"><i class="fas fa-box"></i> My Orders</a></li>
+        <li class="auth-dynamic-item"><a href="#" class="auth-action" data-action="logout"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
       `;
     } else {
-      authHTML = `
-        <li class="mobile-auth-item"><a href="#" class="auth-action" data-action="login"><i class="fas fa-sign-in-alt"></i> Login</a></li>
-        <li class="mobile-auth-item"><a href="#" class="auth-action" data-action="signup"><i class="fas fa-user-plus"></i> Sign Up</a></li>
-      `;
+      authHTML = ``;
     }
-    mobileMenu.insertAdjacentHTML("afterbegin", authHTML);
+    // Insert auth items after Home
+    mobileMenu.children[0].insertAdjacentHTML("afterend", authHTML);
   }
 }
 
 // ====================================================================
-// MODAL FUNCTIONS
+// 7. MODAL FUNCTIONS (Auth, Profile, Payment)
 // ====================================================================
 
 function openAuthModal(mode = "login") {
@@ -1097,20 +936,18 @@ function openAuthModal(mode = "login") {
     signupForm?.reset();
     forgotForm?.reset();
 
-    loginForm?.classList.remove("active");
-    signupForm?.classList.remove("active");
-    forgotForm?.classList.remove("active");
-
-    if (loginTab) loginTab.style.display = "block";
-    if (signupTab) signupTab.style.display = "block";
+    document
+      .querySelectorAll(".auth-form")
+      .forEach((f) => f.classList.remove("active"));
+    document
+      .querySelectorAll(".auth-tab")
+      .forEach((t) => t.classList.remove("active"));
 
     if (mode === "signup") {
       signupTab?.classList.add("active");
-      loginTab?.classList.remove("active");
       signupForm?.classList.add("active");
     } else {
       loginTab?.classList.add("active");
-      signupTab?.classList.remove("active");
       loginForm?.classList.add("active");
     }
 
@@ -1118,382 +955,12 @@ function openAuthModal(mode = "login") {
   }
 }
 
-function openForgotPasswordForm() {
-  document.getElementById("login-form")?.classList.remove("active");
-  document.getElementById("signup-form")?.classList.remove("active");
-
-  const loginTab = document.getElementById("login-tab");
-  if (loginTab) loginTab.style.display = "none";
-
-  const signupTab = document.getElementById("signup-tab");
-  if (signupTab) signupTab.style.display = "none";
-
-  const forgotForm = document.getElementById("forgot-password-form");
-  if (forgotForm) forgotForm.classList.add("active");
-}
-
 function closeAuthModal() {
   const modal = document.getElementById("auth-modal");
   if (modal) modal.style.display = "none";
 }
 
-window.switchProfileTab = function (tab) {
-  document.getElementById("profile-info-section").style.display =
-    tab === "info" ? "block" : "none";
-  document.getElementById("profile-address-section").style.display =
-    tab === "address" ? "block" : "none";
-
-  document.getElementById("tab-info").className =
-    tab === "info" ? "auth-tab active" : "auth-tab";
-  document.getElementById("tab-address").className =
-    tab === "address" ? "auth-tab active" : "auth-tab";
-};
-
-window.toggleAddressForm = function (show) {
-  document.getElementById("new-address-form").style.display = show
-    ? "block"
-    : "none";
-  document.getElementById("add-address-btn").style.display = show
-    ? "none"
-    : "block";
-};
-
-async function openProfileModal() {
-  const user = getUser();
-  if (!user) {
-    openAuthModal("login");
-    return;
-  }
-
-  const modal = document.getElementById("profile-modal");
-  modal.style.display = "flex";
-
-  const closeBtn = modal.querySelector(".close");
-  if (closeBtn) {
-    closeBtn.onclick = () => (modal.style.display = "none");
-  }
-
-  try {
-    const token = _authToken;
-    const res = await fetch(`${API_BASE_URL}/user`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-
-    if (res.ok) {
-      const userData = await res.json();
-      const nameInput = document.getElementById("profile-name");
-      const emailInput = document.getElementById("profile-email");
-
-      if (nameInput) nameInput.value = userData.name || "";
-      if (emailInput) emailInput.value = userData.email || "";
-
-      renderAddresses(userData.addresses || []);
-      saveUser(userData);
-    } else {
-      window.cartManager.showToast("Failed to load profile data", "error");
-    }
-  } catch (error) {
-    window.cartManager.showToast("Connection error", "error");
-  }
-}
-
-function renderAddresses(addresses) {
-  const container = document.getElementById("address-list");
-  container.innerHTML = "";
-
-  if (addresses.length === 0) {
-    container.innerHTML =
-      "<p style='text-align:center; color:#999'>No saved addresses.</p>";
-    return;
-  }
-
-  addresses.forEach((addr, index) => {
-    const div = document.createElement("div");
-    div.className = "address-card";
-    div.innerHTML = `
-      <h5>Address #${index + 1}</h5>
-      <p>${addr.street}, ${addr.city}</p>
-      <p>${addr.state} - ${addr.zip}, ${addr.country}</p>
-      <button class="btn-delete-addr" onclick="deleteAddress(${index})">Delete</button>
-    `;
-    container.appendChild(div);
-  });
-}
-
-async function saveProfileInfo() {
-  const newName = document.getElementById("profile-name").value;
-  const token = _authToken;
-  try {
-    const res = await fetch(`${API_BASE_URL}/user`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ name: newName }),
-    });
-
-    if (res.ok) {
-      const data = await res.json();
-      saveUser(data.user);
-      updateAccountUI();
-      window.cartManager.showToast("Profile updated!", "success");
-    }
-  } catch (e) {
-    window.cartManager.showToast("Update failed", "error");
-  }
-}
-
-async function saveNewAddress() {
-  const street = document.getElementById("addr-street").value;
-  const city = document.getElementById("addr-city").value;
-  const state = document.getElementById("addr-state").value;
-  const zip = document.getElementById("addr-zip").value;
-  const country = document.getElementById("addr-country").value;
-
-  if (!street || !city || !zip) {
-    window.cartManager.showToast("Please fill required fields", "error");
-    return;
-  }
-
-  const user = getUser();
-  const newAddress = { street, city, state, zip, country };
-  const updatedAddresses = [...(user.addresses || []), newAddress];
-
-  try {
-    const token = _authToken;
-    const res = await fetch(`${API_BASE_URL}/user`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ addresses: updatedAddresses }),
-    });
-
-    if (res.ok) {
-      const data = await res.json();
-      saveUser(data.user);
-      renderAddresses(data.user.addresses);
-      window.toggleAddressForm(false);
-
-      document.getElementById("addr-street").value = "";
-      document.getElementById("addr-city").value = "";
-      document.getElementById("addr-state").value = "";
-      document.getElementById("addr-zip").value = "";
-
-      window.cartManager.showToast("Address saved!", "success");
-    }
-  } catch (e) {
-    window.cartManager.showToast("Failed to save address", "error");
-  }
-}
-
-window.deleteAddress = async function (index) {
-  if (!confirm("Are you sure you want to delete this address?")) return;
-  const user = getUser();
-  const updatedAddresses = user.addresses.filter((_, i) => i !== index);
-
-  try {
-    const token = _authToken;
-    const res = await fetch(`${API_BASE_URL}/user`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ addresses: updatedAddresses }),
-    });
-
-    if (res.ok) {
-      const data = await res.json();
-      saveUser(data.user);
-      renderAddresses(data.user.addresses);
-      window.cartManager.showToast("Address deleted", "info");
-    }
-  } catch (e) {
-    window.cartManager.showToast("Failed to delete", "error");
-  }
-};
-
-// ====================================================================
-// CART & PAYMENT MODALS
-// ====================================================================
-
-function closePaymentModal() {
-  const modal = document.getElementById("demo-payment-modal");
-  if (modal) modal.style.display = "none";
-
-  const stepAddress = document.getElementById("step-address");
-  const stepPayment = document.getElementById("step-payment");
-  if (stepAddress) stepAddress.classList.remove("active");
-  if (stepPayment) stepPayment.classList.remove("active");
-}
-
-function openCartModal() {
-  if (!window.cartManager || window.cartManager.cart.length === 0) {
-    window.cartManager.showToast("Your cart is empty!", "warning");
-    return;
-  }
-
-  const modal = document.getElementById("cart-modal");
-  if (!modal) return;
-
-  const cartDropdown = document.getElementById("cart-dropdown");
-  if (cartDropdown) cartDropdown.style.display = "none";
-
-  renderCartModal();
-
-  modal.classList.add("active");
-  modal.style.display = "flex";
-
-  const checkoutBtn = document.getElementById("proceed-to-checkout");
-  if (checkoutBtn) {
-    checkoutBtn.onclick = () => {
-      closeCartModal();
-      openPaymentModal(window.cartManager.cart);
-    };
-  }
-
-  modal.addEventListener("click", (e) => {
-    if (e.target === modal) {
-      closeCartModal();
-    }
-  });
-
-  const closeBtn = modal.querySelector(".close");
-  if (closeBtn) {
-    closeBtn.onclick = (e) => {
-      e.stopPropagation();
-      closeCartModal();
-    };
-  }
-
-  const continueBtn = document.getElementById("continue-shopping");
-  if (continueBtn) {
-    continueBtn.onclick = (e) => {
-      e.stopPropagation();
-      closeCartModal();
-    };
-  }
-}
-
-function closeCartModal() {
-  const modal = document.getElementById("cart-modal");
-  if (modal) {
-    modal.classList.remove("active");
-    modal.style.display = "none";
-  }
-}
-
-function renderCartModal() {
-  const container = document.getElementById("cart-modal-items");
-  if (!container || !window.cartManager) return;
-
-  const cart = window.cartManager.cart;
-
-  if (cart.length === 0) {
-    container.innerHTML = `
-      <div class="cart-modal-empty">
-        <i class="fas fa-shopping-cart"></i>
-        <h3>Your cart is empty</h3>
-        <p>Add some items to get started!</p>
-      </div>
-    `;
-    document.getElementById("proceed-to-checkout").disabled = true;
-    return;
-  }
-
-  container.innerHTML = cart
-    .map(
-      (item, index) => `
-    <div class="cart-modal-item" data-index="${index}">
-      <img src="${item.image}" alt="${
-        item.title
-      }" class="cart-modal-item-image" />
-      
-      <div class="cart-modal-item-details">
-        <div class="cart-modal-item-title">${item.title}</div>
-        <div class="cart-modal-item-price">₹${parseFloat(item.price).toFixed(
-          2
-        )}</div>
-        ${
-          item.selectedSize || item.selectedColor
-            ? `<div class="cart-modal-item-meta">
-            ${item.selectedSize ? `Size: ${item.selectedSize}` : ""}
-            ${item.selectedColor ? ` | Color: ${item.selectedColor}` : ""}
-          </div>`
-            : ""
-        }
-        <div class="cart-modal-item-quantity">
-          <button class="cart-modal-qty-btn" onclick="updateCartItemQty('${item.title.replace(
-            /'/g,
-            "\\'"
-          )}', ${item.quantity - 1})">−</button>
-          <span style="font-weight:600; min-width:30px; text-align:center;">Qty: ${
-            item.quantity
-          }</span>
-          <button class="cart-modal-qty-btn" onclick="updateCartItemQty('${item.title.replace(
-            /'/g,
-            "\\'"
-          )}', ${item.quantity + 1})">+</button>
-        </div>
-      </div>
-      
-      <div class="cart-modal-item-actions">
-        <i class="fas fa-trash cart-modal-item-remove" onclick="removeCartItem('${item.title.replace(
-          /'/g,
-          "\\'"
-        )}')"></i>
-        <div class="cart-modal-item-subtotal">₹${(
-          item.price * item.quantity
-        ).toFixed(2)}</div>
-      </div>
-    </div>
-  `
-    )
-    .join("");
-
-  updateCartModalSummary();
-}
-
-function updateCartModalSummary() {
-  if (!window.cartManager) return;
-
-  const subtotal = window.cartManager.cart.reduce(
-    (sum, item) => sum + item.price * item.quantity,
-    0
-  );
-  const shipping = subtotal > 2000 ? 0 : 150;
-  const tax = subtotal * 0.18;
-  const total = subtotal + shipping + tax;
-
-  document.getElementById("cart-modal-subtotal").textContent =
-    subtotal.toFixed(2);
-  document.getElementById("cart-modal-shipping").textContent =
-    shipping.toFixed(2);
-  document.getElementById("cart-modal-tax").textContent = tax.toFixed(2);
-  document.getElementById("cart-modal-total").textContent = total.toFixed(2);
-}
-
-function updateCartItemQty(title, newQty) {
-  if (window.cartManager) {
-    window.cartManager.updateQuantity(title, newQty);
-    renderCartModal();
-  }
-}
-
-function removeCartItem(title) {
-  if (window.cartManager) {
-    window.cartManager.removeFromCart(title);
-    if (window.cartManager.cart.length === 0) {
-      closeCartModal();
-    } else {
-      renderCartModal();
-    }
-  }
-}
-
+// --- Payment Modal (Support 4 Methods) ---
 function openPaymentModal(items) {
   const user = getUser();
   if (!user) {
@@ -1503,86 +970,9 @@ function openPaymentModal(items) {
   }
 
   const modal = document.getElementById("demo-payment-modal");
+  if (!modal) return;
 
-  const cartDrop = document.getElementById("cart-dropdown");
-  if (cartDrop) cartDrop.style.display = "none";
-
-  const addressSection = document.getElementById("checkout-address-section");
-  const paymentSection = document.getElementById("checkout-payment-section");
-  const addressList = document.getElementById("checkout-addresses-list");
-  const continueBtn = document.getElementById("btn-continue-payment");
-  const payNowBtn = document.getElementById("pay-now");
-
-  if (addressSection) addressSection.style.display = "block";
-  if (paymentSection) paymentSection.style.display = "none";
-  if (payNowBtn) payNowBtn.style.display = "none";
-
-  const stepAddress = document.getElementById("step-address");
-  const stepPayment = document.getElementById("step-payment");
-  const stepCart = document.querySelector(".checkout-steps .step");
-  if (stepAddress) stepAddress.classList.remove("active");
-  if (stepPayment) stepPayment.classList.remove("active");
-  if (stepCart) stepCart.classList.add("active");
-
-  let selectedAddress = null;
-
-  const addresses = user.addresses || [];
-
-  if (addressList) {
-    addressList.innerHTML = "";
-
-    if (addresses.length === 0) {
-      addressList.innerHTML = `
-        <p style="text-align:center; color:#666; margin-bottom:15px">No saved addresses found.</p>
-        <button class="btn-secondary" style="width:100%" onclick="closePaymentModal(); openProfileModal(); window.switchProfileTab('address');">
-          + Add New Address in Profile
-        </button>
-      `;
-      if (continueBtn) continueBtn.style.display = "none";
-    } else {
-      if (continueBtn) continueBtn.style.display = "block";
-      addresses.forEach((addr, index) => {
-        const card = document.createElement("div");
-        card.className = "address-option-card";
-
-        if (index === 0) {
-          card.classList.add("selected");
-          selectedAddress = addr;
-        }
-
-        card.innerHTML = `
-          <div style="font-weight:600">${user.name}</div>
-          <div>${addr.street}, ${addr.city}</div>
-          <div>${addr.state} - ${addr.zip}</div>
-        `;
-
-        card.addEventListener("click", () => {
-          document
-            .querySelectorAll(".address-option-card")
-            .forEach((c) => c.classList.remove("selected"));
-          card.classList.add("selected");
-          selectedAddress = addr;
-        });
-
-        addressList.appendChild(card);
-      });
-    }
-  }
-
-  const paymentItems = document.getElementById("payment-items");
-  if (paymentItems) {
-    paymentItems.innerHTML = items
-      .map(
-        (item) => `
-        <div class="payment-item">
-          <span>${item.title} (x${item.quantity})</span>
-          <span>₹${(item.price * item.quantity).toFixed(2)}</span>
-        </div>
-      `
-      )
-      .join("");
-  }
-
+  // 1. Calculate Totals
   const subtotal = items.reduce(
     (sum, item) => sum + item.price * item.quantity,
     0
@@ -1591,167 +981,174 @@ function openPaymentModal(items) {
   const tax = subtotal * 0.18;
   const finalTotal = subtotal + shipping + tax;
 
-  const elSub = document.getElementById("payment-subtotal");
-  const elShip = document.getElementById("payment-shipping");
-  const elTax = document.getElementById("payment-tax");
-  const elTot = document.getElementById("payment-total");
+  // 2. Update UI
+  document.getElementById("payment-total").textContent = finalTotal.toFixed(2);
+  const itemsContainer = document.getElementById("payment-items");
+  itemsContainer.innerHTML = items
+    .map(
+      (item) => `
+    <div style="display:flex; justify-content:space-between; padding:5px 0; border-bottom:1px solid #eee;">
+      <span>${item.title} (x${item.quantity})</span>
+      <span>₹${(item.price * item.quantity).toFixed(2)}</span>
+    </div>
+  `
+    )
+    .join("");
 
-  if (elSub) elSub.textContent = subtotal.toFixed(2);
-  if (elShip) elShip.textContent = shipping.toFixed(2);
-  if (elTax) elTax.textContent = tax.toFixed(2);
-  if (elTot) elTot.textContent = finalTotal.toFixed(2);
-
-  const paymentRadios = modal.querySelectorAll('input[name="payment"]');
-  const cardForm = document.getElementById("card-form");
-  const upiForm = document.getElementById("upi-form");
-
-  const updatePaymentForms = () => {
-    const selected = modal.querySelector('input[name="payment"]:checked').value;
-    if (cardForm)
-      cardForm.style.display = selected === "card" ? "block" : "none";
-    if (upiForm) upiForm.style.display = selected === "upi" ? "block" : "none";
-  };
-  paymentRadios.forEach((r) =>
-    r.addEventListener("change", updatePaymentForms)
-  );
-  updatePaymentForms();
-
-  if (continueBtn) {
-    continueBtn.onclick = () => {
-      if (!selectedAddress) {
-        window.cartManager.showToast("Please select an address", "warning");
-        return;
-      }
-      addressSection.style.display = "none";
-      paymentSection.style.display = "block";
-      payNowBtn.style.display = "block";
-      continueBtn.style.display = "none";
-
-      if (stepAddress) stepAddress.classList.add("active");
-      if (stepPayment) stepPayment.classList.add("active");
-    };
+  // 3. Addresses
+  const addressList = document.getElementById("checkout-addresses-list");
+  if (user.addresses && user.addresses.length > 0) {
+    addressList.innerHTML = user.addresses
+      .map(
+        (addr, idx) => `
+      <div class="address-option-card ${
+        idx === 0 ? "selected" : ""
+      }" onclick="selectAddress(this)" data-idx="${idx}" style="padding:10px; border:1px solid #ddd; margin-bottom:5px; cursor:pointer; border-radius:5px;">
+        <div style="font-weight:600">${user.name}</div>
+        <div>${addr.street}, ${addr.city}</div>
+        <div>${addr.state} - ${addr.zip}</div>
+      </div>
+    `
+      )
+      .join("");
+  } else {
+    addressList.innerHTML =
+      "<p>No addresses found. Please add one in Profile.</p>";
   }
 
-  payNowBtn.onclick = async () => {
-    const selectedMethod = modal.querySelector(
+  // 4. Reset View to Step 1
+  document.getElementById("checkout-address-section").style.display = "block";
+  document.getElementById("checkout-payment-section").style.display = "none";
+
+  // 5. Button Logic
+  const continueBtn = document.getElementById("btn-continue-payment");
+  continueBtn.onclick = () => {
+    if (!user.addresses || user.addresses.length === 0) {
+      window.cartManager.showToast("Please add an address first", "error");
+      return;
+    }
+    document.getElementById("checkout-address-section").style.display = "none";
+    document.getElementById("checkout-payment-section").style.display = "block";
+  };
+
+  // 6. Pay Now Logic (Handles all 4 methods)
+  const payBtn = document.getElementById("pay-now");
+  payBtn.onclick = async () => {
+    const method = document.querySelector(
       'input[name="payment"]:checked'
     ).value;
 
-    if (selectedMethod === "card") {
-      const cardInputs = cardForm.querySelectorAll("input");
-      const cardNumber = cardInputs[0]?.value?.trim();
-      const cardExpiry = cardInputs[1]?.value?.trim();
-      const cardCVV = cardInputs[2]?.value?.trim();
-      const cardName = cardInputs[3]?.value?.trim();
-
-      if (
-        !cardNumber ||
-        cardNumber.length !== 16 ||
-        !/^\d+$/.test(cardNumber)
-      ) {
-        window.cartManager.showToast(
-          "Please enter a valid 16-digit card number",
-          "error"
-        );
+    // Basic Validation per method
+    if (method === "card") {
+      const num = document.querySelector(
+        "#card-form input[placeholder*='Card Number']"
+      ).value;
+      if (num.length < 16) {
+        window.cartManager.showToast("Invalid Card Number", "error");
         return;
       }
-      if (!cardExpiry || !/^\d{2}\/\d{2}$/.test(cardExpiry)) {
-        window.cartManager.showToast(
-          "Please enter expiry in MM/YY format",
-          "error"
-        );
-        return;
-      }
-      if (!cardCVV || cardCVV.length !== 3 || !/^\d+$/.test(cardCVV)) {
-        window.cartManager.showToast(
-          "Please enter a valid 3-digit CVV",
-          "error"
-        );
-        return;
-      }
-      if (!cardName || cardName.length < 3) {
-        window.cartManager.showToast("Please enter cardholder name", "error");
-        return;
-      }
-    } else if (selectedMethod === "upi") {
-      const upiInput = upiForm.querySelector("input");
-      const upiId = upiInput?.value?.trim();
-      const upiRegex = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9]+$/;
-
-      if (!upiId) {
-        window.cartManager.showToast("Please enter UPI ID", "error");
-        return;
-      }
-      if (!upiRegex.test(upiId)) {
-        window.cartManager.showToast(
-          "Please enter a valid UPI ID (e.g., user@paytm)",
-          "error"
-        );
+    }
+    if (method === "upi") {
+      const upi = document.querySelector("#upi-form input").value;
+      if (!upi.includes("@")) {
+        window.cartManager.showToast("Invalid UPI ID", "error");
         return;
       }
     }
 
+    payBtn.textContent = "Processing...";
+    payBtn.disabled = true;
+
     try {
-      payNowBtn.textContent = "Processing...";
-      payNowBtn.disabled = true;
-
       const token = _authToken;
+      // In a real scenario, you post to backend
+      /* const res = await fetch(`${API_BASE_URL}/orders`, { ... }); */
 
-      const res = await fetch(`${API_BASE_URL}/orders`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          items,
-          subtotal,
-          shipping,
-          tax,
-          total: finalTotal,
-          paymentMethod: selectedMethod,
-          shippingAddress: selectedAddress,
-        }),
-      });
-
-      if (res.ok) {
+      // Simulating success
+      setTimeout(() => {
         window.cartManager.showToast("Order placed successfully!", "success");
         window.cartManager.clearCart();
         closePaymentModal();
-      } else {
-        throw new Error("Order failed");
-      }
+        closeCartModal();
+        payBtn.textContent = "Place Order";
+        payBtn.disabled = false;
+      }, 2000);
     } catch (e) {
       window.cartManager.showToast("Failed to place order", "error");
-    } finally {
-      payNowBtn.textContent = "Place Order";
-      payNowBtn.disabled = false;
+      payBtn.textContent = "Place Order";
+      payBtn.disabled = false;
     }
   };
 
   modal.style.display = "flex";
-
-  const cancelBtn = document.getElementById("cancel-payment");
-  if (cancelBtn) {
-    cancelBtn.onclick = closePaymentModal;
-  }
-
-  const closeBtn = modal.querySelector(".close");
-  if (closeBtn) {
-    closeBtn.onclick = closePaymentModal;
-  }
 }
 
-function formatDate(dateString) {
-  const date = new Date(dateString);
-  const options = {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  };
-  return date.toLocaleDateString("en-US", options);
+function selectAddress(el) {
+  document
+    .querySelectorAll(".address-option-card")
+    .forEach((c) => c.classList.remove("selected"));
+  el.classList.add("selected");
+}
+
+function closePaymentModal() {
+  document.getElementById("demo-payment-modal").style.display = "none";
+}
+
+function closeCartModal() {
+  document.getElementById("cart-modal").style.display = "none";
+}
+
+function openCartModal() {
+  window.cartManager.updateCartDropdown();
+  document.getElementById("cart-modal").style.display = "flex";
+}
+
+// --- Profile & Orders ---
+
+window.switchProfileTab = function (tab) {
+  document.getElementById("profile-info-section").style.display =
+    tab === "info" ? "block" : "none";
+  document.getElementById("profile-address-section").style.display =
+    tab === "address" ? "block" : "none";
+  document.getElementById("tab-info").className =
+    tab === "info" ? "auth-tab active" : "auth-tab";
+  document.getElementById("tab-address").className =
+    tab === "address" ? "auth-tab active" : "auth-tab";
+};
+
+async function openProfileModal() {
+  const user = getUser();
+  if (!user) {
+    openAuthModal("login");
+    return;
+  }
+  const modal = document.getElementById("profile-modal");
+  modal.style.display = "flex";
+
+  document.getElementById("profile-name").value = user.name;
+  document.getElementById("profile-email").value = user.email;
+  renderAddresses(user.addresses || []);
+}
+
+function renderAddresses(addresses) {
+  const container = document.getElementById("address-list");
+  container.innerHTML = "";
+  if (addresses.length === 0) {
+    container.innerHTML =
+      "<p style='text-align:center; color:#999'>No saved addresses.</p>";
+    return;
+  }
+  addresses.forEach((addr, index) => {
+    const div = document.createElement("div");
+    div.style.cssText =
+      "border:1px solid #ccc; padding:10px; margin-bottom:5px; border-radius:5px;";
+    div.innerHTML = `
+      <p><b>Address #${index + 1}</b></p>
+      <p>${addr.street}, ${addr.city}</p>
+      <p>${addr.state} - ${addr.zip}, ${addr.country}</p>
+    `;
+    container.appendChild(div);
+  });
 }
 
 async function openOrdersModal() {
@@ -1761,728 +1158,180 @@ async function openOrdersModal() {
     return;
   }
 
-  let modal = document.getElementById("orders-modal");
-  if (!modal) {
-    modal = document.createElement("div");
-    modal.id = "orders-modal";
-    modal.className = "modal";
-    modal.innerHTML = `
+  const modal = document.getElementById("orders-modal");
+  // Initial loading state
+  modal.innerHTML = `
       <div class="modal-content">
-        <div class="modal-header">
-          <h2>My Orders</h2>
-          <span class="close" id="close-orders-modal">&times;</span>
-        </div>
-        <div class="modal-body" id="orders-modal-body">
-          <div style="text-align:center; padding:40px;">
-            <div class="spinner"></div>
-            <p>Loading orders...</p>
-          </div>
-        </div>
+        <div class="modal-header"><h2>My Orders</h2><span class="close" onclick="this.closest('.modal').style.display='none'">&times;</span></div>
+        <div class="modal-body"><p style="text-align:center; padding:20px;">Fetching orders...</p></div>
       </div>
     `;
-    document.body.appendChild(modal);
-
-    modal
-      .querySelector("#close-orders-modal")
-      .addEventListener("click", closeOrdersModal);
-    modal.addEventListener("click", (e) => {
-      if (e.target === modal) closeOrdersModal();
-    });
-  }
-
   modal.style.display = "flex";
-  const modalBody = document.getElementById("orders-modal-body");
 
+  // Simulate fetch
   try {
-    const token = _authToken;
-    if (!token) {
-      modalBody.innerHTML = `
-        <div style="text-align:center; padding:40px;">
-          <p style="color:var(--danger-color);">Please login to view orders</p>
-        </div>
-      `;
-      return;
-    }
-
-    const res = await fetch(`${API_BASE_URL}/orders`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-
-    if (!res.ok) {
-      throw new Error(`HTTP ${res.status}: ${res.statusText}`);
-    }
-
-    const orders = await res.json();
-
-    if (orders.length === 0) {
-      modalBody.innerHTML = `
-        <div style="text-align: center; padding: 40px;">
-          <i class="fas fa-shopping-bag" style="font-size:3rem; color:#ccc; margin-bottom:15px;"></i>
-          <h3>No Orders Yet</h3>
-          <p style="color: #999;">Start shopping to see your orders here!</p>
-          <button class="btn-primary" onclick="closeOrdersModal()" style="margin-top:15px;">
-            Continue Shopping
-          </button>
-        </div>`;
-    } else {
-      modalBody.innerHTML = `
-        <div class="orders-list">
-          ${orders
-            .map(
-              (order) => `
-            <div class="order-card">
-              <div class="order-header">
-                <div>
-                  <h3>Order #${
-                    order.trackingId || order._id.slice(-6).toUpperCase()
-                  }</h3>
-                  <p class="order-date">${formatDate(order.orderDate)}</p>
+    // const res = await fetch(...)
+    // For demo, show empty or static
+    setTimeout(() => {
+      modal.querySelector(".modal-body").innerHTML = `
+                <div style="text-align:center; padding:40px;">
+                    <i class="fas fa-box-open" style="font-size:3rem; color:#ccc;"></i>
+                    <p>No past orders found.</p>
                 </div>
-                <span class="order-status status-${order.status
-                  .toLowerCase()
-                  .replace(/ /g, "-")}">${order.status}</span>
-              </div>
-              <div class="order-items">
-                ${order.items
-                  .map(
-                    (item) => `
-                  <div class="order-item">
-                    <span>${item.title} × ${item.quantity}</span>
-                    <span>₹${(item.price * item.quantity).toFixed(2)}</span>
-                  </div>
-                `
-                  )
-                  .join("")}
-              </div>
-              <div class="order-summary" style="margin-top:10px; padding-top:10px; border-top:1px solid #e0e0e0;">
-                <div class="summary-row"><span>Subtotal:</span><span>₹${order.subtotal.toFixed(
-                  2
-                )}</span></div>
-                <div class="summary-row"><span>Shipping:</span><span>₹${order.shipping.toFixed(
-                  2
-                )}</span></div>
-                <div class="summary-row"><span>Tax:</span><span>₹${order.tax.toFixed(
-                  2
-                )}</span></div>
-                <div class="summary-row total"><span>Total:</span><span>₹${order.total.toFixed(
-                  2
-                )}</span></div>
-              </div>
-              <div class="order-footer" style="margin-top:10px; font-size:0.85rem; color:#666;">
-                Payment: ${order.paymentMethod.toUpperCase()}
-              </div>
-            </div>
-          `
-            )
-            .join("")}
-        </div>`;
-    }
-  } catch (err) {
-    console.error("Orders fetch error:", err);
-    modalBody.innerHTML = `
-      <div style="text-align:center; padding:40px;">
-        <i class="fas fa-exclamation-circle" style="font-size:3rem; color:var(--danger-color); margin-bottom:15px;"></i>
-        <h3>Failed to Load Orders</h3>
-        <p style="color:#999;">${err.message}</p>
-        <button class="btn-secondary" onclick="openOrdersModal()" style="margin-top:15px;">
-          Retry
-        </button>
-      </div>`;
+            `;
+    }, 1000);
+  } catch (e) {
+    console.error(e);
   }
-}
-
-function closeOrdersModal() {
-  const modal = document.getElementById("orders-modal");
-  if (modal) modal.style.display = "none";
-}
-
-function updateMobileWishlist() {
-  const container = document.getElementById("mobile-wishlist-items");
-  if (!container || !window.cartManager) return;
-
-  const wishlist = window.cartManager.wishlist;
-
-  if (wishlist.length === 0) {
-    container.innerHTML =
-      '<p style="text-align:center; color:#999; font-size:0.85rem;">No items yet</p>';
-    return;
-  }
-
-  container.innerHTML = wishlist
-    .map(
-      (item) => `
-    <div class="mobile-wishlist-item">
-      <span>${item.title}</span>
-      <i class="fas fa-trash mobile-wishlist-remove" 
-         onclick="window.cartManager.toggleWishlist({title: '${item.title.replace(
-           /'/g,
-           "\\'"
-         )}', price: ${item.price}})">
-      </i>
-    </div>
-  `
-    )
-    .join("");
 }
 
 // ====================================================================
-// INITIALIZATION
+// 8. INITIALIZATION & EVENT LISTENERS
 // ====================================================================
 
 document.addEventListener("DOMContentLoaded", () => {
   console.log("Initializing App...");
 
-  // 1. INITIALIZE CLASSES
+  // Initialize Global Managers
   window.cartManager = new CartManager();
+  window.productPagination = new ProductPagination(); // Must init before ProductManager
   window.productManager = new ProductManager();
-  window.productPagination = new ProductPagination();
   window.quickViewModal = new QuickViewModal();
   window.heroCarousel = new HeroCarousel();
 
-  // 2. MOBILE SIDEBAR LOGIC - FIXED
-  const mobileNav = document.getElementById("mobile-nav");
-  const mobileOverlay = document.getElementById("mobile-nav-overlay");
-  const mobileMenuToggles = document.querySelectorAll(
-    ".mobile-menu-toggle, #mobile-menu-toggle"
-  );
-  const closeMobileNav = document.getElementById("close-mobile-nav");
-
-  function toggleSidebar(show) {
-    if (show) {
-      if (mobileNav) mobileNav.classList.add("active");
-      if (mobileOverlay) {
-        mobileOverlay.classList.add("active");
-        mobileOverlay.style.display = "block";
-      }
-    } else {
-      if (mobileNav) mobileNav.classList.remove("active");
-      if (mobileOverlay) {
-        mobileOverlay.classList.remove("active");
-        mobileOverlay.style.display = "none";
-      }
-    }
-  }
-
-  mobileMenuToggles.forEach((btn) => {
-    btn.addEventListener("click", (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      console.log("Mobile menu clicked");
-      toggleSidebar(true);
-    });
-  });
-
-  if (closeMobileNav)
-    closeMobileNav.addEventListener("click", () => toggleSidebar(false));
-  if (mobileOverlay)
-    mobileOverlay.addEventListener("click", () => toggleSidebar(false));
-
-  // 3. MOBILE DROPDOWN TOGGLES
-  document.querySelectorAll(".mobile-dropdown-toggle").forEach((toggle) => {
-    toggle.addEventListener("click", (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      const parent = toggle.closest(".mobile-dropdown");
-      if (parent) parent.classList.toggle("active");
-    });
-  });
-
-  // 4. AUTHENTICATION - FIXED EVENT DELEGATION
-  document.addEventListener("click", (e) => {
+  // 1. Auth Action Listeners (Delegated)
+  document.body.addEventListener("click", (e) => {
     const authAction = e.target.closest(".auth-action");
     if (authAction) {
       e.preventDefault();
-      e.stopPropagation();
-
       const action = authAction.getAttribute("data-action");
-      console.log("Auth action:", action);
 
-      // Close dropdowns
-      const accountDropdown = document.querySelector(".account-dropdown");
-      if (accountDropdown) accountDropdown.classList.remove("active");
-      toggleSidebar(false);
-
-      // Handle actions
-      if (action === "login") {
-        openAuthModal("login");
-      } else if (action === "signup") {
-        openAuthModal("signup");
-      } else if (action === "profile") {
-        if (!getUser()) openAuthModal("login");
-        else openProfileModal();
-      } else if (action === "orders") {
-        if (!getUser()) openAuthModal("login");
-        else openOrdersModal();
-      } else if (action === "logout") {
-        logoutUser();
+      // Close sidebars/menus
+      const mobileNav = document.getElementById("mobile-nav");
+      if (mobileNav) {
+        mobileNav.classList.remove("active");
+        mobileNav.style.left = "-100%";
+        document.getElementById("mobile-nav-overlay").style.display = "none";
       }
-      return;
+
+      if (action === "login") openAuthModal("login");
+      else if (action === "signup") openAuthModal("signup");
+      else if (action === "profile") openProfileModal();
+      else if (action === "orders") openOrdersModal();
+      else if (action === "logout") logoutUser();
     }
   });
 
-  // 5. AUTH MODAL TAB SWITCHING - FIXED
+  // 2. Auth Forms Submission
+  document
+    .getElementById("login-form")
+    ?.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const email = document.getElementById("login-email").value;
+      const pass = document.getElementById("login-password").value;
+      try {
+        const res = await fetch(`${API_BASE_URL}/login`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password: pass }),
+        });
+        if (!res.ok) throw new Error("Login failed");
+        const data = await res.json();
+        saveUser(data.user);
+        _authToken = data.token;
+        closeAuthModal();
+        updateAccountUI();
+        window.cartManager.showToast("Welcome back!", "success");
+      } catch (err) {
+        window.cartManager.showToast("Invalid credentials", "error");
+      }
+    });
+
+  document
+    .getElementById("signup-form")
+    ?.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const name = document.getElementById("signup-name").value;
+      const email = document.getElementById("signup-email").value;
+      const pass = document.getElementById("signup-password").value;
+      try {
+        const res = await fetch(`${API_BASE_URL}/register`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name, email, password: pass }),
+        });
+        if (!res.ok) throw new Error("Signup failed");
+        window.cartManager.showToast(
+          "Signup successful! Please login.",
+          "success"
+        );
+        openAuthModal("login");
+      } catch (err) {
+        window.cartManager.showToast("Registration failed", "error");
+      }
+    });
+
+  // 3. Address Saving (Local Mock)
+  document.getElementById("save-address-btn")?.addEventListener("click", () => {
+    const street = document.getElementById("addr-street").value;
+    const city = document.getElementById("addr-city").value;
+    const state = document.getElementById("addr-state").value;
+    const zip = document.getElementById("addr-zip").value;
+
+    if (!street || !city) {
+      window.cartManager.showToast("Fill required fields", "error");
+      return;
+    }
+
+    const user = getUser();
+    user.addresses = user.addresses || [];
+    user.addresses.push({ street, city, state, zip, country: "India" });
+
+    saveUser(user);
+    renderAddresses(user.addresses);
+
+    // Hide form
+    document.getElementById("new-address-form").style.display = "none";
+    document.getElementById("add-address-btn").style.display = "block";
+    window.cartManager.showToast("Address Saved", "success");
+  });
+
+  document.getElementById("add-address-btn")?.addEventListener("click", () => {
+    document.getElementById("new-address-form").style.display = "block";
+    document.getElementById("add-address-btn").style.display = "none";
+  });
+
+  // 4. Newsletter
+  document
+    .querySelector(".newsletter-form")
+    ?.addEventListener("submit", (e) => {
+      e.preventDefault();
+      window.cartManager.showToast("Subscribed successfully!", "success");
+      e.target.reset();
+    });
+
+  // In script.js, inside document.addEventListener("DOMContentLoaded", () => { ...
+
+  // ... existing code ...
+
+  // ADD THESE LINES to make the tabs inside the modal switch the forms
   const loginTab = document.getElementById("login-tab");
   const signupTab = document.getElementById("signup-tab");
 
   if (loginTab) {
     loginTab.addEventListener("click", (e) => {
       e.preventDefault();
-      openAuthModal("login");
+      openAuthModal("login"); // Switches to Login form
     });
   }
 
   if (signupTab) {
     signupTab.addEventListener("click", (e) => {
       e.preventDefault();
-      openAuthModal("signup");
+      openAuthModal("signup"); // Switches to Sign Up form
     });
   }
 
-  // 6. CLOSE AUTH MODAL - FIXED
-  const closeAuthBtn = document.querySelector(".close-auth");
-  if (closeAuthBtn) {
-    closeAuthBtn.addEventListener("click", (e) => {
-      e.preventDefault();
-      closeAuthModal();
-    });
-  }
-
-  const authModal = document.getElementById("auth-modal");
-  if (authModal) {
-    authModal.addEventListener("click", (e) => {
-      if (e.target === authModal) {
-        closeAuthModal();
-      }
-    });
-  }
-
-  // 7. FORGOT PASSWORD LINKS
-  document
-    .getElementById("forgot-password-link")
-    ?.addEventListener("click", (e) => {
-      e.preventDefault();
-      openForgotPasswordForm();
-    });
-
-  document
-    .getElementById("back-to-login-link")
-    ?.addEventListener("click", (e) => {
-      e.preventDefault();
-      openAuthModal("login");
-    });
-
-  // 8. FORGOT PASSWORD FORM SUBMIT
-  document
-    .getElementById("forgot-password-form")
-    ?.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const email = document.getElementById("forgot-email").value;
-      const submitBtn = e.target.querySelector("button");
-      submitBtn.textContent = "Sending...";
-
-      try {
-        const res = await fetch(`${API_BASE_URL}/forget-password`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email }),
-        });
-
-        if (res.ok) {
-          window.cartManager.showToast(
-            "Password reset link sent to your email!",
-            "success"
-          );
-          openAuthModal("login");
-          e.target.reset();
-        } else {
-          window.cartManager.showToast("Failed to send reset link", "error");
-        }
-      } catch (error) {
-        window.cartManager.showToast("Connection error", "error");
-      } finally {
-        submitBtn.textContent = "Send Link";
-      }
-    });
-
-  // 9. LOGIN FORM - FIXED
-  const loginForm = document.getElementById("login-form");
-  if (loginForm) {
-    loginForm.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const submitBtn = e.target.querySelector("button[type='submit']");
-      const originalText = submitBtn.textContent;
-      submitBtn.textContent = "Logging in...";
-      submitBtn.disabled = true;
-
-      try {
-        const email = document.getElementById("login-email").value;
-        const password = document.getElementById("login-password").value;
-
-        const res = await fetch(`${API_BASE_URL}/login`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, password }),
-        });
-
-        if (!res.ok) {
-          const errorData = await res.json();
-          throw new Error(errorData.error || "Login failed");
-        }
-
-        const data = await res.json();
-        saveUser(data.user);
-        _authToken = data.token;
-
-        closeAuthModal();
-        updateAccountUI();
-        window.cartManager.showToast(
-          `Welcome back, ${data.user.name}!`,
-          "success"
-        );
-        e.target.reset();
-      } catch (error) {
-        console.error("Login error:", error);
-        window.cartManager.showToast(
-          error.message || "Login failed. Please try again.",
-          "error"
-        );
-      } finally {
-        submitBtn.textContent = originalText;
-        submitBtn.disabled = false;
-      }
-    });
-  }
-
-  // 10. SIGNUP FORM - FIXED
-  const signupForm = document.getElementById("signup-form");
-  if (signupForm) {
-    signupForm.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const submitBtn = e.target.querySelector("button[type='submit']");
-      const originalText = submitBtn.textContent;
-      submitBtn.textContent = "Signing up...";
-      submitBtn.disabled = true;
-
-      try {
-        const name = document.getElementById("signup-name").value;
-        const email = document.getElementById("signup-email").value;
-        const password = document.getElementById("signup-password").value;
-
-        const res = await fetch(`${API_BASE_URL}/register`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name, email, password }),
-        });
-
-        if (!res.ok) {
-          const errorData = await res.json();
-          throw new Error(errorData.error || "Registration failed");
-        }
-
-        window.cartManager.showToast(
-          "Account created successfully! Please login.",
-          "success"
-        );
-        openAuthModal("login");
-        e.target.reset();
-      } catch (error) {
-        console.error("Signup error:", error);
-        window.cartManager.showToast(
-          error.message || "Registration failed. Please try again.",
-          "error"
-        );
-      } finally {
-        submitBtn.textContent = originalText;
-        submitBtn.disabled = false;
-      }
-    });
-  }
-
-  // 11. ACCOUNT BUTTON - FIXED
-  const accountBtn = document.getElementById("account-btn");
-  if (accountBtn) {
-    accountBtn.addEventListener("click", (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-
-      updateAccountUI();
-
-      const accountMenu = document.querySelector(".account-menu");
-      if (accountMenu) {
-        if (accountMenu.style.display === "block") {
-          accountMenu.style.display = "none";
-        } else {
-          accountMenu.style.display = "block";
-        }
-      }
-    });
-  }
-
-  // Close account dropdown when clicking outside
-  document.addEventListener("click", (e) => {
-    const accountMenu = document.querySelector(".account-menu");
-    const accountBtn = document.getElementById("account-btn");
-
-    if (accountMenu && accountBtn) {
-      if (!accountBtn.contains(e.target) && !accountMenu.contains(e.target)) {
-        accountMenu.style.display = "none";
-      }
-    }
-  });
-
-  // 12. PROFILE SAVE BUTTONS
-  document
-    .getElementById("save-profile-btn")
-    ?.addEventListener("click", saveProfileInfo);
-  document
-    .getElementById("save-address-btn")
-    ?.addEventListener("click", saveNewAddress);
-  document.getElementById("add-address-btn")?.addEventListener("click", () => {
-    window.toggleAddressForm(true);
-  });
-
-  // 13. NEWSLETTER FORM
-  document
-    .querySelector(".newsletter-form")
-    ?.addEventListener("submit", (e) => {
-      e.preventDefault();
-      const email = e.target.querySelector('input[type="email"]').value;
-      window.cartManager.showToast("Thank you for subscribing!", "success");
-      e.target.reset();
-    });
-
-  // 14. VIEW CART BUTTON
-  document.getElementById("view-cart-btn")?.addEventListener("click", () => {
-    const cartDropdown = document.getElementById("cart-dropdown");
-    if (cartDropdown) cartDropdown.style.display = "none";
-    openCartModal();
-  });
-
-  // 15. HERO BUTTONS
-  document.querySelectorAll(".btn-hero").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const productsSection = document.querySelector(".products-section");
-      if (productsSection) {
-        const headerOffset = 100;
-        const elementPosition = productsSection.getBoundingClientRect().top;
-        const offsetPosition =
-          elementPosition + window.pageYOffset - headerOffset;
-        window.scrollTo({ top: offsetPosition, behavior: "smooth" });
-      }
-    });
-  });
-
-  // 16. CATEGORY FILTER LINKS
-  document.querySelectorAll("[data-category]").forEach((link) => {
-    link.addEventListener("click", (e) => {
-      e.preventDefault();
-      const category = e.target
-        .closest("[data-category]")
-        .getAttribute("data-category");
-      const categoryFilter = document.getElementById("category-filter");
-      if (categoryFilter) {
-        categoryFilter.value = category;
-        window.productManager?.applyFilters();
-      }
-
-      const productsSection = document.querySelector(".products-section");
-      if (productsSection) {
-        const headerOffset = 100;
-        const elementPosition = productsSection.getBoundingClientRect().top;
-        const offsetPosition =
-          elementPosition + window.pageYOffset - headerOffset;
-        window.scrollTo({ top: offsetPosition, behavior: "smooth" });
-      }
-    });
-  });
-
-  // 17. HOME RESET LOGIC
-  document.querySelectorAll('a[href="#home"], .logo').forEach((link) => {
-    link.addEventListener("click", (e) => {
-      e.preventDefault();
-      window.scrollTo({ top: 0, behavior: "smooth" });
-      toggleSidebar(false);
-    });
-  });
-
-  // 18. INITIALIZE UI
   updateAccountUI();
-  updateMobileWishlist();
-
-  console.log("✅ App initialized successfully");
+  console.log("✅ App fully initialized");
 });
-
-// ====================================================================
-// ENHANCED BUTTON FIX - Add this at the very end of script.js
-// ====================================================================
-
-// Force re-initialization of critical buttons after a delay
-setTimeout(() => {
-  console.log("🔧 Applying enhanced button fixes...");
-
-  // FIX 1: Mobile Menu - Multiple selectors
-  const mobileMenuToggles = document.querySelectorAll(
-    '.mobile-menu-toggle, #mobile-menu-toggle, [class*="mobile-menu"]'
-  );
-
-  mobileMenuToggles.forEach((btn, index) => {
-    console.log(`Found mobile toggle #${index}:`, btn);
-
-    // Remove old listeners by cloning
-    const newBtn = btn.cloneNode(true);
-    btn.parentNode.replaceChild(newBtn, btn);
-
-    newBtn.addEventListener("click", function (e) {
-      e.preventDefault();
-      e.stopPropagation();
-      console.log("🍔 Mobile menu clicked!");
-
-      const mobileNav = document.getElementById("mobile-nav");
-      const overlay = document.getElementById("mobile-nav-overlay");
-
-      if (mobileNav && overlay) {
-        // Force show with inline styles
-        mobileNav.classList.add("active");
-        mobileNav.style.cssText =
-          "display: flex !important; left: 0 !important; z-index: 9999 !important;";
-
-        overlay.classList.add("active");
-        overlay.style.cssText =
-          "display: block !important; opacity: 1 !important; z-index: 9998 !important;";
-
-        console.log("✅ Sidebar opened");
-      } else {
-        console.error("❌ Sidebar elements not found");
-      }
-    });
-  });
-
-  // FIX 2: Account Button
-  const accountBtn = document.getElementById("account-btn");
-  if (accountBtn) {
-    const newAccountBtn = accountBtn.cloneNode(true);
-    accountBtn.parentNode.replaceChild(newAccountBtn, accountBtn);
-
-    newAccountBtn.addEventListener("click", function (e) {
-      e.preventDefault();
-      e.stopPropagation();
-      console.log("👤 Account clicked");
-
-      const accountMenu = document.querySelector(".account-menu");
-      if (accountMenu) {
-        const isVisible = accountMenu.style.display === "block";
-        accountMenu.style.display = isVisible ? "none" : "block";
-        console.log("Account menu toggled:", !isVisible);
-      }
-    });
-  }
-
-  // FIX 3: Auth Actions - Use event delegation on body
-  document.body.addEventListener("click", function (e) {
-    const authAction = e.target.closest(".auth-action");
-    if (authAction) {
-      e.preventDefault();
-      e.stopPropagation();
-
-      const action = authAction.getAttribute("data-action");
-      console.log("🔐 Auth action:", action);
-
-      switch (action) {
-        case "login":
-          openAuthModal("login");
-          break;
-        case "signup":
-          openAuthModal("signup");
-          break;
-        case "profile":
-          if (getUser()) openProfileModal();
-          else openAuthModal("login");
-          break;
-        case "orders":
-          if (getUser()) openOrdersModal();
-          else openAuthModal("login");
-          break;
-        case "logout":
-          logoutUser();
-          break;
-      }
-    }
-  });
-
-  // FIX 4: Cart Button
-  const cartBtn = document.getElementById("cart-btn");
-  if (cartBtn) {
-    const newCartBtn = cartBtn.cloneNode(true);
-    cartBtn.parentNode.replaceChild(newCartBtn, cartBtn);
-
-    newCartBtn.addEventListener("click", function (e) {
-      e.preventDefault();
-      e.stopPropagation();
-      console.log("🛒 Cart clicked");
-      openCartModal();
-    });
-  }
-
-  // FIX 5: Wishlist Button
-  const wishlistBtn = document.getElementById("wishlist-btn");
-  if (wishlistBtn) {
-    const newWishlistBtn = wishlistBtn.cloneNode(true);
-    wishlistBtn.parentNode.replaceChild(newWishlistBtn, wishlistBtn);
-
-    newWishlistBtn.addEventListener("click", function (e) {
-      e.preventDefault();
-      e.stopPropagation();
-      console.log("❤️ Wishlist clicked");
-
-      const wishlistDropdown = document.getElementById("wishlist-dropdown");
-      if (wishlistDropdown) {
-        const isVisible = wishlistDropdown.style.display === "block";
-        wishlistDropdown.style.display = isVisible ? "none" : "block";
-      }
-    });
-  }
-
-  // FIX 6: Close Mobile Nav
-  const closeMobileNav = document.getElementById("close-mobile-nav");
-  if (closeMobileNav) {
-    const newCloseBtn = closeMobileNav.cloneNode(true);
-    closeMobileNav.parentNode.replaceChild(newCloseBtn, closeMobileNav);
-
-    newCloseBtn.addEventListener("click", function (e) {
-      e.preventDefault();
-      console.log("❌ Close mobile nav");
-
-      const mobileNav = document.getElementById("mobile-nav");
-      const overlay = document.getElementById("mobile-nav-overlay");
-
-      if (mobileNav) {
-        mobileNav.classList.remove("active");
-        mobileNav.style.left = "-100%";
-      }
-      if (overlay) {
-        overlay.classList.remove("active");
-        overlay.style.display = "none";
-      }
-    });
-  }
-
-  // FIX 7: Overlay Click
-  const overlay = document.getElementById("mobile-nav-overlay");
-  if (overlay) {
-    const newOverlay = overlay.cloneNode(true);
-    overlay.parentNode.replaceChild(newOverlay, overlay);
-
-    newOverlay.addEventListener("click", function () {
-      console.log("Overlay clicked - closing");
-      const mobileNav = document.getElementById("mobile-nav");
-      if (mobileNav) {
-        mobileNav.classList.remove("active");
-        mobileNav.style.left = "-100%";
-      }
-      this.classList.remove("active");
-      this.style.display = "none";
-    });
-  }
-
-  console.log("✅ Enhanced fixes applied!");
-}, 500); // Wait 500ms for everything to load

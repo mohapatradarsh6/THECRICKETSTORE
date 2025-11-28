@@ -43,71 +43,58 @@
     <header class="main-header">
       <div class="container">
         <div class="header-content">
-          <button class="mobile-menu-toggle" id="mobile-menu-toggle">
+          <button
+            class="mobile-menu-toggle"
+            id="mobile-menu-toggle"
+            onclick="toggleMobileMenu(true)"
+          >
             <i class="fas fa-bars"></i>
           </button>
 
           <div class="logo">
-            <h1><i class="fas fa-baseball-ball"></i> The Cricket Store</h1>
-            <span class="tagline">Your Premium Cricket Partner</span>
+            <a
+              href="#home"
+              onclick="resetHomeState(event)"
+              style="text-decoration: none; color: inherit"
+            >
+              <h1><i class="fas fa-baseball-ball"></i> The Cricket Store</h1>
+              <span class="tagline">Your Premium Cricket Partner</span>
+            </a>
           </div>
 
           <nav class="main-nav">
             <ul>
-              <li><a href="#home" class="active">Home</a></li>
+              <li>
+                <a href="#home" class="active" onclick="resetHomeState(event)"
+                  >Home</a
+                >
+              </li>
 
               <li class="dropdown">
                 <a href="#products"
                   >Products <i class="fas fa-chevron-down"></i
                 ></a>
                 <div class="dropdown-content">
-                  <a href="#bats" data-category="bats"
-                    ><i class="fas fa-baseball-bat-ball"></i> Cricket Bats<span
-                      class="dropdown-desc"
-                      >:-English & Kashmir Willow</span
-                    ></a
+                  <a href="#bats" onclick="applyCategoryFilter('bats')"
+                    ><i class="fas fa-baseball-bat-ball"></i> Cricket Bats</a
                   >
-                  <a href="#balls" data-category="balls"
-                    ><i class="fas fa-circle"></i> Cricket Balls<span
-                      class="dropdown-desc"
-                      >:-Leather, Tennis & Practice</span
-                    ></a
+                  <a href="#balls" onclick="applyCategoryFilter('balls')"
+                    ><i class="fas fa-circle"></i> Cricket Balls</a
                   >
-                  <a href="#pads" data-category="pads"
-                    ><i class="fas fa-shield-alt"></i> Pads & Guards<span
-                      class="dropdown-desc"
-                      >:-Leg Guards, Thigh Guards, Arm Guards</span
-                    ></a
+                  <a href="#pads" onclick="applyCategoryFilter('pads')"
+                    ><i class="fas fa-shield-alt"></i> Pads & Guards</a
                   >
-                  <a href="#gloves" data-category="gloves"
-                    ><i class="fas fa-mitten"></i> Gloves<span
-                      class="dropdown-desc"
-                      >:-Batting, Keeping & Inner Gloves</span
-                    ></a
+                  <a href="#gloves" onclick="applyCategoryFilter('gloves')"
+                    ><i class="fas fa-mitten"></i> Gloves</a
                   >
-                  <a href="#helmets"
-                    ><i class="fas fa-hard-hat"></i> Helmets<span
-                      class="dropdown-desc"
-                      >:-Premium Protection Gear</span
-                    ></a
+                  <a href="#helmets" onclick="applyCategoryFilter('helmets')"
+                    ><i class="fas fa-hard-hat"></i> Helmets</a
                   >
-                  <a href="#shoes"
-                    ><i class="fas fa-shoe-prints"></i> Cricket Shoes<span
-                      class="dropdown-desc"
-                      >:-Spikes, Rubber & Training</span
-                    ></a
+                  <a href="#shoes" onclick="applyCategoryFilter('shoes')"
+                    ><i class="fas fa-shoe-prints"></i> Cricket Shoes</a
                   >
-                  <a href="#bags"
-                    ><i class="fas fa-briefcase"></i> Kit Bags<span
-                      class="dropdown-desc"
-                      >:-Wheelie, Duffle & Backpacks</span
-                    ></a
-                  >
-                  <a href="#accessories"
-                    ><i class="fas fa-tools"></i> Accessories<span
-                      class="dropdown-desc"
-                      >:-Grips, Guards, Stumps & More</span
-                    ></a
+                  <a href="#bags" onclick="applyCategoryFilter('bags')"
+                    ><i class="fas fa-briefcase"></i> Kit Bags</a
                   >
                 </div>
               </li>
@@ -115,49 +102,25 @@
               <li class="dropdown">
                 <a href="#brands">Brands <i class="fas fa-chevron-down"></i></a>
                 <div class="dropdown-content">
-                  <a href="#sg"
-                    ><i class="fas fa-star"></i> SG<span class="dropdown-desc"
-                      >:Sanspareils Greenlands - Since 1931</span
-                    ></a
+                  <a href="#sg" onclick="applyBrandFilter('sg')"
+                    ><i class="fas fa-star"></i> SG</a
                   >
-                  <a href="#kookaburra"
-                    ><i class="fas fa-star"></i> Kookaburra<span
-                      class="dropdown-desc"
-                      >:Australian Excellence</span
-                    ></a
+                  <a href="#kookaburra" onclick="applyBrandFilter('kookaburra')"
+                    ><i class="fas fa-star"></i> Kookaburra</a
                   >
-                  <a href="#bas"
-                    ><i class="fas fa-star"></i> BAS Vampire<span
-                      class="dropdown-desc"
-                      >:Power & Precision</span
-                    ></a
+                  <a href="#bas" onclick="applyBrandFilter('bas')"
+                    ><i class="fas fa-star"></i> BAS Vampire</a
                   >
-                  <a href="#gray-nicolls"
-                    ><i class="fas fa-star"></i> Gray-Nicolls<span
-                      class="dropdown-desc"
-                      >:British Heritage Since 1855</span
-                    ></a
+                  <a
+                    href="#gray-nicolls"
+                    onclick="applyBrandFilter('gray-nicolls')"
+                    ><i class="fas fa-star"></i> Gray-Nicolls</a
                   >
-                  <a href="#mrf"
-                    ><i class="fas fa-star"></i> MRF<span class="dropdown-desc"
-                      >:Legends Choice - Made in India</span
-                    ></a
+                  <a href="#mrf" onclick="applyBrandFilter('mrf')"
+                    ><i class="fas fa-star"></i> MRF</a
                   >
-                  <a href="#ss"
-                    ><i class="fas fa-star"></i> SS<span class="dropdown-desc"
-                      >:Sareen Sports - Premium Quality</span
-                    ></a
-                  >
-                  <a href="#adidas"
-                    ><i class="fas fa-star"></i> Adidas<span
-                      class="dropdown-desc"
-                      >:Global Sports Leader</span
-                    ></a
-                  >
-                  <a href="#nike"
-                    ><i class="fas fa-star"></i> Nike<span class="dropdown-desc"
-                      >:Innovation & Performance</span
-                    ></a
+                  <a href="#ss" onclick="applyBrandFilter('ss')"
+                    ><i class="fas fa-star"></i> SS</a
                   >
                 </div>
               </li>
@@ -166,34 +129,13 @@
                 <a href="#offers">Offers <i class="fas fa-chevron-down"></i></a>
                 <div class="dropdown-content">
                   <a href="#clearance"
-                    ><i class="fas fa-percentage"></i> Clearance Sale<span
-                      class="dropdown-desc"
-                      >:-Up to 60% OFF - Limited Stock</span
-                    ></a
+                    ><i class="fas fa-percentage"></i> Clearance Sale</a
                   >
                   <a href="#new-arrivals"
-                    ><i class="fas fa-sparkles"></i> New Arrivals<span
-                      class="dropdown-desc"
-                      >:-Latest 2025 Collection</span
-                    ></a
+                    ><i class="fas fa-sparkles"></i> New Arrivals</a
                   >
                   <a href="#bestsellers"
-                    ><i class="fas fa-fire"></i> Bestsellers<span
-                      class="dropdown-desc"
-                      >:-Top Rated by Customers</span
-                    ></a
-                  >
-                  <a href="#combo-deals"
-                    ><i class="fas fa-gift"></i> Combo Deals<span
-                      class="dropdown-desc"
-                      >:-Complete Kits at Best Prices</span
-                    ></a
-                  >
-                  <a href="#season-sale"
-                    ><i class="fas fa-tag"></i> Season End Sale<span
-                      class="dropdown-desc"
-                      >:-Massive Discounts - Don't Miss!</span
-                    ></a
+                    ><i class="fas fa-fire"></i> Bestsellers</a
                   >
                 </div>
               </li>
@@ -201,40 +143,12 @@
               <li class="dropdown">
                 <a href="#about">About <i class="fas fa-chevron-down"></i></a>
                 <div class="dropdown-content">
-                  <a href="#our-story"
-                    ><i class="fas fa-book"></i> Our Story<span
-                      class="dropdown-desc"
-                    >
-                      :20+ Years of Cricket Excellence</span
-                    ></a
-                  >
+                  <a href="#our-story"><i class="fas fa-book"></i> Our Story</a>
                   <a href="#why-us"
-                    ><i class="fas fa-heart"></i> Why Choose Us<span
-                      class="dropdown-desc"
-                    >
-                      :Quality, Service & Trust</span
-                    ></a
+                    ><i class="fas fa-heart"></i> Why Choose Us</a
                   >
                   <a href="#testimonials"
-                    ><i class="fas fa-comments"></i> Customer Reviews<span
-                      class="dropdown-desc"
-                    >
-                      :50,000+ Happy Cricketers</span
-                    ></a
-                  >
-                  <a href="#store-locator"
-                    ><i class="fas fa-map-marked-alt"></i> Store Locator<span
-                      class="dropdown-desc"
-                    >
-                      :500+ Stores Pan India</span
-                    ></a
-                  >
-                  <a href="#careers"
-                    ><i class="fas fa-briefcase"></i> Careers<span
-                      class="dropdown-desc"
-                    >
-                      :Join Our Team</span
-                    ></a
+                    ><i class="fas fa-comments"></i> Reviews</a
                   >
                 </div>
               </li>
@@ -244,40 +158,12 @@
                   >Contact <i class="fas fa-chevron-down"></i
                 ></a>
                 <div class="dropdown-content">
-                  <a href="#customer-support"
-                    ><i class="fas fa-headset"></i> Customer Support<span
-                      class="dropdown-desc"
-                    >
-                      :24/7 Expert Assistance</span
-                    ></a
-                  >
+                  <a href="#support"><i class="fas fa-headset"></i> Support</a>
                   <a href="#bulk-orders"
-                    ><i class="fas fa-boxes"></i> Bulk Orders<span
-                      class="dropdown-desc"
-                    >
-                      :Schools, Clubs & Academies</span
-                    ></a
+                    ><i class="fas fa-boxes"></i> Bulk Orders</a
                   >
-                  <a href="#track-order"
-                    ><i class="fas fa-shipping-fast"></i> Track Your Order<span
-                      class="dropdown-desc"
-                    >
-                      :Real-time Delivery Updates</span
-                    ></a
-                  >
-                  <a href="#feedback"
-                    ><i class="fas fa-comment-dots"></i> Feedback<span
-                      class="dropdown-desc"
-                    >
-                      :We Value Your Opinion</span
-                    ></a
-                  >
-                  <a href="#faq"
-                    ><i class="fas fa-question-circle"></i> FAQs<span
-                      class="dropdown-desc"
-                    >
-                      :Quick Answers & Help</span
-                    ></a
+                  <a href="#track"
+                    ><i class="fas fa-shipping-fast"></i> Track Order</a
                   >
                 </div>
               </li>
@@ -295,18 +181,25 @@
               <button id="search-btn"><i class="fas fa-search"></i></button>
               <div id="search-suggestions" class="suggestions-dropdown"></div>
             </div>
+
             <div class="user-action-item account-dropdown">
-              <a href="#" class="user-btn" id="account-btn">
+              <a
+                href="#"
+                class="user-btn"
+                id="account-btn"
+                onclick="toggleAccountMenu(event)"
+              >
                 <i class="fas fa-user"></i> <span>Account</span>
               </a>
-              <div class="account-menu">
-                <a href="#" class="auth-action" data-action="login">Login</a>
-                <a href="#" class="auth-action" data-action="signup">Sign Up</a>
-              </div>
+              <div class="account-menu"></div>
             </div>
 
             <div class="wishlist-wrapper">
-              <button id="wishlist-btn" class="wishlist-btn">
+              <button
+                id="wishlist-btn"
+                class="wishlist-btn"
+                onclick="toggleWishlist(event)"
+              >
                 <i class="fas fa-heart"></i>
                 <span class="wishlist-count">0</span>
               </button>
@@ -317,25 +210,10 @@
             </div>
 
             <div class="cart-wrapper">
-              <button id="cart-btn" class="cart-btn">
+              <button id="cart-btn" class="cart-btn" onclick="openCartModal()">
                 <i class="fas fa-shopping-cart"></i>
                 <span id="cart-count" class="cart-count">0</span>
               </button>
-              <div class="cart-dropdown" id="cart-dropdown">
-                <h3>Cart</h3>
-                <div id="cart-items"></div>
-                <div class="cart-total">
-                  Total: <span id="cart-total">₹0</span>
-                </div>
-                <div class="cart-actions">
-                  <button id="view-cart-btn" class="btn-secondary">
-                    View Cart
-                  </button>
-                  <button id="checkout-btn" class="btn-primary">
-                    Checkout
-                  </button>
-                </div>
-              </div>
             </div>
           </div>
         </div>
@@ -351,10 +229,20 @@
             <p class="hero-subtitle">
               Unleash your potential with world-class equipment.
             </p>
-            <button class="btn-hero btn-primary-hero">Shop Now</button>
+            <button
+              class="btn-hero btn-primary-hero"
+              onclick="scrollToProducts()"
+            >
+              Shop Now
+            </button>
           </div>
           <div class="hero-image">
-            <img src="images/kit.png" class="hero-product-img" alt="Kit" />
+            <img
+              src="images/kit.png"
+              onerror="this.src='https://via.placeholder.com/500x300?text=Cricket+Kit'"
+              class="hero-product-img"
+              alt="Kit"
+            />
           </div>
         </div>
         <div class="hero-slide" data-slide="2">
@@ -364,13 +252,22 @@
             <p class="hero-subtitle">
               Unbeatable prices on premium cricket equipment.
             </p>
-            <button class="btn-hero btn-primary-hero">View Offers</button>
+            <button
+              class="btn-hero btn-primary-hero"
+              onclick="scrollToProducts()"
+            >
+              View Offers
+            </button>
           </div>
           <div class="hero-image">
-            <img src="images/bats.png" class="hero-product-img" alt="Bats" />
+            <img
+              src="images/bats.png"
+              onerror="this.src='https://via.placeholder.com/500x300?text=Bats'"
+              class="hero-product-img"
+              alt="Bats"
+            />
           </div>
         </div>
-
         <div class="hero-slide" data-slide="3">
           <div class="hero-content">
             <span class="hero-badge">Pro Collection</span>
@@ -378,11 +275,17 @@
             <p class="hero-subtitle">
               Professional-grade bats for serious cricketers.
             </p>
-            <button class="btn-hero btn-primary-hero">Explore</button>
+            <button
+              class="btn-hero btn-primary-hero"
+              onclick="scrollToProducts()"
+            >
+              Explore
+            </button>
           </div>
           <div class="hero-image">
             <img
               src="images/willows.png"
+              onerror="this.src='https://via.placeholder.com/500x300?text=Willow'"
               class="hero-product-img"
               alt="Willow"
             />
@@ -532,29 +435,15 @@
               <a href="#"><i class="fab fa-youtube"></i></a>
             </div>
           </div>
-
           <div class="footer-column">
             <h3>Quick Links</h3>
             <ul>
               <li><a href="#">About Us</a></li>
               <li><a href="#">Contact Us</a></li>
               <li><a href="#">Store Locator</a></li>
-              <li><a href="#">Size Guide</a></li>
-              <li><a href="#">Blog</a></li>
-            </ul>
-          </div>
-
-          <div class="footer-column">
-            <h3>Customer Service</h3>
-            <ul>
-              <li><a href="#">Track Order</a></li>
-              <li><a href="#">Return Policy</a></li>
-              <li><a href="#">Shipping Info</a></li>
-              <li><a href="#">FAQs</a></li>
               <li><a href="#">Terms & Conditions</a></li>
             </ul>
           </div>
-
           <div class="footer-column">
             <h3>Contact Info</h3>
             <ul class="contact-info">
@@ -566,84 +455,250 @@
               <li>
                 <i class="fas fa-envelope"></i> support@thecricketstore.com
               </li>
-              <li><i class="fas fa-clock"></i> Mon-Sat: 9AM-8PM</li>
             </ul>
           </div>
         </div>
-
         <div class="footer-bottom">
-          <p>
-            &copy; 2025 The Cricket Store. All Rights Reserved. | Developed by
-            Darsh Mohapatra
-          </p>
-          <div class="payment-methods">
-            <i class="fab fa-cc-visa"></i>
-            <i class="fab fa-cc-mastercard"></i>
-            <i class="fab fa-cc-paypal"></i>
-            <i class="fab fa-google-pay"></i>
-            <i class="fab fa-amazon-pay"></i>
-          </div>
+          <p>&copy; 2025 The Cricket Store. All Rights Reserved.</p>
         </div>
       </div>
     </footer>
 
-    <!-- Cart View Modal -->
-<div id="cart-modal" class="modal">
-  <div class="modal-content">
-    <div class="modal-header">
-      <h2><i class="fas fa-shopping-cart"></i> My Cart</h2>
-      <span class="close">&times;</span>
-    </div>
-    <div class="modal-body">
-      <div id="cart-modal-items"></div>
-      
-      <div class="cart-modal-summary">
-        <div class="summary-row">
-          <span>Subtotal:</span>
-          <span>₹<span id="cart-modal-subtotal">0</span></span>
+    <nav class="mobile-nav" id="mobile-nav">
+      <div class="mobile-nav-header">
+        <h2>Menu</h2>
+        <button class="close-mobile-nav" onclick="toggleMobileMenu(false)">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <ul class="mobile-menu-list">
+        <li>
+          <a
+            href="#home"
+            onclick="toggleMobileMenu(false); resetHomeState(event)"
+            >Home</a
+          >
+        </li>
+
+        <li class="mobile-dropdown">
+          <a href="#" class="mobile-dropdown-toggle"
+            >Products <i class="fas fa-chevron-down" style="float: right"></i
+          ></a>
+          <ul class="mobile-submenu">
+            <li>
+              <a
+                href="#bats"
+                onclick="toggleMobileMenu(false); applyCategoryFilter('bats')"
+                >Cricket Bats</a
+              >
+            </li>
+            <li>
+              <a
+                href="#balls"
+                onclick="toggleMobileMenu(false); applyCategoryFilter('balls')"
+                >Cricket Balls</a
+              >
+            </li>
+            <li>
+              <a
+                href="#pads"
+                onclick="toggleMobileMenu(false); applyCategoryFilter('pads')"
+                >Pads & Guards</a
+              >
+            </li>
+            <li>
+              <a
+                href="#gloves"
+                onclick="toggleMobileMenu(false); applyCategoryFilter('gloves')"
+                >Gloves</a
+              >
+            </li>
+            <li>
+              <a
+                href="#helmets"
+                onclick="toggleMobileMenu(false); applyCategoryFilter('helmets')"
+                >Helmets</a
+              >
+            </li>
+            <li>
+              <a
+                href="#shoes"
+                onclick="toggleMobileMenu(false); applyCategoryFilter('shoes')"
+                >Shoes</a
+              >
+            </li>
+            <li>
+              <a
+                href="#bags"
+                onclick="toggleMobileMenu(false); applyCategoryFilter('bags')"
+                >Kit Bags</a
+              >
+            </li>
+          </ul>
+        </li>
+
+        <li class="mobile-dropdown">
+          <a href="#" class="mobile-dropdown-toggle"
+            >Brands <i class="fas fa-chevron-down" style="float: right"></i
+          ></a>
+          <ul class="mobile-submenu">
+            <li>
+              <a
+                href="#sg"
+                onclick="toggleMobileMenu(false); applyBrandFilter('sg')"
+                >SG</a
+              >
+            </li>
+            <li>
+              <a
+                href="#kookaburra"
+                onclick="toggleMobileMenu(false); applyBrandFilter('kookaburra')"
+                >Kookaburra</a
+              >
+            </li>
+            <li>
+              <a
+                href="#bas"
+                onclick="toggleMobileMenu(false); applyBrandFilter('bas')"
+                >BAS Vampire</a
+              >
+            </li>
+            <li>
+              <a
+                href="#mrf"
+                onclick="toggleMobileMenu(false); applyBrandFilter('mrf')"
+                >MRF</a
+              >
+            </li>
+            <li>
+              <a
+                href="#ss"
+                onclick="toggleMobileMenu(false); applyBrandFilter('ss')"
+                >SS</a
+              >
+            </li>
+          </ul>
+        </li>
+
+        <li class="mobile-dropdown">
+          <a href="#" class="mobile-dropdown-toggle"
+            >Offers <i class="fas fa-chevron-down" style="float: right"></i
+          ></a>
+          <ul class="mobile-submenu">
+            <li>
+              <a href="#clearance" onclick="toggleMobileMenu(false)"
+                >Clearance Sale</a
+              >
+            </li>
+            <li>
+              <a href="#new" onclick="toggleMobileMenu(false)">New Arrivals</a>
+            </li>
+          </ul>
+        </li>
+
+        <li class="mobile-dropdown">
+          <a href="#" class="mobile-dropdown-toggle"
+            >About <i class="fas fa-chevron-down" style="float: right"></i
+          ></a>
+          <ul class="mobile-submenu">
+            <li>
+              <a href="#story" onclick="toggleMobileMenu(false)">Our Story</a>
+            </li>
+            <li>
+              <a href="#whyus" onclick="toggleMobileMenu(false)"
+                >Why Choose Us</a
+              >
+            </li>
+          </ul>
+        </li>
+
+        <li class="mobile-dropdown">
+          <a href="#" class="mobile-dropdown-toggle"
+            >Contact <i class="fas fa-chevron-down" style="float: right"></i
+          ></a>
+          <ul class="mobile-submenu">
+            <li>
+              <a href="#support" onclick="toggleMobileMenu(false)"
+                >Customer Support</a
+              >
+            </li>
+            <li>
+              <a href="#bulk" onclick="toggleMobileMenu(false)">Bulk Orders</a>
+            </li>
+          </ul>
+        </li>
+      </ul>
+
+      <div class="mobile-nav-footer">
+        <div class="info-item">
+          <i class="fas fa-phone"></i> +91 98765 43210
         </div>
-        <div class="summary-row">
-          <span>Shipping:</span>
-          <span>₹<span id="cart-modal-shipping">0</span></span>
+        <div class="info-item">
+          <i class="fas fa-envelope"></i> support@thecricketstore.com
         </div>
-        <div class="summary-row">
-          <span>Tax (18%):</span>
-          <span>₹<span id="cart-modal-tax">0</span></span>
+        <div class="info-item highlight">
+          <i class="fas fa-shipping-fast"></i> Free Shipping > ₹2000 | 40% OFF
         </div>
-        <div class="summary-row total">
-          <span>Total:</span>
-          <span>₹<span id="cart-modal-total">0</span></span>
+      </div>
+    </nav>
+    <div
+      id="mobile-nav-overlay"
+      class="mobile-nav-overlay"
+      onclick="toggleMobileMenu(false)"
+    ></div>
+
+    <div id="cart-modal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2><i class="fas fa-shopping-cart"></i> My Cart</h2>
+          <span class="close" onclick="closeCartModal()">&times;</span>
+        </div>
+        <div class="modal-body">
+          <div id="cart-modal-items"></div>
+          <div class="cart-modal-summary">
+            <div class="summary-row">
+              <span>Subtotal:</span
+              ><span>₹<span id="cart-modal-subtotal">0</span></span>
+            </div>
+            <div class="summary-row">
+              <span>Shipping:</span
+              ><span>₹<span id="cart-modal-shipping">0</span></span>
+            </div>
+            <div class="summary-row">
+              <span>Tax (18%):</span
+              ><span>₹<span id="cart-modal-tax">0</span></span>
+            </div>
+            <div class="summary-row total">
+              <span>Total:</span
+              ><span>₹<span id="cart-modal-total">0</span></span>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button
+            id="continue-shopping"
+            class="btn-secondary"
+            onclick="closeCartModal()"
+          >
+            Continue Shopping
+          </button>
+          <button id="proceed-to-checkout" class="btn-primary">
+            Proceed to Checkout
+          </button>
         </div>
       </div>
     </div>
-    <div class="modal-footer">
-      <button id="continue-shopping" class="btn-secondary">Continue Shopping</button>
-      <button id="proceed-to-checkout" class="btn-primary">Proceed to Checkout</button>
-    </div>
-  </div>
-</div>
 
     <div id="demo-payment-modal" class="modal">
       <div class="modal-content">
         <div class="modal-header">
           <h2>Secure Checkout</h2>
-          <span class="close">&times;</span>
+          <span class="close" onclick="closePaymentModal()">&times;</span>
         </div>
         <div class="modal-body">
-          <div class="checkout-steps">
-            <div class="step active">
-              <span class="step-number">1</span> Cart
-            </div>
-            <div class="step" id="step-address">
-              <span class="step-number">2</span> Address
-            </div>
-            <div class="step" id="step-payment">
-              <span class="step-number">3</span> Payment
-            </div>
-          </div>
-
           <div id="checkout-address-section">
-            <h3>Select Address</h3>
+            <h3>Select Delivery Address</h3>
             <div id="checkout-addresses-list"></div>
             <button
               id="btn-continue-payment"
@@ -654,73 +709,184 @@
             </button>
           </div>
 
-   <div id="checkout-payment-section" style="display: none">
-  <div id="payment-items"></div>
-  <div class="order-summary">
-    <div class="summary-row total">
-      <span>Total:</span
-      ><span>₹<span id="payment-total">0</span></span>
+          <div id="checkout-payment-section" style="display: none">
+            <div id="payment-items"></div>
+            <div
+              class="order-summary"
+              style="
+                background: #f9f9f9;
+                padding: 10px;
+                border-radius: 5px;
+                margin-bottom: 15px;
+              "
+            >
+              <div
+                style="
+                  display: flex;
+                  justify-content: space-between;
+                  font-weight: bold;
+                "
+              >
+                <span>Total Amount:</span
+                ><span>₹<span id="payment-total">0</span></span>
+              </div>
+            </div>
+
+            <h3>Select Payment Method</h3>
+            <div class="payment-methods-grid">
+              <label class="payment-option">
+                <input
+                  type="radio"
+                  name="payment"
+                  value="card"
+                  checked
+                  onchange="togglePaymentForms()"
+                />
+                <div class="payment-option-content">
+                  <i class="fas fa-credit-card"></i> <span>Card</span>
+                </div>
+              </label>
+              <label class="payment-option">
+                <input
+                  type="radio"
+                  name="payment"
+                  value="upi"
+                  onchange="togglePaymentForms()"
+                />
+                <div class="payment-option-content">
+                  <i class="fas fa-mobile-alt"></i> <span>UPI</span>
+                </div>
+              </label>
+              <label class="payment-option">
+                <input
+                  type="radio"
+                  name="payment"
+                  value="netbanking"
+                  onchange="togglePaymentForms()"
+                />
+                <div class="payment-option-content">
+                  <i class="fas fa-university"></i> <span>Net Banking</span>
+                </div>
+              </label>
+              <label class="payment-option">
+                <input
+                  type="radio"
+                  name="payment"
+                  value="cod"
+                  onchange="togglePaymentForms()"
+                />
+                <div class="payment-option-content">
+                  <i class="fas fa-money-bill-wave"></i> <span>COD</span>
+                </div>
+              </label>
+            </div>
+
+            <div
+              id="card-form"
+              class="payment-form"
+              style="
+                display: block;
+                margin-top: 15px;
+                padding: 15px;
+                background: #f5f5f5;
+                border-radius: 5px;
+              "
+            >
+              <h4>Card Details</h4>
+              <input
+                type="text"
+                placeholder="Card Number (16 digits)"
+                maxlength="16"
+                style="width: 100%; margin-bottom: 10px; padding: 8px"
+              />
+              <div style="display: flex; gap: 10px">
+                <input
+                  type="text"
+                  placeholder="MM/YY"
+                  maxlength="5"
+                  style="width: 50%; padding: 8px"
+                />
+                <input
+                  type="password"
+                  placeholder="CVV"
+                  maxlength="3"
+                  style="width: 50%; padding: 8px"
+                />
+              </div>
+              <input
+                type="text"
+                placeholder="Cardholder Name"
+                style="width: 100%; margin-top: 10px; padding: 8px"
+              />
+            </div>
+
+            <div
+              id="upi-form"
+              class="payment-form"
+              style="
+                display: none;
+                margin-top: 15px;
+                padding: 15px;
+                background: #f5f5f5;
+                border-radius: 5px;
+              "
+            >
+              <h4>Enter UPI ID</h4>
+              <input
+                type="text"
+                placeholder="example@upi"
+                style="width: 100%; padding: 8px"
+              />
+              <p style="font-size: 0.8rem; color: #666; margin-top: 5px">
+                Verify on banking app after clicking Pay.
+              </p>
+            </div>
+
+            <div
+              id="netbanking-form"
+              class="payment-form"
+              style="
+                display: none;
+                margin-top: 15px;
+                padding: 15px;
+                background: #f5f5f5;
+                border-radius: 5px;
+              "
+            >
+              <p>You will be redirected to your bank's secure login page.</p>
+            </div>
+
+            <div
+              id="cod-form"
+              class="payment-form"
+              style="
+                display: none;
+                margin-top: 15px;
+                padding: 15px;
+                background: #f5f5f5;
+                border-radius: 5px;
+              "
+            >
+              <p>
+                Pay cash upon delivery. Additional ₹50 handling fee may apply.
+              </p>
+            </div>
+
+            <button
+              id="pay-now"
+              class="btn-primary"
+              style="width: 100%; margin-top: 20px; padding: 12px"
+            >
+              Place Order
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
-  </div>
-  
-  <h3>Payment Method</h3>
-  <div class="payment-methods-grid">
-    <label class="payment-option">
-      <input type="radio" name="payment" value="card" checked />
-      <div class="payment-option-content">
-        <i class="fas fa-credit-card"></i>
-        <span>Card</span>
-      </div>
-    </label>
-    
-    <label class="payment-option">
-      <input type="radio" name="payment" value="upi" />
-      <div class="payment-option-content">
-        <i class="fas fa-mobile-alt"></i>
-        <span>UPI</span>
-      </div>
-    </label>
-    
-    <label class="payment-option">
-      <input type="radio" name="payment" value="netbanking" />
-      <div class="payment-option-content">
-        <i class="fas fa-university"></i>
-        <span>Net Banking</span>
-      </div>
-    </label>
-    
-    <label class="payment-option">
-      <input type="radio" name="payment" value="cod" />
-      <div class="payment-option-content">
-        <i class="fas fa-money-bill-wave"></i>
-        <span>Cash on Delivery</span>
-      </div>
-    </label>
-  </div>
-
-  <!-- ✅ ADD THESE PAYMENT FORMS HERE -->
-  <div id="card-form" class="payment-form" style="display:block; margin-top:20px;">
-    <input type="text" placeholder="Card Number (16 digits)" maxlength="19" inputmode="numeric" />
-    <div class="form-row">
-      <input type="text" placeholder="MM/YY" maxlength="5" />
-      <input type="text" placeholder="CVV" maxlength="3" inputmode="numeric" />
-    </div>
-    <input type="text" placeholder="Cardholder Name" />
-  </div>
-
-  <div id="upi-form" class="payment-form" style="display:none; margin-top:20px;">
-    <input type="text" placeholder="UPI ID (e.g., user@paytm)" />
-    <p style="font-size:0.85rem; color:#666; margin-top:5px;">
-      <i class="fas fa-info-circle"></i> Enter your UPI ID to complete payment
-    </p>
-  </div>
-
-
-</div>
 
     <div id="auth-modal" class="auth-modal">
       <div class="auth-modal-content">
-        <span class="close-auth">&times;</span>
+        <span class="close-auth" onclick="closeAuthModal()">&times;</span>
         <div class="auth-tabs">
           <button class="auth-tab active" id="login-tab">Login</button>
           <button class="auth-tab" id="signup-tab">Sign Up</button>
@@ -734,12 +900,9 @@
             required
           />
           <button type="submit" class="btn-primary">Login</button>
-          <a
-            href="#"
-            id="forgot-password-link"
-            style="text-align: right; font-size: 0.8rem"
-            >Forgot Password?</a
-          >
+          <button type="button" id="forgot-password-link" class="btn-text">
+            Forgot Password?
+          </button>
         </form>
         <form id="signup-form" class="auth-form">
           <input type="text" id="signup-name" placeholder="Name" required />
@@ -769,7 +932,11 @@
       <div class="modal-content profile-content">
         <div class="modal-header">
           <h2>My Profile</h2>
-          <span class="close">&times;</span>
+          <span
+            class="close"
+            onclick="document.getElementById('profile-modal').style.display='none'"
+            >&times;</span
+          >
         </div>
         <div class="modal-body">
           <div class="auth-tabs">
@@ -874,107 +1041,107 @@
       ></div>
     </div>
 
-    <nav class="mobile-nav" id="mobile-nav">
-      <div class="mobile-nav-header">
-        <h2><i class="fas fa-bars"></i> Menu</h2>
-        <button class="close-mobile-nav" id="close-mobile-nav">
-          <i class="fas fa-times"></i>
-        </button>
-      </div>
+    <script>
+      function toggleMobileMenu(show) {
+        const nav = document.getElementById("mobile-nav");
+        const overlay = document.getElementById("mobile-nav-overlay");
+        if (show) {
+          nav.classList.add("active");
+          nav.style.left = "0";
+          overlay.classList.add("active");
+          overlay.style.display = "block";
+        } else {
+          nav.classList.remove("active");
+          nav.style.left = "-100%";
+          overlay.classList.remove("active");
+          overlay.style.display = "none";
+        }
+      }
 
-      <!-- Top Bar Info in Sidebar -->
-      <div class="mobile-top-info">
-        <p><i class="fas fa-phone"></i> +91 98765 43210</p>
-        <p><i class="fas fa-envelope"></i> support@thecricketstore.com</p>
-        <p><i class="fas fa-shipping-fast"></i> Free Shipping â‚¹2000+</p>
-      </div>
+      // Toggle dropdowns inside mobile menu
+      document.querySelectorAll(".mobile-dropdown-toggle").forEach((btn) => {
+        btn.addEventListener("click", (e) => {
+          e.preventDefault();
+          // Toggle active class on parent li
+          const parent = btn.parentElement;
+          parent.classList.toggle("active");
+        });
+      });
 
-      <!-- Wishlist Section -->
-      <div class="mobile-wishlist-section">
-        <h3><i class="fas fa-heart"></i> My Wishlist</h3>
-        <div id="mobile-wishlist-items">
-          <p style="text-align: center; color: #999; font-size: 0.85rem">
-            No items yet
-          </p>
-        </div>
-      </div>
+      function resetHomeState(e) {
+        if (e) e.preventDefault();
+        document.getElementById("search-input").value = "";
+        document.querySelector(".hero-section").style.display = "block";
+        if (document.getElementById("category-filter"))
+          document.getElementById("category-filter").value = "all";
+        if (document.getElementById("brand-filter"))
+          document.getElementById("brand-filter").value = "all";
 
-      <!-- Menu List -->
-      <ul class="mobile-menu-list">
-        <li>
-          <a href="#home"><i class="fas fa-home"></i> Home</a>
-        </li>
+        if (window.productManager) {
+          window.productManager.filteredProducts = [
+            ...window.productManager.products,
+          ];
+          window.productManager.renderProductCards();
+        }
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
 
-        <li class="mobile-dropdown">
-          <a href="#" class="mobile-dropdown-toggle">
-            <i class="fas fa-box"></i> Products
-            <i class="fas fa-chevron-down" style="margin-left: auto"></i>
-          </a>
-          <ul class="mobile-submenu">
-            <li>
-              <a href="#bats"
-                ><i class="fas fa-baseball-bat-ball"></i> Cricket Bats</a
-              >
-            </li>
-            <li>
-              <a href="#balls"><i class="fas fa-circle"></i> Cricket Balls</a>
-            </li>
-            <li>
-              <a href="#pads"
-                ><i class="fas fa-shield-alt"></i> Pads & Guards</a
-              >
-            </li>
-            <li>
-              <a href="#gloves"><i class="fas fa-mitten"></i> Gloves</a>
-            </li>
-            <li>
-              <a href="#helmets"><i class="fas fa-hard-hat"></i> Helmets</a>
-            </li>
-            <li>
-              <a href="#shoes"><i class="fas fa-shoe-prints"></i> Shoes</a>
-            </li>
-            <li>
-              <a href="#bags"><i class="fas fa-briefcase"></i> Kit Bags</a>
-            </li>
-          </ul>
-        </li>
+      function toggleAccountMenu(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        const menu = document.querySelector(".account-menu");
+        menu.style.display = menu.style.display === "block" ? "none" : "block";
+      }
 
-        <li class="mobile-dropdown">
-          <a href="#" class="mobile-dropdown-toggle">
-            <i class="fas fa-star"></i> Brands
-            <i class="fas fa-chevron-down" style="margin-left: auto"></i>
-          </a>
-          <ul class="mobile-submenu">
-            <li><a href="#sg">SG</a></li>
-            <li><a href="#kookaburra">Kookaburra</a></li>
-            <li><a href="#bas">BAS Vampire</a></li>
-            <li><a href="#mrf">MRF</a></li>
-            <li><a href="#ss">SS</a></li>
-          </ul>
-        </li>
+      function toggleWishlist(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        const menu = document.getElementById("wishlist-dropdown");
+        menu.style.display = menu.style.display === "block" ? "none" : "block";
+      }
 
-        <li>
-          <a href="#offers"><i class="fas fa-tags"></i> Offers</a>
-        </li>
-        <li>
-          <a href="#about"><i class="fas fa-info-circle"></i> About</a>
-        </li>
-        <li>
-          <a href="#contact"><i class="fas fa-phone-alt"></i> Contact</a>
-        </li>
-      </ul>
+      function scrollToProducts() {
+        const section = document.querySelector(".products-section");
+        section.scrollIntoView({ behavior: "smooth" });
+      }
 
-      <!-- Footer -->
-      <div class="mobile-nav-footer">
-        <div class="mobile-contact-info">
-          <p><i class="fas fa-clock"></i> Mon-Sat: 9AM-8PM</p>
-          <p><i class="fas fa-map-marker-alt"></i> Mumbai, India</p>
-        </div>
-      </div>
-    </nav>
+      function applyCategoryFilter(cat) {
+        const filter = document.getElementById("category-filter");
+        if (filter) {
+          filter.value = cat;
+          if (window.productManager) window.productManager.applyFilters();
+          scrollToProducts();
+        }
+      }
 
-    <div id="mobile-nav-overlay" class="mobile-nav-overlay"></div>
+      function applyBrandFilter(brand) {
+        const filter = document.getElementById("brand-filter");
+        if (filter) {
+          filter.value = brand;
+          if (window.productManager) window.productManager.applyFilters();
+          scrollToProducts();
+        }
+      }
 
+      function togglePaymentForms() {
+        const method = document.querySelector(
+          'input[name="payment"]:checked'
+        ).value;
+        document.getElementById("card-form").style.display = "none";
+        document.getElementById("upi-form").style.display = "none";
+        document.getElementById("netbanking-form").style.display = "none";
+        document.getElementById("cod-form").style.display = "none";
+
+        if (method === "card")
+          document.getElementById("card-form").style.display = "block";
+        if (method === "upi")
+          document.getElementById("upi-form").style.display = "block";
+        if (method === "netbanking")
+          document.getElementById("netbanking-form").style.display = "block";
+        if (method === "cod")
+          document.getElementById("cod-form").style.display = "block";
+      }
+    </script>
     <script src="script.js"></script>
   </body>
 </html>
