@@ -2,10 +2,7 @@
 // GLOBAL CONFIGURATION
 // ====================================================================
 
-// [FIX 1: Link Frontend to Backend]
-// Changed from "/api" to your local backend URL.
-// If deploying, change this back to your production URL.
-const API_BASE_URL = "http://localhost:5000/api";
+const API_BASE_URL = "/api";
 
 // ====================================================================
 // IN-MEMORY STORAGE (Simulates Database/LocalStorage)
@@ -29,7 +26,7 @@ class CartManager {
     this.updateUI();
   }
 
-  // --- Data Persistence (Mock) ---
+  // --- Data Persistence  ---
   saveCart() {
     _cartData = this.cart;
     this.updateUI();
