@@ -1,33 +1,51 @@
 // ====================================================================
+// GLOBAL CONFIGURATION
+// ====================================================================
+
+const API_BASE_URL = "/api"; // Change this to your actual API base URL if deployed
+
+// ====================================================================
+// IN-MEMORY STORAGE (Replaces localStorage)
+// ====================================================================
+
+let _cartData = [];
+let _wishlistData = [];
+let _searchHistoryData = [];
+let _currentUser = null;
+let _authToken = null;
+
+// ====================================================================
 // CORE FUNCTIONS AND CLASSES
 // ====================================================================
 
 // --- 1. Cart Management System ---
 class CartManager {
   constructor() {
-    this.cart = this.loadCart();
-    this.wishlist = this.loadWishlist();
+    this.cart = _cartData;
+    this.wishlist = _wishlistData;
     this.initializeEventListeners();
     this.updateUI();
   }
 
   loadCart() {
-    return this._cartData || [];
+    return _cartData;
   }
 
   saveCart() {
-    this._cartData = this.cart;
+    _cartData = this.cart;
     this.updateUI();
   }
 
   loadWishlist() {
-    return this._wishlistData || [];
+    return _wishlistData;
   }
 
   saveWishlist() {
-    this._wishlistData = this.wishlist;
+    _wishlistData = this.wishlist;
     this.updateWishlistUI();
-    updateMobileWishlist();
+    if (typeof updateMobileWishlist === "function") {
+      updateMobileWishlist();
+    }
   }
 
   addToCart(product, quantity = 1) {
@@ -237,7 +255,6 @@ class CartManager {
 
   initializeEventListeners() {
     const cartBtn = document.getElementById("cart-btn");
-    const cartDropdown = document.getElementById("cart-dropdown");
     const wishlistBtn = document.getElementById("wishlist-btn");
     const wishlistDropdown = document.getElementById("wishlist-dropdown");
 
@@ -259,8 +276,12 @@ class CartManager {
           const mobileNav = document.getElementById("mobile-nav");
           const mobileOverlay = document.getElementById("mobile-nav-overlay");
           if (mobileNav) mobileNav.classList.add("active");
-          if (mobileOverlay) mobileOverlay.classList.add("active");
+          if (mobileOverlay) {
+            mobileOverlay.classList.add("active");
+            mobileOverlay.style.display = "block";
+          }
         } else {
+          const cartDropdown = document.getElementById("cart-dropdown");
           if (cartDropdown) cartDropdown.style.display = "none";
           wishlistDropdown.style.display =
             wishlistDropdown.style.display === "block" ? "none" : "block";
@@ -269,6 +290,7 @@ class CartManager {
     }
 
     document.addEventListener("click", (e) => {
+      const cartDropdown = document.getElementById("cart-dropdown");
       if (
         cartDropdown &&
         !cartDropdown.contains(e.target) &&
@@ -300,53 +322,13 @@ class CartManager {
   }
 }
 
-function formatDate(dateString) {
-  const date = new Date(dateString);
-  const options = {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  };
-  return date.toLocaleDateString("en-US", options);
-}
-
-function updateMobileWishlist() {
-  const container = document.getElementById("mobile-wishlist-items");
-  if (!container || !window.cartManager) return;
-
-  const wishlist = window.cartManager.wishlist;
-
-  if (wishlist.length === 0) {
-    container.innerHTML =
-      '<p style="text-align:center; color:#999; font-size:0.85rem;">No items yet</p>';
-    return;
-  }
-
-  container.innerHTML = wishlist
-    .map(
-      (item) => `
-    <div class="mobile-wishlist-item">
-      <span>${item.title}</span>
-      <i class="fas fa-trash mobile-wishlist-remove" 
-         onclick="window.cartManager.toggleWishlist({title: '${item.title.replace(
-           /'/g,
-           "\\'"
-         )}', price: ${item.price}})">
-      </i>
-    </div>
-  `
-    )
-    .join("");
-}
-
 // --- 2. Product Management ---
 class ProductManager {
   constructor() {
     this.products = [];
     this.filteredProducts = [];
-    this.searchHistory = this._searchHistoryData || [];
+    this.searchHistory = _searchHistoryData;
+    if (!window.productDataMap) window.productDataMap = {};
     this.init();
   }
 
@@ -359,7 +341,7 @@ class ProductManager {
 
   async fetchProducts() {
     try {
-      const response = await fetch("/api/products");
+      const response = await fetch(`${API_BASE_URL}/products`);
       if (!response.ok)
         throw new Error(`HTTP error! status: ${response.status}`);
       const data = await response.json();
@@ -396,12 +378,15 @@ class ProductManager {
   }
 
   createProductCard(product) {
+    const key =
+      product._id ||
+      product.title.replace(/\s+/g, "_") +
+        Math.random().toString(36).substr(2, 5);
+    window.productDataMap[key] = product;
+
     const card = document.createElement("div");
     card.className = "product-card";
-
-    // Escape quotes for safety
-    const productJson = JSON.stringify(product).replace(/'/g, "&#39;");
-    card.setAttribute("data-product", productJson);
+    card.setAttribute("data-product-key", key);
 
     let ratingHTML = '<div class="stars"><i class="fas fa-star"></i></div>';
     if (window.cartManager?.generateRatingHTML) {
@@ -464,39 +449,35 @@ class ProductManager {
     return card;
   }
 
-  // FIXED: Improved delegation to catch Quick View and others robustly
   initializeProductEvents() {
     const container = document.getElementById("products-container");
     if (!container) return;
 
     container.addEventListener("click", (e) => {
-      // 1. Handle Quick View explicitly (class check on closest button)
       const quickViewBtn = e.target.closest(".btn-quick-view");
       if (quickViewBtn) {
         e.stopPropagation();
         e.preventDefault();
         const card = quickViewBtn.closest(".product-card");
-        if (card && window.quickViewModal) {
-          try {
-            const productData = JSON.parse(card.getAttribute("data-product"));
-            window.quickViewModal.showQuickView(productData);
-          } catch (err) {
-            console.error("Error parsing product data", err);
-          }
+        const key = card.getAttribute("data-product-key");
+        const productData = window.productDataMap[key];
+
+        if (productData && window.quickViewModal) {
+          window.quickViewModal.showQuickView(productData);
         }
         return;
       }
 
-      // 2. Handle other buttons
       const btn = e.target.closest("button");
       if (!btn) return;
 
       const card = btn.closest(".product-card");
       if (!card) return;
 
-      try {
-        const productData = JSON.parse(card.getAttribute("data-product"));
+      const key = card.getAttribute("data-product-key");
+      const productData = window.productDataMap[key];
 
+      if (productData) {
         if (btn.classList.contains("btn-add-cart")) {
           if (btn.disabled) return;
           window.cartManager.addToCart(productData);
@@ -508,8 +489,6 @@ class ProductManager {
           productData.quantity = 1;
           openPaymentModal([productData]);
         }
-      } catch (err) {
-        console.error("Action failed:", err);
       }
     });
   }
@@ -518,7 +497,6 @@ class ProductManager {
     const categoryFilter = document.getElementById("category-filter");
     const brandFilter = document.getElementById("brand-filter");
     const sortFilter = document.getElementById("sort-filter");
-
     const priceRange = document.getElementById("price-range");
     const priceNumber = document.getElementById("price-number");
     const stockFilter = document.getElementById("stock-filter");
@@ -603,7 +581,10 @@ class ProductManager {
         const mobileSearchBar = document.getElementById("mobile-search-bar");
 
         if (mobileNav) mobileNav.classList.remove("active");
-        if (mobileOverlay) mobileOverlay.classList.remove("active");
+        if (mobileOverlay) {
+          mobileOverlay.classList.remove("active");
+          mobileOverlay.style.display = "none";
+        }
         if (mobileSearchBar) mobileSearchBar.classList.remove("active");
         if (suggestions) suggestions.classList.remove("active");
 
@@ -664,7 +645,7 @@ class ProductManager {
     const mobileSearchBar = document.getElementById("mobile-search-bar");
     const closeMobileSearch = document.getElementById("close-mobile-search");
 
-    if (mobileSearchToggle) {
+    if (mobileSearchToggle && mobileSearchBar) {
       mobileSearchToggle.addEventListener("click", () => {
         mobileSearchBar.classList.add("active");
         setTimeout(
@@ -673,7 +654,7 @@ class ProductManager {
         );
       });
     }
-    if (closeMobileSearch) {
+    if (closeMobileSearch && mobileSearchBar) {
       closeMobileSearch.addEventListener("click", () => {
         mobileSearchBar.classList.remove("active");
       });
@@ -754,7 +735,7 @@ class ProductManager {
     this.searchHistory = this.searchHistory.filter((t) => t !== term);
     this.searchHistory.unshift(term);
     if (this.searchHistory.length > 5) this.searchHistory.pop();
-    this._searchHistoryData = this.searchHistory;
+    _searchHistoryData = this.searchHistory;
   }
 
   searchProducts(query) {
@@ -776,6 +757,12 @@ class ProductManager {
       );
     }
     this.renderProductCards();
+
+    if (this.filteredProducts.length === 0) {
+      const container = document.getElementById("products-container");
+      if (container)
+        container.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:40px"><h3>No products found</h3></div>`;
+    }
   }
 }
 
@@ -802,13 +789,12 @@ class QuickViewModal {
     const qtyPlus = this.modal?.querySelector(".qty-plus");
     const qtyInput = this.modal?.querySelector(".qty-input");
 
-    if (qtyMinus) {
+    if (qtyMinus && qtyInput) {
       qtyMinus.addEventListener("click", () => {
-        if (qtyInput && qtyInput.value > 1)
-          qtyInput.value = parseInt(qtyInput.value) - 1;
+        if (qtyInput.value > 1) qtyInput.value = parseInt(qtyInput.value) - 1;
       });
     }
-    if (qtyPlus) {
+    if (qtyPlus && qtyInput) {
       qtyPlus.addEventListener("click", () => {
         if (this.currentProduct && this.currentProduct.stock !== undefined) {
           if (parseInt(qtyInput.value) >= this.currentProduct.stock) {
@@ -816,16 +802,13 @@ class QuickViewModal {
             return;
           }
         }
-        if (qtyInput) qtyInput.value = parseInt(qtyInput.value) + 1;
+        qtyInput.value = parseInt(qtyInput.value) + 1;
       });
     }
   }
 
   showQuickView(product) {
-    if (!this.modal) {
-      console.error("Quick View Modal ID not found in DOM");
-      return;
-    }
+    if (!this.modal) return;
     this.currentProduct = product;
 
     this.modal.querySelector("#quick-view-title").textContent = product.title;
@@ -1026,10 +1009,8 @@ class ProductPagination {
 }
 
 // ====================================================================
-// AUTHENTICATION & INITIALIZATION
+// AUTHENTICATION & USER MANAGEMENT
 // ====================================================================
-
-let _currentUser = null;
 
 function saveUser(user) {
   _currentUser = user;
@@ -1045,40 +1026,64 @@ function logoutUser() {
   if (window.cartManager) {
     window.cartManager.cart = [];
     window.cartManager.wishlist = [];
-    window.cartManager._cartData = [];
-    window.cartManager._wishlistData = [];
+    _cartData = [];
+    _wishlistData = [];
     window.cartManager.updateUI();
     window.cartManager.showToast("Logged out successfully!");
   }
   updateAccountUI();
 }
 
-let _authToken = null;
-
 function updateAccountUI() {
   const user = getUser();
   const accountName = document.querySelector(".user-btn span");
   const accountMenu = document.querySelector(".account-menu");
 
-  if (!accountName || !accountMenu) return;
+  if (accountName && accountMenu) {
+    if (user) {
+      accountName.textContent = user.name.split(" ")[0];
+      accountMenu.innerHTML = `
+        <a href="#" class="auth-action" data-action="profile">My Profile</a>
+        <a href="#" class="auth-action" data-action="orders">My Orders</a>
+        <a href="#" class="auth-action" data-action="logout">Logout</a>
+      `;
+    } else {
+      accountName.textContent = "Account";
+      accountMenu.innerHTML = `
+        <a href="#" class="auth-action" data-action="login">Login</a>
+        <a href="#" class="auth-action" data-action="signup">Sign Up</a>
+      `;
+    }
+  }
 
-  if (user) {
-    accountName.textContent = user.name.split(" ")[0];
-    accountMenu.innerHTML = `
-      <a href="#" class="auth-action" data-action="profile">My Profile</a>
-      <a href="#" class="auth-action" data-action="orders">My Orders</a>
-      <a href="#" class="auth-action" data-action="logout">Logout</a>
-    `;
-  } else {
-    accountName.textContent = "Account";
-    accountMenu.innerHTML = `
-      <a href="#" class="auth-action" data-action="login">Login</a>
-      <a href="#" class="auth-action" data-action="signup">Sign Up</a>
-    `;
+  const mobileMenu = document.querySelector(".mobile-menu-list");
+  if (mobileMenu) {
+    const existingAuth = mobileMenu.querySelectorAll(".mobile-auth-item");
+    existingAuth.forEach((el) => el.remove());
+
+    let authHTML = "";
+    if (user) {
+      authHTML = `
+        <li class="mobile-auth-item"><a href="#" class="auth-action" data-action="profile"><i class="fas fa-user-circle"></i> Hi, ${
+          user.name.split(" ")[0]
+        }</a></li>
+        <li class="mobile-auth-item"><a href="#" class="auth-action" data-action="orders"><i class="fas fa-box"></i> My Orders</a></li>
+        <li class="mobile-auth-item"><a href="#" class="auth-action" data-action="logout"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+      `;
+    } else {
+      authHTML = `
+        <li class="mobile-auth-item"><a href="#" class="auth-action" data-action="login"><i class="fas fa-sign-in-alt"></i> Login</a></li>
+        <li class="mobile-auth-item"><a href="#" class="auth-action" data-action="signup"><i class="fas fa-user-plus"></i> Sign Up</a></li>
+      `;
+    }
+    mobileMenu.insertAdjacentHTML("afterbegin", authHTML);
   }
 }
 
-// Auth Modals
+// ====================================================================
+// MODAL FUNCTIONS
+// ====================================================================
+
 function openAuthModal(mode = "login") {
   const modal = document.getElementById("auth-modal");
   const loginTab = document.getElementById("login-tab");
@@ -1110,8 +1115,6 @@ function openAuthModal(mode = "login") {
     }
 
     modal.style.display = "flex";
-  } else {
-    console.error("Auth modal element not found!");
   }
 }
 
@@ -1134,7 +1137,6 @@ function closeAuthModal() {
   if (modal) modal.style.display = "none";
 }
 
-// Profile Modals
 window.switchProfileTab = function (tab) {
   document.getElementById("profile-info-section").style.display =
     tab === "info" ? "block" : "none";
@@ -1173,7 +1175,7 @@ async function openProfileModal() {
 
   try {
     const token = _authToken;
-    const res = await fetch("/api/user", {
+    const res = await fetch(`${API_BASE_URL}/user`, {
       headers: { Authorization: `Bearer ${token}` },
     });
 
@@ -1222,7 +1224,7 @@ async function saveProfileInfo() {
   const newName = document.getElementById("profile-name").value;
   const token = _authToken;
   try {
-    const res = await fetch("/api/user", {
+    const res = await fetch(`${API_BASE_URL}/user`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
@@ -1260,7 +1262,7 @@ async function saveNewAddress() {
 
   try {
     const token = _authToken;
-    const res = await fetch("/api/user", {
+    const res = await fetch(`${API_BASE_URL}/user`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
@@ -1294,7 +1296,7 @@ window.deleteAddress = async function (index) {
 
   try {
     const token = _authToken;
-    const res = await fetch("/api/user", {
+    const res = await fetch(`${API_BASE_URL}/user`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
@@ -1314,7 +1316,10 @@ window.deleteAddress = async function (index) {
   }
 };
 
-// Payment Modal Functions
+// ====================================================================
+// CART & PAYMENT MODALS
+// ====================================================================
+
 function closePaymentModal() {
   const modal = document.getElementById("demo-payment-modal");
   if (modal) modal.style.display = "none";
@@ -1349,6 +1354,7 @@ function openCartModal() {
       openPaymentModal(window.cartManager.cart);
     };
   }
+
   modal.addEventListener("click", (e) => {
     if (e.target === modal) {
       closeCartModal();
@@ -1492,11 +1498,12 @@ function openPaymentModal(items) {
   const user = getUser();
   if (!user) {
     window.cartManager.showToast("Please login to checkout", "warning");
-    document.getElementById("auth-modal").style.display = "flex";
+    openAuthModal("login");
     return;
   }
 
   const modal = document.getElementById("demo-payment-modal");
+
   const cartDrop = document.getElementById("cart-dropdown");
   if (cartDrop) cartDrop.style.display = "none";
 
@@ -1690,7 +1697,7 @@ function openPaymentModal(items) {
 
       const token = _authToken;
 
-      const res = await fetch("/api/orders", {
+      const res = await fetch(`${API_BASE_URL}/orders`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -1722,6 +1729,8 @@ function openPaymentModal(items) {
     }
   };
 
+  modal.style.display = "flex";
+
   const cancelBtn = document.getElementById("cancel-payment");
   if (cancelBtn) {
     cancelBtn.onclick = closePaymentModal;
@@ -1731,6 +1740,18 @@ function openPaymentModal(items) {
   if (closeBtn) {
     closeBtn.onclick = closePaymentModal;
   }
+}
+
+function formatDate(dateString) {
+  const date = new Date(dateString);
+  const options = {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  };
+  return date.toLocaleDateString("en-US", options);
 }
 
 async function openOrdersModal() {
@@ -1783,7 +1804,7 @@ async function openOrdersModal() {
       return;
     }
 
-    const res = await fetch("/api/orders", {
+    const res = await fetch(`${API_BASE_URL}/orders`, {
       headers: { Authorization: `Bearer ${token}` },
     });
 
@@ -1875,6 +1896,35 @@ function closeOrdersModal() {
   if (modal) modal.style.display = "none";
 }
 
+function updateMobileWishlist() {
+  const container = document.getElementById("mobile-wishlist-items");
+  if (!container || !window.cartManager) return;
+
+  const wishlist = window.cartManager.wishlist;
+
+  if (wishlist.length === 0) {
+    container.innerHTML =
+      '<p style="text-align:center; color:#999; font-size:0.85rem;">No items yet</p>';
+    return;
+  }
+
+  container.innerHTML = wishlist
+    .map(
+      (item) => `
+    <div class="mobile-wishlist-item">
+      <span>${item.title}</span>
+      <i class="fas fa-trash mobile-wishlist-remove" 
+         onclick="window.cartManager.toggleWishlist({title: '${item.title.replace(
+           /'/g,
+           "\\'"
+         )}', price: ${item.price}})">
+      </i>
+    </div>
+  `
+    )
+    .join("");
+}
+
 // ====================================================================
 // INITIALIZATION
 // ====================================================================
@@ -1882,12 +1932,14 @@ function closeOrdersModal() {
 document.addEventListener("DOMContentLoaded", () => {
   console.log("Initializing App...");
 
+  // 1. INITIALIZE CLASSES
   window.cartManager = new CartManager();
   window.productManager = new ProductManager();
   window.productPagination = new ProductPagination();
   window.quickViewModal = new QuickViewModal();
   window.heroCarousel = new HeroCarousel();
 
+  // 2. MOBILE SIDEBAR LOGIC - FIXED
   const mobileNav = document.getElementById("mobile-nav");
   const mobileOverlay = document.getElementById("mobile-nav-overlay");
   const mobileMenuToggles = document.querySelectorAll(
@@ -1915,6 +1967,7 @@ document.addEventListener("DOMContentLoaded", () => {
     btn.addEventListener("click", (e) => {
       e.preventDefault();
       e.stopPropagation();
+      console.log("Mobile menu clicked");
       toggleSidebar(true);
     });
   });
@@ -1924,139 +1977,326 @@ document.addEventListener("DOMContentLoaded", () => {
   if (mobileOverlay)
     mobileOverlay.addEventListener("click", () => toggleSidebar(false));
 
-  // --- GLOBAL EVENT DELEGATION (FIXES LOGIN/SIGNUP & MODALS) ---
+  // 3. MOBILE DROPDOWN TOGGLES
+  document.querySelectorAll(".mobile-dropdown-toggle").forEach((toggle) => {
+    toggle.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const parent = toggle.closest(".mobile-dropdown");
+      if (parent) parent.classList.toggle("active");
+    });
+  });
+
+  // 4. AUTHENTICATION - FIXED EVENT DELEGATION
   document.addEventListener("click", (e) => {
-    // 1. Handle Account Menu Actions (Login, Signup, Profile, Logout)
-    // This is moved to global scope so it works even if innerHTML changes
     const authAction = e.target.closest(".auth-action");
     if (authAction) {
       e.preventDefault();
-      // Stop propagation to prevent the dropdown from closing immediately
       e.stopPropagation();
 
       const action = authAction.getAttribute("data-action");
+      console.log("Auth action:", action);
+
+      // Close dropdowns
       const accountDropdown = document.querySelector(".account-dropdown");
-
-      // Close dropdown
       if (accountDropdown) accountDropdown.classList.remove("active");
+      toggleSidebar(false);
 
-      if (action === "login") openAuthModal("login");
-      if (action === "signup") openAuthModal("signup");
-      if (action === "profile") {
+      // Handle actions
+      if (action === "login") {
+        openAuthModal("login");
+      } else if (action === "signup") {
+        openAuthModal("signup");
+      } else if (action === "profile") {
         if (!getUser()) openAuthModal("login");
         else openProfileModal();
-      }
-      if (action === "orders") {
+      } else if (action === "orders") {
         if (!getUser()) openAuthModal("login");
         else openOrdersModal();
+      } else if (action === "logout") {
+        logoutUser();
       }
-      if (action === "logout") logoutUser();
       return;
-    }
-
-    // 2. Handle Modal Closing (Clicks on Background)
-    if (
-      e.target.matches(".close") ||
-      e.target.id === "continue-shopping" ||
-      e.target.id === "cart-modal"
-    ) {
-      const cartModal = document.getElementById("cart-modal");
-      const quickViewModal = document.getElementById("quick-view-modal");
-      const ordersModal = document.getElementById("orders-modal");
-
-      if (
-        cartModal &&
-        (e.target.id === "cart-modal" || e.target.closest("#cart-modal"))
-      ) {
-        cartModal.style.display = "none";
-        cartModal.classList.remove("active");
-      }
-      if (quickViewModal && e.target.closest("#quick-view-modal")) {
-        quickViewModal.style.display = "none";
-      }
-      if (ordersModal && e.target.closest("#orders-modal")) {
-        ordersModal.style.display = "none";
-      }
-    }
-
-    if (e.target.matches(".close-auth") || e.target.id === "auth-modal") {
-      closeAuthModal();
     }
   });
 
+  // 5. AUTH MODAL TAB SWITCHING - FIXED
+  const loginTab = document.getElementById("login-tab");
+  const signupTab = document.getElementById("signup-tab");
+
+  if (loginTab) {
+    loginTab.addEventListener("click", (e) => {
+      e.preventDefault();
+      openAuthModal("login");
+    });
+  }
+
+  if (signupTab) {
+    signupTab.addEventListener("click", (e) => {
+      e.preventDefault();
+      openAuthModal("signup");
+    });
+  }
+
+  // 6. CLOSE AUTH MODAL - FIXED
+  const closeAuthBtn = document.querySelector(".close-auth");
+  if (closeAuthBtn) {
+    closeAuthBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      closeAuthModal();
+    });
+  }
+
+  const authModal = document.getElementById("auth-modal");
+  if (authModal) {
+    authModal.addEventListener("click", (e) => {
+      if (e.target === authModal) {
+        closeAuthModal();
+      }
+    });
+  }
+
+  // 7. FORGOT PASSWORD LINKS
   document
-    .getElementById("login-form")
+    .getElementById("forgot-password-link")
+    ?.addEventListener("click", (e) => {
+      e.preventDefault();
+      openForgotPasswordForm();
+    });
+
+  document
+    .getElementById("back-to-login-link")
+    ?.addEventListener("click", (e) => {
+      e.preventDefault();
+      openAuthModal("login");
+    });
+
+  // 8. FORGOT PASSWORD FORM SUBMIT
+  document
+    .getElementById("forgot-password-form")
     ?.addEventListener("submit", async (e) => {
       e.preventDefault();
+      const email = document.getElementById("forgot-email").value;
       const submitBtn = e.target.querySelector("button");
+      submitBtn.textContent = "Sending...";
+
+      try {
+        const res = await fetch(`${API_BASE_URL}/forget-password`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email }),
+        });
+
+        if (res.ok) {
+          window.cartManager.showToast(
+            "Password reset link sent to your email!",
+            "success"
+          );
+          openAuthModal("login");
+          e.target.reset();
+        } else {
+          window.cartManager.showToast("Failed to send reset link", "error");
+        }
+      } catch (error) {
+        window.cartManager.showToast("Connection error", "error");
+      } finally {
+        submitBtn.textContent = "Send Link";
+      }
+    });
+
+  // 9. LOGIN FORM - FIXED
+  const loginForm = document.getElementById("login-form");
+  if (loginForm) {
+    loginForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const submitBtn = e.target.querySelector("button[type='submit']");
+      const originalText = submitBtn.textContent;
       submitBtn.textContent = "Logging in...";
+      submitBtn.disabled = true;
 
       try {
         const email = document.getElementById("login-email").value;
         const password = document.getElementById("login-password").value;
-        const res = await fetch("/api/login", {
+
+        const res = await fetch(`${API_BASE_URL}/login`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email, password }),
         });
-        if (!res.ok) throw new Error("API Failed");
+
+        if (!res.ok) {
+          const errorData = await res.json();
+          throw new Error(errorData.error || "Login failed");
+        }
+
         const data = await res.json();
         saveUser(data.user);
         _authToken = data.token;
-      } catch (error) {
-        console.warn("API Failed, using Mock User");
-        const mockUser = {
-          name: "Demo User",
-          email: "demo@example.com",
-          addresses: [],
-        };
-        saveUser(mockUser);
-        _authToken = "mock-token";
-      }
 
-      closeAuthModal();
-      updateAccountUI();
-      window.cartManager.showToast(`Welcome back!`, "success");
-      submitBtn.textContent = "Login";
-    });
-
-  document
-    .getElementById("signup-form")
-    ?.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const submitBtn = e.target.querySelector("button");
-      submitBtn.textContent = "Signing up...";
-
-      setTimeout(() => {
+        closeAuthModal();
+        updateAccountUI();
         window.cartManager.showToast(
-          "Account created! Please login.",
+          `Welcome back, ${data.user.name}!`,
+          "success"
+        );
+        e.target.reset();
+      } catch (error) {
+        console.error("Login error:", error);
+        window.cartManager.showToast(
+          error.message || "Login failed. Please try again.",
+          "error"
+        );
+      } finally {
+        submitBtn.textContent = originalText;
+        submitBtn.disabled = false;
+      }
+    });
+  }
+
+  // 10. SIGNUP FORM - FIXED
+  const signupForm = document.getElementById("signup-form");
+  if (signupForm) {
+    signupForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const submitBtn = e.target.querySelector("button[type='submit']");
+      const originalText = submitBtn.textContent;
+      submitBtn.textContent = "Signing up...";
+      submitBtn.disabled = true;
+
+      try {
+        const name = document.getElementById("signup-name").value;
+        const email = document.getElementById("signup-email").value;
+        const password = document.getElementById("signup-password").value;
+
+        const res = await fetch(`${API_BASE_URL}/register`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name, email, password }),
+        });
+
+        if (!res.ok) {
+          const errorData = await res.json();
+          throw new Error(errorData.error || "Registration failed");
+        }
+
+        window.cartManager.showToast(
+          "Account created successfully! Please login.",
           "success"
         );
         openAuthModal("login");
         e.target.reset();
-        submitBtn.textContent = "Sign Up";
-      }, 1000);
-    });
-
-  const accountBtn = document.getElementById("account-btn");
-  const accountDropdown = document.querySelector(".account-dropdown");
-
-  if (accountBtn && accountDropdown) {
-    accountBtn.addEventListener("click", (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      updateAccountUI();
-      accountDropdown.classList.toggle("active");
+      } catch (error) {
+        console.error("Signup error:", error);
+        window.cartManager.showToast(
+          error.message || "Registration failed. Please try again.",
+          "error"
+        );
+      } finally {
+        submitBtn.textContent = originalText;
+        submitBtn.disabled = false;
+      }
     });
   }
 
-  document
-    .getElementById("login-tab")
-    ?.addEventListener("click", () => openAuthModal("login"));
-  document
-    .getElementById("signup-tab")
-    ?.addEventListener("click", () => openAuthModal("signup"));
+  // 11. ACCOUNT BUTTON - FIXED
+  const accountBtn = document.getElementById("account-btn");
+  if (accountBtn) {
+    accountBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
 
+      updateAccountUI();
+
+      const accountMenu = document.querySelector(".account-menu");
+      if (accountMenu) {
+        if (accountMenu.style.display === "block") {
+          accountMenu.style.display = "none";
+        } else {
+          accountMenu.style.display = "block";
+        }
+      }
+    });
+  }
+
+  // Close account dropdown when clicking outside
+  document.addEventListener("click", (e) => {
+    const accountMenu = document.querySelector(".account-menu");
+    const accountBtn = document.getElementById("account-btn");
+
+    if (accountMenu && accountBtn) {
+      if (!accountBtn.contains(e.target) && !accountMenu.contains(e.target)) {
+        accountMenu.style.display = "none";
+      }
+    }
+  });
+
+  // 12. PROFILE SAVE BUTTONS
+  document
+    .getElementById("save-profile-btn")
+    ?.addEventListener("click", saveProfileInfo);
+  document
+    .getElementById("save-address-btn")
+    ?.addEventListener("click", saveNewAddress);
+  document.getElementById("add-address-btn")?.addEventListener("click", () => {
+    window.toggleAddressForm(true);
+  });
+
+  // 13. NEWSLETTER FORM
+  document
+    .querySelector(".newsletter-form")
+    ?.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const email = e.target.querySelector('input[type="email"]').value;
+      window.cartManager.showToast("Thank you for subscribing!", "success");
+      e.target.reset();
+    });
+
+  // 14. VIEW CART BUTTON
+  document.getElementById("view-cart-btn")?.addEventListener("click", () => {
+    const cartDropdown = document.getElementById("cart-dropdown");
+    if (cartDropdown) cartDropdown.style.display = "none";
+    openCartModal();
+  });
+
+  // 15. HERO BUTTONS
+  document.querySelectorAll(".btn-hero").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const productsSection = document.querySelector(".products-section");
+      if (productsSection) {
+        const headerOffset = 100;
+        const elementPosition = productsSection.getBoundingClientRect().top;
+        const offsetPosition =
+          elementPosition + window.pageYOffset - headerOffset;
+        window.scrollTo({ top: offsetPosition, behavior: "smooth" });
+      }
+    });
+  });
+
+  // 16. CATEGORY FILTER LINKS
+  document.querySelectorAll("[data-category]").forEach((link) => {
+    link.addEventListener("click", (e) => {
+      e.preventDefault();
+      const category = e.target
+        .closest("[data-category]")
+        .getAttribute("data-category");
+      const categoryFilter = document.getElementById("category-filter");
+      if (categoryFilter) {
+        categoryFilter.value = category;
+        window.productManager?.applyFilters();
+      }
+
+      const productsSection = document.querySelector(".products-section");
+      if (productsSection) {
+        const headerOffset = 100;
+        const elementPosition = productsSection.getBoundingClientRect().top;
+        const offsetPosition =
+          elementPosition + window.pageYOffset - headerOffset;
+        window.scrollTo({ top: offsetPosition, behavior: "smooth" });
+      }
+    });
+  });
+
+  // 17. HOME RESET LOGIC
   document.querySelectorAll('a[href="#home"], .logo').forEach((link) => {
     link.addEventListener("click", (e) => {
       e.preventDefault();
@@ -2065,5 +2305,184 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
+  // 18. INITIALIZE UI
   updateAccountUI();
+  updateMobileWishlist();
+
+  console.log("✅ App initialized successfully");
 });
+
+// ====================================================================
+// ENHANCED BUTTON FIX - Add this at the very end of script.js
+// ====================================================================
+
+// Force re-initialization of critical buttons after a delay
+setTimeout(() => {
+  console.log("🔧 Applying enhanced button fixes...");
+
+  // FIX 1: Mobile Menu - Multiple selectors
+  const mobileMenuToggles = document.querySelectorAll(
+    '.mobile-menu-toggle, #mobile-menu-toggle, [class*="mobile-menu"]'
+  );
+
+  mobileMenuToggles.forEach((btn, index) => {
+    console.log(`Found mobile toggle #${index}:`, btn);
+
+    // Remove old listeners by cloning
+    const newBtn = btn.cloneNode(true);
+    btn.parentNode.replaceChild(newBtn, btn);
+
+    newBtn.addEventListener("click", function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      console.log("🍔 Mobile menu clicked!");
+
+      const mobileNav = document.getElementById("mobile-nav");
+      const overlay = document.getElementById("mobile-nav-overlay");
+
+      if (mobileNav && overlay) {
+        // Force show with inline styles
+        mobileNav.classList.add("active");
+        mobileNav.style.cssText =
+          "display: flex !important; left: 0 !important; z-index: 9999 !important;";
+
+        overlay.classList.add("active");
+        overlay.style.cssText =
+          "display: block !important; opacity: 1 !important; z-index: 9998 !important;";
+
+        console.log("✅ Sidebar opened");
+      } else {
+        console.error("❌ Sidebar elements not found");
+      }
+    });
+  });
+
+  // FIX 2: Account Button
+  const accountBtn = document.getElementById("account-btn");
+  if (accountBtn) {
+    const newAccountBtn = accountBtn.cloneNode(true);
+    accountBtn.parentNode.replaceChild(newAccountBtn, accountBtn);
+
+    newAccountBtn.addEventListener("click", function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      console.log("👤 Account clicked");
+
+      const accountMenu = document.querySelector(".account-menu");
+      if (accountMenu) {
+        const isVisible = accountMenu.style.display === "block";
+        accountMenu.style.display = isVisible ? "none" : "block";
+        console.log("Account menu toggled:", !isVisible);
+      }
+    });
+  }
+
+  // FIX 3: Auth Actions - Use event delegation on body
+  document.body.addEventListener("click", function (e) {
+    const authAction = e.target.closest(".auth-action");
+    if (authAction) {
+      e.preventDefault();
+      e.stopPropagation();
+
+      const action = authAction.getAttribute("data-action");
+      console.log("🔐 Auth action:", action);
+
+      switch (action) {
+        case "login":
+          openAuthModal("login");
+          break;
+        case "signup":
+          openAuthModal("signup");
+          break;
+        case "profile":
+          if (getUser()) openProfileModal();
+          else openAuthModal("login");
+          break;
+        case "orders":
+          if (getUser()) openOrdersModal();
+          else openAuthModal("login");
+          break;
+        case "logout":
+          logoutUser();
+          break;
+      }
+    }
+  });
+
+  // FIX 4: Cart Button
+  const cartBtn = document.getElementById("cart-btn");
+  if (cartBtn) {
+    const newCartBtn = cartBtn.cloneNode(true);
+    cartBtn.parentNode.replaceChild(newCartBtn, cartBtn);
+
+    newCartBtn.addEventListener("click", function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      console.log("🛒 Cart clicked");
+      openCartModal();
+    });
+  }
+
+  // FIX 5: Wishlist Button
+  const wishlistBtn = document.getElementById("wishlist-btn");
+  if (wishlistBtn) {
+    const newWishlistBtn = wishlistBtn.cloneNode(true);
+    wishlistBtn.parentNode.replaceChild(newWishlistBtn, wishlistBtn);
+
+    newWishlistBtn.addEventListener("click", function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      console.log("❤️ Wishlist clicked");
+
+      const wishlistDropdown = document.getElementById("wishlist-dropdown");
+      if (wishlistDropdown) {
+        const isVisible = wishlistDropdown.style.display === "block";
+        wishlistDropdown.style.display = isVisible ? "none" : "block";
+      }
+    });
+  }
+
+  // FIX 6: Close Mobile Nav
+  const closeMobileNav = document.getElementById("close-mobile-nav");
+  if (closeMobileNav) {
+    const newCloseBtn = closeMobileNav.cloneNode(true);
+    closeMobileNav.parentNode.replaceChild(newCloseBtn, closeMobileNav);
+
+    newCloseBtn.addEventListener("click", function (e) {
+      e.preventDefault();
+      console.log("❌ Close mobile nav");
+
+      const mobileNav = document.getElementById("mobile-nav");
+      const overlay = document.getElementById("mobile-nav-overlay");
+
+      if (mobileNav) {
+        mobileNav.classList.remove("active");
+        mobileNav.style.left = "-100%";
+      }
+      if (overlay) {
+        overlay.classList.remove("active");
+        overlay.style.display = "none";
+      }
+    });
+  }
+
+  // FIX 7: Overlay Click
+  const overlay = document.getElementById("mobile-nav-overlay");
+  if (overlay) {
+    const newOverlay = overlay.cloneNode(true);
+    overlay.parentNode.replaceChild(newOverlay, overlay);
+
+    newOverlay.addEventListener("click", function () {
+      console.log("Overlay clicked - closing");
+      const mobileNav = document.getElementById("mobile-nav");
+      if (mobileNav) {
+        mobileNav.classList.remove("active");
+        mobileNav.style.left = "-100%";
+      }
+      this.classList.remove("active");
+      this.style.display = "none";
+    });
+  }
+
+  console.log("✅ Enhanced fixes applied!");
+}, 500); // Wait 500ms for everything to load
