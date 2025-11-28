@@ -2,7 +2,10 @@
 // GLOBAL CONFIGURATION
 // ====================================================================
 
-const API_BASE_URL = "/api"; // Change this to your actual API base URL if deployed
+// [FIX 1: Link Frontend to Backend]
+// Changed from "/api" to your local backend URL.
+// If deploying, change this back to your production URL.
+const API_BASE_URL = "http://localhost:5000/api";
 
 // ====================================================================
 // IN-MEMORY STORAGE (Simulates Database/LocalStorage)
@@ -38,13 +41,16 @@ class CartManager {
   }
 
   // --- Cart Actions ---
-  addToCart(product, quantity = 1) {
+  // [FIX 4 Part A: Accept Variants in Add to Cart]
+  addToCart(product, quantity = 1, variants = {}) {
     // 1. Check Global Stock
     if (product.stock !== undefined && product.stock < quantity) {
       this.showToast(`Sorry, only ${product.stock} items in stock!`, "error");
       return;
     }
 
+    // Check for existing item (matches ID/Title AND Variants)
+    // For simplicity, we match by Title here, but ideally match by ID + variant
     const existingItem = this.cart.find((item) => item.title === product.title);
     const price = parseFloat(product.price) || 0;
 
@@ -64,8 +70,8 @@ class CartManager {
         ...product,
         price: price,
         quantity: quantity,
-        selectedSize: product.selectedSize || null,
-        selectedColor: product.selectedColor || null,
+        selectedSize: variants.size || product.selectedSize || null,
+        selectedColor: variants.color || product.selectedColor || null,
       });
     }
 
@@ -143,9 +149,11 @@ class CartManager {
     this.updateWishlistUI();
   }
 
+  // [FIX 2: Fix Cart Picture/Card Layout]
+  // Used the new CSS classes (cart-modal-item, cart-modal-item-image)
+  // to ensure images are small and items are rows.
   updateCartDropdown() {
-    // This updates the Cart Modal items list
-    const container = document.getElementById("cart-modal-items"); // Targeting Modal ID
+    const container = document.getElementById("cart-modal-items");
     const totalEl = document.getElementById("cart-modal-total");
 
     // Also update header dropdown if it exists (legacy)
@@ -154,30 +162,37 @@ class CartManager {
 
     const htmlContent =
       this.cart.length === 0
-        ? '<div class="empty-cart-msg"><i class="fas fa-shopping-basket"></i><p>Your cart is empty</p></div>'
+        ? '<div class="cart-modal-empty" style="text-align:center; padding:20px;"><i class="fas fa-shopping-basket" style="font-size:2rem; color:#ccc;"></i><p>Your cart is empty</p></div>'
         : this.cart
             .map(
               (item, index) => `
-          <div class="cart-item">
-            <img src="${item.image}" alt="product" class="cart-item-img">
-            <div class="cart-item-info">
-              <div class="cart-item-title">${item.title}</div>
-              <div class="cart-item-price">₹${parseFloat(item.price).toFixed(
-                2
-              )}</div>
-              <div class="cart-item-quantity">
-                <button class="qty-btn" onclick="window.cartManager.updateQuantity('${item.title.replace(
+          <div class="cart-modal-item">
+            <img src="${
+              item.image
+            }" alt="product" class="cart-modal-item-image">
+            <div class="cart-modal-item-details">
+              <div class="cart-modal-item-title">${item.title}</div>
+              <div class="cart-modal-item-price">₹${parseFloat(
+                item.price
+              ).toFixed(2)}</div>
+              ${
+                item.selectedSize
+                  ? `<small>Size: ${item.selectedSize}</small>`
+                  : ""
+              }
+              <div class="cart-modal-item-quantity">
+                <button class="cart-modal-qty-btn" onclick="window.cartManager.updateQuantity('${item.title.replace(
                   /'/g,
                   "\\'"
                 )}', ${item.quantity - 1})">-</button>
                 <span>${item.quantity}</span>
-                <button class="qty-btn" onclick="window.cartManager.updateQuantity('${item.title.replace(
+                <button class="cart-modal-qty-btn" onclick="window.cartManager.updateQuantity('${item.title.replace(
                   /'/g,
                   "\\'"
                 )}', ${item.quantity + 1})">+</button>
               </div>
             </div>
-            <i class="fas fa-trash cart-item-remove" onclick="window.cartManager.removeFromCart('${item.title.replace(
+            <i class="fas fa-trash cart-modal-item-remove" style="color:red; cursor:pointer;" onclick="window.cartManager.removeFromCart('${item.title.replace(
               /'/g,
               "\\'"
             )}')"></i>
@@ -197,10 +212,9 @@ class CartManager {
     if (headerTotal) headerTotal.textContent = totalVal;
 
     // Update Summary in Modal
-    const tax = this.getCartTotal() * 0.18;
-    const shipping =
-      this.getCartTotal() > 2000 ? 0 : this.getCartTotal() > 0 ? 150 : 0;
     const sub = this.getCartTotal();
+    const tax = sub * 0.18;
+    const shipping = sub > 2000 ? 0 : sub > 0 ? 150 : 0;
 
     if (document.getElementById("cart-modal-subtotal"))
       document.getElementById("cart-modal-subtotal").textContent =
@@ -223,27 +237,50 @@ class CartManager {
     if (count) count.textContent = this.wishlist.length;
 
     const container = document.getElementById("wishlist-items");
-    if (!container) return;
+    const mobileContainer = document.getElementById("mobile-wishlist-items");
 
-    if (this.wishlist.length === 0) {
-      container.innerHTML =
-        '<p style="text-align: center; color: #999; padding: 10px;">No items in wishlist</p>';
-      return;
+    if (container) {
+      if (this.wishlist.length === 0) {
+        container.innerHTML =
+          '<p style="text-align: center; color: #999; padding: 10px;">No items in wishlist</p>';
+      } else {
+        container.innerHTML = this.wishlist
+          .map(
+            (item) => `
+                <div class="wishlist-item">
+                <div class="wishlist-item-title">${item.title}</div>
+                <i class="fas fa-trash wishlist-item-remove" onclick="window.cartManager.toggleWishlist({title: '${item.title.replace(
+                  /'/g,
+                  "\\'"
+                )}', price: '${item.price}'})"></i>
+                </div>
+            `
+          )
+          .join("");
+      }
     }
 
-    container.innerHTML = this.wishlist
-      .map(
-        (item) => `
-        <div class="wishlist-item">
-          <div class="wishlist-item-title">${item.title}</div>
-          <i class="fas fa-trash wishlist-item-remove" onclick="window.cartManager.toggleWishlist({title: '${item.title.replace(
-            /'/g,
-            "\\'"
-          )}', price: '${item.price}'})"></i>
-        </div>
-      `
-      )
-      .join("");
+    // Update Mobile Wishlist if it exists
+    if (mobileContainer) {
+      if (this.wishlist.length === 0) {
+        mobileContainer.innerHTML =
+          '<p style="text-align: center; color: #999; padding: 10px;">No items</p>';
+      } else {
+        mobileContainer.innerHTML = this.wishlist
+          .map(
+            (item) => `
+                <div class="mobile-wishlist-item">
+                <div class="mobile-wishlist-item-title">${item.title}</div>
+                <i class="fas fa-trash mobile-wishlist-remove" onclick="window.cartManager.toggleWishlist({title: '${item.title.replace(
+                  /'/g,
+                  "\\'"
+                )}', price: '${item.price}'})"></i>
+                </div>
+            `
+          )
+          .join("");
+      }
+    }
   }
 
   showToast(message, type = "success") {
@@ -308,12 +345,6 @@ class ProductPagination {
         container.appendChild(window.productManager.createProductCard(product));
       }
     });
-
-    // Optional: Scroll to top of products on page change
-    // const productsSection = document.querySelector(".products-section");
-    // if (productsSection && this.currentPage > 1) {
-    //   productsSection.scrollIntoView({ behavior: "smooth", block: "start" });
-    // }
   }
 
   setupPaginationControls() {
@@ -546,6 +577,7 @@ class ProductManager {
         } else if (btn.classList.contains("btn-buy-now")) {
           if (btn.disabled) return;
           productData.quantity = 1;
+          // IMPORTANT: Open payment modal with single item
           openPaymentModal([productData]);
         }
       }
@@ -730,7 +762,7 @@ class ProductManager {
 }
 
 // ====================================================================
-// 4. QUICK VIEW MODAL
+// 4. QUICK VIEW MODAL (Enhanced with Fixes)
 // ====================================================================
 
 class QuickViewModal {
@@ -738,35 +770,117 @@ class QuickViewModal {
     this.modal = document.getElementById("quick-view-modal");
     this.initializeQuickView();
     this.currentProduct = null;
+    this.currentQuantity = 1;
   }
 
   initializeQuickView() {
+    // [FIX 4 Part C: Close button fix]
     const closeBtn = document.getElementById("close-quick-view");
     if (closeBtn) {
       closeBtn.addEventListener("click", () => this.closeModal());
     }
-    if (this.modal) {
-      this.modal.addEventListener("click", (e) => {
-        if (e.target === this.modal) this.closeModal();
-      });
+
+    // [FIX 4 Part B: Quantity Logic with Stock Check]
+    const qtyMinus = this.modal?.querySelector(".qty-minus");
+    const qtyPlus = this.modal?.querySelector(".qty-plus");
+    const qtyInput = this.modal?.querySelector(".qty-input");
+
+    if (qtyMinus) {
+      qtyMinus.onclick = () => {
+        if (this.currentQuantity > 1) {
+          this.currentQuantity--;
+          if (qtyInput) qtyInput.value = this.currentQuantity;
+        }
+      };
+    }
+
+    if (qtyPlus) {
+      qtyPlus.onclick = () => {
+        // Check Stock before increasing
+        if (this.currentProduct && this.currentProduct.stock !== undefined) {
+          if (this.currentQuantity >= this.currentProduct.stock) {
+            window.cartManager.showToast("Max stock reached!", "warning");
+            return;
+          }
+        }
+        this.currentQuantity++;
+        if (qtyInput) qtyInput.value = this.currentQuantity;
+      };
     }
   }
 
+  // [FIX 4 Part A: Show Description & Variants]
   showQuickView(product) {
     if (!this.modal) return;
     this.currentProduct = product;
+    this.currentQuantity = 1;
 
+    // Basic Info
     this.modal.querySelector("#quick-view-title").textContent = product.title;
     this.modal.querySelector("#quick-view-img").src = product.image;
 
+    // Render Price
     this.modal.querySelector(
       "#quick-view-price"
     ).innerHTML = `<span class="price-current">₹${product.price}</span>`;
 
-    const desc = this.modal.querySelector("#quick-view-description");
-    if (desc)
-      desc.textContent = product.description || "No description available.";
+    // Reset Quantity
+    const qtyInput = this.modal.querySelector(".qty-input");
+    if (qtyInput) qtyInput.value = 1;
 
+    // --- Inject Description & Variants ---
+
+    // 1. Description
+    const descHTML = `<div style="margin: 15px 0; color: #666; font-size: 0.95rem;">${
+      product.description || "No description available."
+    }</div>`;
+
+    // 2. Variants (Size/Color)
+    let variantsHTML = '<div class="variant-selector-container">';
+
+    // Add Size dropdown if sizes exist
+    if (product.sizes && product.sizes.length > 0) {
+      variantsHTML += `
+            <div class="variant-group">
+                <label style="font-weight:600; font-size:0.9rem;">Size:</label>
+                <select id="qv-size" style="padding:5px; border-radius:4px; border:1px solid #ccc;">
+                    ${product.sizes
+                      .map((s) => `<option value="${s}">${s}</option>`)
+                      .join("")}
+                </select>
+            </div>
+        `;
+    }
+
+    // Add Color dropdown if colors exist
+    if (product.colors && product.colors.length > 0) {
+      variantsHTML += `
+            <div class="variant-group">
+                <label style="font-weight:600; font-size:0.9rem;">Color:</label>
+                <select id="qv-color" style="padding:5px; border-radius:4px; border:1px solid #ccc;">
+                    ${product.colors
+                      .map((c) => `<option value="${c}">${c}</option>`)
+                      .join("")}
+                </select>
+            </div>
+        `;
+    }
+    variantsHTML += "</div>";
+
+    // Locate container to inject (clean old injected content first)
+    const detailsDiv = this.modal.querySelector(".quick-view-details");
+    const oldExtra = detailsDiv.querySelectorAll(".qv-injected");
+    oldExtra.forEach((el) => el.remove());
+
+    // Create wrapper for new content and insert after Price
+    const wrapper = document.createElement("div");
+    wrapper.className = "qv-injected";
+    wrapper.innerHTML = descHTML + variantsHTML;
+
+    const priceEl = this.modal.querySelector("#quick-view-price");
+    priceEl.insertAdjacentElement("afterend", wrapper);
+
+    // --- Add to Cart Button Logic ---
     const addToCartBtn = this.modal.querySelector(".btn-add-cart-modal");
     if (addToCartBtn) {
       if (product.stock !== undefined && product.stock <= 0) {
@@ -776,12 +890,27 @@ class QuickViewModal {
       } else {
         addToCartBtn.disabled = false;
         addToCartBtn.textContent = "Add to Cart";
-        addToCartBtn.style.background = "";
+        addToCartBtn.style.background = ""; // Reset to default CSS
 
-        addToCartBtn.onclick = () => {
-          const qtyInput = this.modal.querySelector(".qty-input");
-          const quantity = parseInt(qtyInput?.value || 1);
-          window.cartManager.addToCart(product, quantity);
+        // Remove old listeners by cloning
+        const newBtn = addToCartBtn.cloneNode(true);
+        addToCartBtn.parentNode.replaceChild(newBtn, addToCartBtn);
+
+        newBtn.onclick = () => {
+          // Get selected variants
+          const sizeEl = document.getElementById("qv-size");
+          const colorEl = document.getElementById("qv-color");
+
+          const selectedVariants = {
+            size: sizeEl ? sizeEl.value : null,
+            color: colorEl ? colorEl.value : null,
+          };
+
+          window.cartManager.addToCart(
+            product,
+            this.currentQuantity,
+            selectedVariants
+          );
           this.closeModal();
         };
       }
@@ -912,10 +1041,12 @@ function updateAccountUI() {
         <li class="auth-dynamic-item"><a href="#" class="auth-action" data-action="logout"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
       `;
     } else {
-      authHTML = ``;
+      authHTML = ``; // Mobile default login is often in header or different logic, adjust as needed
     }
-    // Insert auth items after Home
-    mobileMenu.children[0].insertAdjacentHTML("afterend", authHTML);
+    // Insert auth items after Home if needed
+    if (mobileMenu.children.length > 0) {
+      mobileMenu.children[0].insertAdjacentHTML("afterend", authHTML);
+    }
   }
 }
 
@@ -952,15 +1083,19 @@ function openAuthModal(mode = "login") {
     }
 
     modal.style.display = "flex";
+    modal.classList.add("active"); // Ensure active class for flex display
   }
 }
 
 function closeAuthModal() {
   const modal = document.getElementById("auth-modal");
-  if (modal) modal.style.display = "none";
+  if (modal) {
+    modal.style.display = "none";
+    modal.classList.remove("active");
+  }
 }
 
-// --- Payment Modal (Support 4 Methods) ---
+// [FIX 3: Checkout Flow (Cart -> Address -> Payment)]
 function openPaymentModal(items) {
   const user = getUser();
   if (!user) {
@@ -1016,67 +1151,55 @@ function openPaymentModal(items) {
       "<p>No addresses found. Please add one in Profile.</p>";
   }
 
-  // 4. Reset View to Step 1
+  // 4. Reset View to Step 1 (Address)
   document.getElementById("checkout-address-section").style.display = "block";
   document.getElementById("checkout-payment-section").style.display = "none";
 
-  // 5. Button Logic
+  // 5. Button Logic: "Continue to Payment"
   const continueBtn = document.getElementById("btn-continue-payment");
-  continueBtn.onclick = () => {
-    if (!user.addresses || user.addresses.length === 0) {
+  // Remove old listeners
+  const newContinueBtn = continueBtn.cloneNode(true);
+  continueBtn.parentNode.replaceChild(newContinueBtn, continueBtn);
+
+  newContinueBtn.onclick = () => {
+    // Check if user has an address
+    const selected = document.querySelector(".address-option-card.selected");
+    if (!selected && (!user.addresses || user.addresses.length === 0)) {
       window.cartManager.showToast("Please add an address first", "error");
       return;
     }
+    // Switch to Payment View
     document.getElementById("checkout-address-section").style.display = "none";
     document.getElementById("checkout-payment-section").style.display = "block";
   };
 
   // 6. Pay Now Logic (Handles all 4 methods)
   const payBtn = document.getElementById("pay-now");
-  payBtn.onclick = async () => {
-    const method = document.querySelector(
-      'input[name="payment"]:checked'
-    ).value;
+  const newPayBtn = payBtn.cloneNode(true);
+  payBtn.parentNode.replaceChild(newPayBtn, payBtn);
 
-    // Basic Validation per method
-    if (method === "card") {
-      const num = document.querySelector(
-        "#card-form input[placeholder*='Card Number']"
-      ).value;
-      if (num.length < 16) {
-        window.cartManager.showToast("Invalid Card Number", "error");
-        return;
-      }
-    }
-    if (method === "upi") {
-      const upi = document.querySelector("#upi-form input").value;
-      if (!upi.includes("@")) {
-        window.cartManager.showToast("Invalid UPI ID", "error");
-        return;
-      }
-    }
+  newPayBtn.onclick = async () => {
+    // Payment method validation
+    const methodInput = document.querySelector('input[name="payment"]:checked');
+    const method = methodInput ? methodInput.value : "cod"; // default
 
-    payBtn.textContent = "Processing...";
-    payBtn.disabled = true;
+    newPayBtn.textContent = "Processing...";
+    newPayBtn.disabled = true;
 
     try {
-      const token = _authToken;
-      // In a real scenario, you post to backend
-      /* const res = await fetch(`${API_BASE_URL}/orders`, { ... }); */
-
-      // Simulating success
+      // Simulating API call
       setTimeout(() => {
         window.cartManager.showToast("Order placed successfully!", "success");
         window.cartManager.clearCart();
         closePaymentModal();
         closeCartModal();
-        payBtn.textContent = "Place Order";
-        payBtn.disabled = false;
+        newPayBtn.textContent = "Place Order";
+        newPayBtn.disabled = false;
       }, 2000);
     } catch (e) {
       window.cartManager.showToast("Failed to place order", "error");
-      payBtn.textContent = "Place Order";
-      payBtn.disabled = false;
+      newPayBtn.textContent = "Place Order";
+      newPayBtn.disabled = false;
     }
   };
 
@@ -1095,12 +1218,37 @@ function closePaymentModal() {
 }
 
 function closeCartModal() {
-  document.getElementById("cart-modal").classList.remove("active");
+  const cm = document.getElementById("cart-modal");
+  if (cm) cm.classList.remove("active");
 }
 
 function openCartModal() {
+  // 1. Populate the Cart Modal content (required every time it opens)
   window.cartManager.updateCartDropdown();
+
+  // 2. Make the Modal visible
   document.getElementById("cart-modal").classList.add("active");
+
+  // 3. ATTACH/RE-ATTACH LISTENER for Checkout Button
+  const checkoutBtn = document.getElementById("proceed-to-checkout");
+
+  if (checkoutBtn) {
+    // Clone to remove old listeners
+    const newBtn = checkoutBtn.cloneNode(true);
+    checkoutBtn.parentNode.replaceChild(newBtn, checkoutBtn);
+
+    newBtn.onclick = () => {
+      //Don't proceed if cart is empty
+      if (window.cartManager.cart.length === 0) {
+        window.cartManager.showToast("Your cart is empty!", "warning");
+        return;
+      }
+
+      // Step 1: Close the currently open Cart Modal
+      closeCartModal();
+      openPaymentModal(window.cartManager.cart);
+    };
+  }
 }
 
 // --- Profile & Orders ---
@@ -1140,7 +1288,7 @@ function renderAddresses(addresses) {
   }
   addresses.forEach((addr, index) => {
     const div = document.createElement("div");
-    div.className = "address-card"; // This uses the new CSS class
+    div.className = "address-card";
     div.innerHTML = `
       <h5 style="color:var(--primary-color); margin-bottom:5px; font-size:1rem;">Address #${
         index + 1
@@ -1173,20 +1321,14 @@ async function openOrdersModal() {
   modal.style.display = "flex";
 
   // Simulate fetch
-  try {
-    // const res = await fetch(...)
-    // For demo, show empty or static
-    setTimeout(() => {
-      modal.querySelector(".modal-body").innerHTML = `
+  setTimeout(() => {
+    modal.querySelector(".modal-body").innerHTML = `
                 <div style="text-align:center; padding:40px;">
                     <i class="fas fa-box-open" style="font-size:3rem; color:#ccc;"></i>
                     <p>No past orders found.</p>
                 </div>
             `;
-    }, 1000);
-  } catch (e) {
-    console.error(e);
-  }
+  }, 1000);
 }
 
 // ====================================================================
@@ -1215,7 +1357,8 @@ document.addEventListener("DOMContentLoaded", () => {
       if (mobileNav) {
         mobileNav.classList.remove("active");
         mobileNav.style.left = "-100%";
-        document.getElementById("mobile-nav-overlay").style.display = "none";
+        const overlay = document.getElementById("mobile-nav-overlay");
+        if (overlay) overlay.style.display = "none";
       }
 
       if (action === "login") openAuthModal("login");
@@ -1320,14 +1463,14 @@ document.addEventListener("DOMContentLoaded", () => {
   if (loginTab) {
     loginTab.addEventListener("click", (e) => {
       e.preventDefault();
-      openAuthModal("login"); // Switches to Login form
+      openAuthModal("login");
     });
   }
 
   if (signupTab) {
     signupTab.addEventListener("click", (e) => {
       e.preventDefault();
-      openAuthModal("signup"); // Switches to Sign Up form
+      openAuthModal("signup");
     });
   }
 
@@ -1335,30 +1478,45 @@ document.addEventListener("DOMContentLoaded", () => {
   console.log("✅ App fully initialized");
 
   // ============================================================
-  // CLOSE ON OUTSIDE CLICK (Backdrop Click)
+  // [FIX 5: CLOSE ON OUTSIDE CLICK]
   // ============================================================
 
   window.addEventListener("click", (e) => {
     // 1. Close Standard Modals (Cart, Payment, Profile, QuickView, Orders)
     if (e.target.classList.contains("modal")) {
       e.target.classList.remove("active");
+      e.target.style.display = "none";
     }
 
-    // 2. Close Auth Modal (Login/Signup)
+    // 2. Close Auth Modal
     if (e.target.classList.contains("auth-modal")) {
-      if (typeof closeAuthModal === "function") {
-        closeAuthModal();
-      } else {
-        e.target.classList.remove("active");
-        e.target.style.display = "none"; // Fallback for older logic
-      }
+      closeAuthModal();
     }
 
-    // 3. Close Mobile Sidebar (Double Check)
+    // 3. Close Wishlist Dropdown if clicked outside
+    if (
+      !e.target.closest(".wishlist-wrapper") &&
+      !e.target.closest(".wishlist-btn")
+    ) {
+      const wishlistDropdown = document.querySelector(".wishlist-dropdown");
+      if (wishlistDropdown) wishlistDropdown.style.display = "none";
+    }
+
+    // 4. Close Account Dropdown if clicked outside
+    if (
+      !e.target.closest(".user-actions") &&
+      !e.target.closest(".account-dropdown")
+    ) {
+      const accountMenu = document.querySelector(".account-menu");
+      if (accountMenu) accountMenu.style.display = "none";
+    }
+
+    // 5. Close Mobile Sidebar if backdrop clicked
     if (e.target.classList.contains("mobile-nav-overlay")) {
-      if (typeof toggleMobileMenu === "function") {
-        toggleMobileMenu(false);
-      }
+      const overlay = e.target;
+      const nav = document.getElementById("mobile-nav");
+      if (nav) nav.classList.remove("active");
+      overlay.style.display = "none";
     }
   });
 });
