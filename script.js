@@ -55,7 +55,7 @@ class CartManager {
     // 1. Check Global Stock (Initial add)
     if (!isNaN(stock) && stock < qty) {
       this.showToast(`Sorry, only ${stock} items in stock!`, "error");
-      return;
+      return false;
     }
 
     // Check for existing item
@@ -70,7 +70,7 @@ class CartManager {
           `Cannot add more! Max stock reached (${stock}).`,
           "warning"
         );
-        return;
+        return false;
       }
       existingItem.quantity = currentQty + qty;
     } else {
@@ -86,6 +86,7 @@ class CartManager {
 
     this.saveCart();
     this.showToast(`${product.title} added to cart!`, "success");
+    return true;
   }
 
   removeFromCart(productTitle) {
@@ -809,16 +810,22 @@ class QuickViewModal {
 
     if (qtyPlus) {
       qtyPlus.onclick = () => {
-        // FIX: Check Stock before increasing (Ignore variants, use main product stock)
+        // FIX: Check Stock taking Cart into account
         if (this.currentProduct && this.currentProduct.stock !== undefined) {
-          if (this.currentQuantity >= this.currentProduct.stock) {
-            // Error message right there
+          // Find how many of this item are ALREADY in the cart
+          const cartItem = window.cartManager.cart.find(
+            (item) => item.title === this.currentProduct.title
+          );
+          const cartQty = cartItem ? parseInt(cartItem.quantity) : 0;
+          const totalRequested = this.currentQuantity + 1 + cartQty; // Current Input + 1 Click + Cart
+
+          if (totalRequested > this.currentProduct.stock) {
             window.cartManager.showToast(
-              `Cannot add more! Only ${this.currentProduct.stock} available.`,
+              `Max limit reached! You have ${cartQty} in cart. Stock is ${this.currentProduct.stock}.`,
               "error"
             );
 
-            // Optional: Shake animation on input to indicate error visually
+            // Visual Shake effect
             if (qtyInput) {
               qtyInput.style.borderColor = "red";
               setTimeout(() => (qtyInput.style.borderColor = ""), 500);
@@ -826,6 +833,7 @@ class QuickViewModal {
             return;
           }
         }
+
         this.currentQuantity++;
         if (qtyInput) qtyInput.value = this.currentQuantity;
       };
@@ -919,8 +927,9 @@ class QuickViewModal {
         const newBtn = addToCartBtn.cloneNode(true);
         addToCartBtn.parentNode.replaceChild(newBtn, addToCartBtn);
 
+        // Inside QuickViewModal class -> showQuickView() -> newBtn.onclick
+
         newBtn.onclick = () => {
-          // Get selected variants
           const sizeEl = document.getElementById("qv-size");
           const colorEl = document.getElementById("qv-color");
 
@@ -929,12 +938,16 @@ class QuickViewModal {
             color: colorEl ? colorEl.value : null,
           };
 
-          window.cartManager.addToCart(
+          // FIX: Only close modal if addToCart returns TRUE
+          const success = window.cartManager.addToCart(
             product,
             this.currentQuantity,
             selectedVariants
           );
-          this.closeModal();
+
+          if (success) {
+            this.closeModal();
+          }
         };
       }
     }
@@ -1324,12 +1337,43 @@ async function openProfileModal() {
     openAuthModal("login");
     return;
   }
+
   const modal = document.getElementById("profile-modal");
   modal.style.display = "flex";
 
-  document.getElementById("profile-name").value = user.name;
-  document.getElementById("profile-email").value = user.email;
-  renderAddresses(user.addresses || []);
+  // 1. Show loading state initially
+  document.getElementById("address-list").innerHTML =
+    '<p style="text-align:center;">Syncing profile...</p>';
+
+  try {
+    // 2. FETCH LATEST DATA from Backend
+    const res = await fetch(`${API_BASE_URL}/user`, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${_authToken}`,
+        "Content-Type": "application/json",
+      },
+    });
+
+    if (res.ok) {
+      const freshUser = await res.json();
+      // 3. Update Local Storage & Global State with fresh data
+      saveUser(freshUser);
+
+      // 4. Update Inputs
+      document.getElementById("profile-name").value = freshUser.name;
+      document.getElementById("profile-email").value = freshUser.email;
+
+      // 5. Render Addresses
+      renderAddresses(freshUser.addresses || []);
+    } else {
+      // Fallback to local data if fetch fails
+      renderAddresses(user.addresses || []);
+    }
+  } catch (e) {
+    console.error("Profile sync failed", e);
+    renderAddresses(user.addresses || []);
+  }
 }
 
 function renderAddresses(addresses) {
