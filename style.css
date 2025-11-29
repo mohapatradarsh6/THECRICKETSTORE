@@ -2279,52 +2279,46 @@ body {
   align-items: center;
   justify-content: space-between;
 
-  /* Compact Dimensions */
-  width: 100px; /* Small fixed width */
-  height: 40px; /* Standard button height */
+  /* FORCE SMALL SIZE */
+  width: 110px !important; /* Fixed small width */
+  height: 45px;
+  flex-shrink: 0; /* Don't let it shrink further */
 
-  /* Styling */
-  border: 2px solid #ffc107 !important; /* Bright Yellow Border */
-  background-color: white;
+  /* Styling (Yellow Pill) */
+  border: 2px solid #ffc107 !important;
   border-radius: 50px !important;
-  box-shadow: 0 4px 10px rgba(255, 193, 7, 0.2); /* Soft Yellow Glow */
-  flex-shrink: 0;
+  background: white;
   overflow: hidden;
-  margin-right: 10px;
 }
 
 .qty-minus,
 .qty-plus {
-  width: 45px;
+  width: 35px;
   height: 100%;
   border: none !important;
+  background: transparent !important;
+  font-size: 1.2rem !important;
+  font-weight: bold;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-
-  /* Colors */
-  background-color: #fff9db !important; /* Very Pale Yellow Background */
-  color: var(--primary-color) !important; /* Green Icon */
-  font-size: 1.4rem !important;
-  font-weight: 900 !important;
-  transition: background 0.2s;
+  color: #000;
 }
 
 .qty-minus:hover,
 .qty-plus:hover {
   background-color: #ffe082 !important; /* Darker Yellow on Hover */
-  color: #000 !important;
 }
 .qty-input {
+  width: 100%;
   border: none !important;
   background: transparent !important;
-  font-weight: 800;
-  font-size: 1.2rem;
-  color: #333 !important;
-  width: 100%;
   text-align: center;
+  font-weight: bold;
+  font-size: 1rem;
   padding: 0;
+  pointer-events: none; /* Disable manual typing to keep style clean */
 }
 /* =========================================
    3. ADD TO CART BUTTON & STICKY ACTIONS
@@ -2332,9 +2326,9 @@ body {
 .quick-view-actions {
   display: flex;
   align-items: center;
-  gap: 15px; /* Space between quantity and button */
+  gap: 15px; /* Space between the two */
 
-  /* Sticky positioning */
+  /* Sticky Bottom Logic */
   position: sticky;
   bottom: 0;
   background: white;
@@ -2342,7 +2336,6 @@ body {
   z-index: 20;
   border-top: 1px solid #f0f0f0;
 }
-
 .btn-add-cart,
 .btn-buy-now,
 .btn-add-cart-modal {
@@ -2358,32 +2351,32 @@ body {
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
 }
 
-/* Make this look like a button, NOT a pill */
 .btn-add-cart-modal {
-  flex: 1; /* Grow to fill space next to quantity */
-  height: 40px; /* Match quantity height */
+  /* Flex 1 makes it take ALL remaining space */
+  flex: 1 !important;
+  height: 45px;
+
+  /* Text Styling */
+  white-space: nowrap; /* Prevents "Add To Cart" from breaking into 2 lines */
   font-size: 1rem;
-
-  border: none;
-  cursor: pointer;
-  transition: all 0.3s ease;
-
-  /* Vibrant Green Gradient */
-  background: linear-gradient(135deg, #1a5f3f 0%, #2ecc71 100%) !important;
-  color: white !important;
-
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 1px;
 
-  /* Shadow for "Pop" */
-  box-shadow: 0 5px 15px rgba(46, 204, 113, 0.4);
+  /* Shape & Color */
+  border-radius: 8px !important;
+  background: linear-gradient(135deg, #1a5f3f 0%, #2ecc71 100%) !important;
+  color: white !important;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(46, 204, 113, 0.3);
 }
 
 .btn-add-cart:hover,
 .btn-add-cart-modal:hover {
   background-color: var(--secondary-color);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(46, 204, 113, 0.5);
 }
 
 .btn-buy-now:hover {
