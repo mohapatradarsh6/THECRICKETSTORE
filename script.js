@@ -528,6 +528,7 @@ class ProductManager {
         <img class="product-image" src="${product.image}" alt="${
       product.title
     }" />
+    <button class="btn-wishlist"><i class="far fa-heart"></i></button>
         <div class="product-overlay">
           <button class="btn-quick-view">Quick View</button>
         </div>
@@ -546,7 +547,6 @@ class ProductManager {
           ${discountBadge}
         </div>
         <div class="product-actions">
-          <button class="btn-wishlist"><i class="far fa-heart"></i></button>
           <button class="btn-add-cart" ${btnState}>${btnText}</button>
           <button class="btn-buy-now" ${buyBtnState}>Buy Now</button>
         </div>
