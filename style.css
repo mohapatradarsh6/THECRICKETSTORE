@@ -2276,12 +2276,12 @@ body {
 /* Quick View Mobile Adjustments */
 @media (max-width: 768px) {
   .quick-view-content {
-    width: 95% !important;
-    max-height: 85vh !important; /* Prevent it going off screen */
-    margin: auto;
-    overflow: hidden; /* Hide outer scroll */
+    max-width: 900px;
+    width: 95%;
+    max-height: 85vh; /* Fixed height relative to viewport */
     display: flex;
     flex-direction: column;
+    overflow: hidden;
   }
 
   .quick-view-body {
@@ -2290,14 +2290,18 @@ body {
     gap: 30px;
     padding: 30px;
     /* Ensure the body doesn't exceed screen height minus padding */
-    max-height: 80vh;
+    height: 100%;
     overflow: hidden; /* Hide outer overflow */
   }
   .quick-view-image {
-    min-height: 200px;
-    height: 200px;
-    margin-bottom: 15px;
-    padding: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f8f9fa;
+    border-radius: 12px;
+    padding: 20px;
+    height: 100%; /* Match height of details */
+    max-height: 70vh; /* Limit image height */
   }
 
   .quick-view-image img {
@@ -2361,9 +2365,13 @@ body {
   display: flex;
   flex-direction: column;
   gap: 15px;
-  overflow-y: auto; /* Enable Scroll here */
-  padding-right: 10px; /* Space for scrollbar */
-  max-height: 100%; /* Fill parent */
+
+  /* SCROLLING MAGIC */
+  overflow-y: auto;
+  height: 100%;
+  max-height: 70vh; /* Ensure it respects viewport limits */
+  padding-right: 5px; /* Prevent scrollbar overlapping content */
+  position: relative; /* Context for sticky elements */
 }
 
 /* Custom Scrollbar for better look */
@@ -2413,10 +2421,6 @@ body {
     overflow-y: auto; /* Scroll the whole body on mobile */
   }
 
-  .quick-view-details {
-    overflow-y: visible; /* Disable inner scroll on mobile */
-    max-height: none;
-  }
   /* Make Add to Cart sticky at bottom on mobile */
   .quick-view-actions {
     position: sticky;
@@ -2460,62 +2464,69 @@ body {
 
 .quick-view-actions {
   display: flex;
-  gap: 12px;
+  gap: 15px;
   align-items: center;
-  margin-top: 20px;
+  margin-top: auto; /* Push to bottom if content is short */
+
+  /* STICKY BEHAVIOR */
+  position: sticky;
+  bottom: 0;
+  background: white; /* Cover content scrolling behind */
+  padding: 15px 0 5px 0; /* Add padding for breathing room */
+  z-index: 10;
+  border-top: 1px solid #f0f0f0; /* Slight separator */
 }
 
-/* Enhanced Quantity Selector */
 .quantity-selector {
   display: flex;
   align-items: center;
-  border: 2px solid #ddd;
-  border-radius: 8px;
-  overflow: hidden;
-  height: 50px; /* Taller */
-  width: 160px; /* Wider */
+  justify-content: space-between;
+
+  /* THE YELLOW PILL STYLE */
+  border: 2px solid #ffc107; /* Bright Yellow Border */
+  border-radius: 50px; /* Pill Shape */
   background: white;
-  margin-bottom: 10px;
+
+  height: 40px;
+  width: 120px;
+  overflow: hidden;
 }
 
 .qty-minus,
 .qty-plus {
-  width: 50px; /* Large click area */
+  width: 35px;
   height: 100%;
   border: none;
-  background: #f1f1f1;
-  color: #333;
+  background: transparent; /* No grey background */
   cursor: pointer;
-  font-size: 1.5rem; /* Big Icons */
-  font-weight: bold;
+  font-size: 1.5rem;
+  font-weight: 400;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background 0.2s;
+  transition: transform 0.1s;
+  color: #000;
 }
 
 .qty-minus:hover,
 .qty-plus:hover {
-  background: #e0e0e0;
-}
-
-.qty-minus:active,
-.qty-plus:active {
-  background: var(--secondary-color);
-  transform: scale(0.95);
+  background-color: rgba(255, 193, 7, 0.1); /* Light yellow hover */
 }
 
 .qty-input {
   flex: 1;
   text-align: center;
   border: none;
-  border-left: 1px solid #ddd;
-  border-right: 1px solid #ddd;
   font-weight: 700;
-  font-size: 1.2rem;
+  font-size: 1.1rem;
   color: #333;
-  background: white;
-  pointer-events: none; /* User taps buttons only */
+  background: transparent;
+  pointer-events: none;
+}
+.qty-minus:active,
+.qty-plus:active {
+  background: var(--secondary-color);
+  transform: scale(0.95);
 }
 
 /* Add shake animation for error feedback */
@@ -2534,11 +2545,11 @@ body {
 
 .btn-add-cart-modal {
   flex: 1;
-  height: 45px;
+  height: 40px;
   background: var(--primary-color);
   color: white;
   border: none;
-  border-radius: 8px;
+  border-radius: 20px;
   font-weight: 600;
   font-size: 1rem;
   cursor: pointer;
@@ -2560,38 +2571,21 @@ body {
 @media (max-width: 768px) {
   .quick-view-body {
     grid-template-columns: 1fr;
-    gap: 20px;
-    padding: 20px;
+    display: block; /* Stack */
+    overflow-y: auto; /* Scroll the whole body */
   }
 
-  .quick-view-image {
-    min-height: 250px;
-  }
-
-  .quick-view-details h2 {
-    font-size: 1.4rem;
-  }
-
-  #quick-view-price {
-    font-size: 1.5rem;
+  .quick-view-details {
+    overflow: visible; /* Let parent handle scroll */
+    max-height: none;
   }
 
   .quick-view-actions {
-    flex-direction: column;
-    width: 100%;
-  }
-
-  .quantity-selector {
-    width: 100%;
-    justify-content: space-between;
-  }
-
-  .qty-input {
-    flex: 1;
-  }
-
-  .btn-add-cart-modal {
-    width: 100%;
+    position: sticky;
+    bottom: 0;
+    padding: 15px;
+    margin: 0 -15px -15px -15px; /* Stretch to edges */
+    box-shadow: 0 -4px 10px rgba(0, 0, 0, 0.05); /* Shadow for mobile sticky */
   }
 }
 
@@ -3417,11 +3411,6 @@ body {
 
   .quick-view-details h2 {
     font-size: 1.5rem;
-  }
-
-  .quick-view-actions {
-    flex-direction: column; /* Stack quantity and button */
-    width: 100%;
   }
 
   .quantity-selector {
