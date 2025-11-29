@@ -27,6 +27,25 @@ const userSchema = new mongoose.Schema({
     },
   ],
   recentlyViewed: [String],
+
+  cart: [
+    {
+      productId: { type: mongoose.Schema.Types.ObjectId, ref: "Product" },
+      quantity: { type: Number, default: 1 },
+      selectedSize: String,
+      selectedColor: String,
+      price: Number, // Store price at time of adding (optional but good for history)
+      title: String,
+      image: String,
+    },
+  ],
+
+  savedForLater: [
+    {
+      productId: { type: mongoose.Schema.Types.ObjectId, ref: "Product" },
+      addedAt: { type: Date, default: Date.now },
+    },
+  ],
 });
 
 // IMPORTANT: Do not re-define User if it already exists

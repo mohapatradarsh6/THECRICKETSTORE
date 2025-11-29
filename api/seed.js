@@ -579,6 +579,34 @@ module.exports = async (req, res) => {
       }
     }
 
+    // 4. SEED COUPONS
+    const couponSchema = new mongoose.Schema({
+      code: String,
+      discountType: String,
+      value: Number,
+      minOrderValue: Number,
+      isActive: Boolean,
+    });
+    const Coupon =
+      mongoose.models.Coupon || mongoose.model("Coupon", couponSchema);
+
+    await Coupon.deleteMany({}); // Clear old coupons
+    await Coupon.create([
+      {
+        code: "WELCOME10",
+        discountType: "percent",
+        value: 10,
+        minOrderValue: 500,
+        isActive: true,
+      },
+      {
+        code: "SAVE100",
+        discountType: "flat",
+        value: 100,
+        minOrderValue: 1000,
+        isActive: true,
+      },
+    ]);
     res.status(200).json({
       message: "✅ Database seeded successfully with Tags and FBT links!",
       count: insertedProducts.length,
