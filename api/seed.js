@@ -1,7 +1,36 @@
 const mongoose = require("mongoose");
 
+// 1. Define Schema (Must match products.js EXACTLY)
+const productSchema = new mongoose.Schema({
+  title: String,
+  price: Number,
+  originalPrice: Number,
+  category: String,
+  brand: String,
+  image: String,
+  images: [String],
+  rating: { type: Number, default: 4.5 },
+  reviews: { type: Number, default: 0 },
+  description: String,
+  isNewArrival: { type: Boolean, default: false },
+  isBestSeller: { type: Boolean, default: false },
+  stock: { type: Number, default: 10 },
+  inStock: { type: Boolean, default: true },
+  sizes: [String],
+  colors: [String],
+  // --- NEW FIELDS ---
+  tags: [String],
+  frequentlyBoughtTogether: [
+    { type: mongoose.Schema.Types.ObjectId, ref: "Product" },
+  ],
+});
+
+const Product =
+  mongoose.models.Product || mongoose.model("Product", productSchema);
+
+// 2. The Data (Now with Tags!)
 const seedProducts = [
-  // --- BATS (8 Products) ---
+  // --- BATS ---
   {
     title: "SG HP33 Kashmir Willow",
     price: 4999,
@@ -17,6 +46,7 @@ const seedProducts = [
     stock: 15,
     sizes: ["SH", "Harrow", "6"],
     colors: ["Natural"],
+    tags: ["kashmir-willow", "beginner", "balance"],
   },
   {
     title: "Kookaburra Kahuna Pro",
@@ -34,6 +64,7 @@ const seedProducts = [
     stock: 5,
     sizes: ["SH", "LH"],
     colors: ["Green/White"],
+    tags: ["english-willow", "pro", "power"],
   },
   {
     title: "SS Ton Retro Classic",
@@ -49,6 +80,7 @@ const seedProducts = [
     stock: 8,
     sizes: ["SH"],
     colors: ["Natural"],
+    tags: ["english-willow", "classic", "power"],
   },
   {
     title: "MRF Grand Edition",
@@ -65,6 +97,7 @@ const seedProducts = [
     stock: 3,
     sizes: ["SH", "LH"],
     colors: ["Red/White"],
+    tags: ["virat-kohli", "english-willow", "premium"],
   },
   {
     title: "Gray-Nicolls Cobra",
@@ -80,6 +113,7 @@ const seedProducts = [
     stock: 12,
     sizes: ["SH", "Harrow"],
     colors: ["Blue/Silver"],
+    tags: ["english-willow", "low-profile", "drive"],
   },
   {
     title: "BAS Vampire SR23",
@@ -92,9 +126,10 @@ const seedProducts = [
     rating: 4.5,
     reviews: 156,
     description: "Legendary BAS profile with thick edges.",
-    stock: 0, // OUT OF STOCK TEST
+    stock: 0,
     sizes: ["SH"],
     colors: ["Red/Black"],
+    tags: ["kashmir-willow", "thick-edges"],
   },
   {
     title: "Adidas Incurza 4.0",
@@ -110,6 +145,7 @@ const seedProducts = [
     stock: 20,
     sizes: ["SH", "6"],
     colors: ["Acid Red"],
+    tags: ["t20", "power", "modern"],
   },
   {
     title: "DSC Blak 300",
@@ -125,9 +161,10 @@ const seedProducts = [
     stock: 10,
     sizes: ["SH"],
     colors: ["Black"],
+    tags: ["beginner", "budget", "power"],
   },
 
-  // --- BALLS (5 Products) ---
+  // --- BALLS ---
   {
     title: "SG Test Cricket Ball",
     price: 899,
@@ -143,6 +180,7 @@ const seedProducts = [
     stock: 100,
     sizes: ["Standard"],
     colors: ["Red"],
+    tags: ["leather", "test-match", "professional"],
   },
   {
     title: "Kookaburra Turf White",
@@ -158,6 +196,7 @@ const seedProducts = [
     stock: 50,
     sizes: ["Standard"],
     colors: ["White"],
+    tags: ["leather", "white-ball", "odi"],
   },
   {
     title: "SG Pink Leather Ball",
@@ -170,9 +209,10 @@ const seedProducts = [
     rating: 4.2,
     reviews: 200,
     description: "Durable 4-piece ball perfect for club matches and nets.",
-    stock: 0, // OUT OF STOCK TEST
+    stock: 0,
     sizes: ["Standard"],
     colors: ["Pink"],
+    tags: ["leather", "practice", "pink"],
   },
   {
     title: "Heavy Tennis Ball (Pack of 5)",
@@ -188,6 +228,7 @@ const seedProducts = [
     stock: 200,
     sizes: ["Pack of 5"],
     colors: ["Red", "Yellow"],
+    tags: ["tennis", "box-cricket", "heavy"],
   },
   {
     title: "Training Synthetic Ball",
@@ -203,9 +244,10 @@ const seedProducts = [
     stock: 60,
     sizes: ["Standard"],
     colors: ["Red", "Yellow"],
+    tags: ["synthetic", "practice", "weather-proof"],
   },
 
-  // --- PADS (4 Products) ---
+  // --- PADS ---
   {
     title: "Kookaburra Batting Pads",
     price: 2999,
@@ -220,6 +262,7 @@ const seedProducts = [
     stock: 15,
     sizes: ["Boys", "Youth", "Adult"],
     colors: ["White", "Blue", "Green"],
+    tags: ["protection", "lightweight", "foam"],
   },
   {
     title: "Moonwalkr Thigh Pad Combo",
@@ -236,6 +279,7 @@ const seedProducts = [
     stock: 25,
     sizes: ["S", "M", "L"],
     colors: ["Blue", "White", "Black"],
+    tags: ["protection", "thigh-guard", "slim"],
   },
   {
     title: "SS Limited Edition Pads",
@@ -251,6 +295,7 @@ const seedProducts = [
     stock: 8,
     sizes: ["Adult", "Large Adult"],
     colors: ["White"],
+    tags: ["protection", "premium", "traditional"],
   },
   {
     title: "SG Test Thigh Guard",
@@ -266,9 +311,10 @@ const seedProducts = [
     stock: 40,
     sizes: ["Standard"],
     colors: ["White"],
+    tags: ["protection", "basic", "thigh-guard"],
   },
 
-  // --- GLOVES (4 Products) ---
+  // --- GLOVES ---
   {
     title: "BAS Vampire Batting Gloves",
     price: 1999,
@@ -285,6 +331,7 @@ const seedProducts = [
     stock: 30,
     sizes: ["Youth", "Adult"],
     colors: ["White/Red"],
+    tags: ["protection", "leather-palm", "comfort"],
   },
   {
     title: "Kookaburra Pro Keeper Gloves",
@@ -301,6 +348,7 @@ const seedProducts = [
     stock: 10,
     sizes: ["Adult"],
     colors: ["Green/White"],
+    tags: ["keeping", "grip", "pro"],
   },
   {
     title: "SS Millenium Pro Gloves",
@@ -316,6 +364,7 @@ const seedProducts = [
     stock: 20,
     sizes: ["Boys", "Adult"],
     colors: ["Blue/White"],
+    tags: ["protection", "flexible", "batting"],
   },
   {
     title: "SG Savage Lite Gloves",
@@ -328,12 +377,13 @@ const seedProducts = [
     rating: 4.2,
     reviews: 60,
     description: "Lightweight gloves for club cricket.",
-    stock: 0, // OUT OF STOCK TEST
+    stock: 0,
     sizes: ["Adult"],
     colors: ["White"],
+    tags: ["protection", "lightweight", "budget"],
   },
 
-  // --- HELMETS (3 Products) ---
+  // --- HELMETS ---
   {
     title: "SG Aerotech Helmet",
     price: 3499,
@@ -348,6 +398,7 @@ const seedProducts = [
     stock: 12,
     sizes: ["S", "M", "L"],
     colors: ["Navy", "Black"],
+    tags: ["safety", "helmet", "lightweight"],
   },
   {
     title: "Shrey Master Class Air",
@@ -364,6 +415,7 @@ const seedProducts = [
     stock: 5,
     sizes: ["M", "L", "XL"],
     colors: ["Green", "Navy", "Yellow"],
+    tags: ["safety", "titanium", "pro"],
   },
   {
     title: "Masuri Legacy Helmet",
@@ -379,9 +431,10 @@ const seedProducts = [
     stock: 8,
     sizes: ["M", "L"],
     colors: ["Navy"],
+    tags: ["safety", "traditional", "steel"],
   },
 
-  // --- SHOES (3 Products) ---
+  // --- SHOES ---
   {
     title: "Kookaburra KC 2.0 Spikes",
     price: 4999,
@@ -397,6 +450,7 @@ const seedProducts = [
     stock: 15,
     sizes: ["UK 7", "UK 8", "UK 9", "UK 10"],
     colors: ["White/Green"],
+    tags: ["spikes", "footwear", "turf"],
   },
   {
     title: "Adidas Vector Mid",
@@ -412,6 +466,7 @@ const seedProducts = [
     stock: 4,
     sizes: ["UK 8", "UK 9", "UK 10", "UK 11"],
     colors: ["White/Blue"],
+    tags: ["spikes", "bowling", "fast-bowler"],
   },
   {
     title: "Asics Gel Peake Rubber",
@@ -427,9 +482,10 @@ const seedProducts = [
     stock: 10,
     sizes: ["UK 7", "UK 8", "UK 9", "UK 10"],
     colors: ["White/Black"],
+    tags: ["rubber-sole", "all-rounder", "footwear"],
   },
 
-  // --- BAGS & KITS (3 Products) ---
+  // --- BAGS & KITS ---
   {
     title: "SG Teampak Wheelie Bag",
     price: 3999,
@@ -444,6 +500,7 @@ const seedProducts = [
     stock: 20,
     sizes: ["Standard"],
     colors: ["Blue/Black"],
+    tags: ["kitbag", "storage", "wheelie"],
   },
   {
     title: "BAS Players Complete Kit",
@@ -460,6 +517,7 @@ const seedProducts = [
     stock: 2,
     sizes: ["Adult", "Youth"],
     colors: ["Multicolor"],
+    tags: ["full-kit", "bundle", "value"],
   },
   {
     title: "SG Junior Cricket Kit",
@@ -476,50 +534,55 @@ const seedProducts = [
     stock: 5,
     sizes: ["Size 4", "Size 5", "Size 6"],
     colors: ["Blue/Orange"],
+    tags: ["junior", "starter", "kit"],
   },
 ];
-
-// Define Schema (Must match products.js)
-const productSchema = new mongoose.Schema({
-  title: String,
-  price: Number,
-  originalPrice: Number,
-  category: String,
-  brand: String,
-  image: String,
-  rating: { type: Number, default: 4.5 },
-  reviews: { type: Number, default: 0 },
-  description: String,
-  isNewArrival: { type: Boolean, default: false },
-  isBestSeller: { type: Boolean, default: false },
-  stock: { type: Number, default: 10 },
-  inStock: { type: Boolean, default: true },
-  sizes: [String],
-  colors: [String],
-
-  // 1. Tags: Keywords for "Related Products" logic (e.g., "english-willow", "power-hitting")
-  tags: [String],
-
-  // 2. FBT: Links to other specific Product IDs
-  frequentlyBoughtTogether: [
-    { type: mongoose.Schema.Types.ObjectId, ref: "Product" },
-  ],
-});
-const Product =
-  mongoose.models.Product || mongoose.model("Product", productSchema);
 
 module.exports = async (req, res) => {
   try {
     if (!process.env.MONGO_URI) throw new Error("MONGO_URI missing");
     await mongoose.connect(process.env.MONGO_URI);
 
-    // DELETE OLD & INSERT NEW
+    // 1. DELETE OLD DATA
     await Product.deleteMany({});
-    await Product.insertMany(seedProducts);
 
-    res
-      .status(200)
-      .json({ message: "✅ Database successfully seeded with 30 items!" });
+    // 2. INSERT NEW DATA
+    const insertedProducts = await Product.insertMany(seedProducts);
+
+    // 3. AUTO-LINK "FREQUENTLY BOUGHT TOGETHER" (The Logic)
+    // We filter the inserted products to find categories
+    const bats = insertedProducts.filter((p) => p.category === "bats");
+    const balls = insertedProducts.filter((p) => p.category === "balls");
+    const gloves = insertedProducts.filter((p) => p.category === "gloves");
+    const pads = insertedProducts.filter((p) => p.category === "pads");
+    const helmets = insertedProducts.filter((p) => p.category === "helmets");
+
+    // Loop through bats and link them to a Ball and a Glove
+    for (let bat of bats) {
+      // Add random ball ID if available
+      if (balls.length > 0) {
+        bat.frequentlyBoughtTogether.push(balls[0]._id);
+      }
+      // Add random glove ID if available
+      if (gloves.length > 0) {
+        bat.frequentlyBoughtTogether.push(gloves[0]._id);
+      }
+      await bat.save(); // Update the bat in DB
+    }
+
+    // Link Kits to Balls
+    const kits = insertedProducts.filter((p) => p.category === "kits");
+    for (let kit of kits) {
+      if (balls.length > 0) {
+        kit.frequentlyBoughtTogether.push(balls[0]._id);
+        await kit.save();
+      }
+    }
+
+    res.status(200).json({
+      message: "✅ Database seeded successfully with Tags and FBT links!",
+      count: insertedProducts.length,
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: error.message });

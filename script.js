@@ -810,14 +810,14 @@ class QuickViewModal {
 
     if (qtyPlus) {
       qtyPlus.onclick = () => {
-        // FIX: Check Stock taking Cart into account
+        // FIX: Check Stock - Cart + Modal Input
         if (this.currentProduct && this.currentProduct.stock !== undefined) {
           // Find how many of this item are ALREADY in the cart
           const cartItem = window.cartManager.cart.find(
             (item) => item.title === this.currentProduct.title
           );
           const cartQty = cartItem ? parseInt(cartItem.quantity) : 0;
-          const totalRequested = this.currentQuantity + 1 + cartQty; // Current Input + 1 Click + Cart
+          const totalRequested = this.currentQuantity + 1 + cartQty;
 
           if (totalRequested > this.currentProduct.stock) {
             window.cartManager.showToast(
@@ -828,7 +828,11 @@ class QuickViewModal {
             // Visual Shake effect
             if (qtyInput) {
               qtyInput.style.borderColor = "red";
-              setTimeout(() => (qtyInput.style.borderColor = ""), 500);
+              qtyInput.style.animation = "shake 0.3s";
+              setTimeout(() => {
+                qtyInput.style.borderColor = "";
+                qtyInput.style.animation = "";
+              }, 500);
             }
             return;
           }
@@ -926,8 +930,6 @@ class QuickViewModal {
         // Remove old listeners by cloning
         const newBtn = addToCartBtn.cloneNode(true);
         addToCartBtn.parentNode.replaceChild(newBtn, addToCartBtn);
-
-        // Inside QuickViewModal class -> showQuickView() -> newBtn.onclick
 
         newBtn.onclick = () => {
           const sizeEl = document.getElementById("qv-size");

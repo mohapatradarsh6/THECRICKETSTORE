@@ -2451,42 +2451,44 @@ body {
 .quantity-selector {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  border: 2px solid var(--primary-color); /* Thicker, colored border */
-  border-radius: 8px; /* Slightly squarer is easier to click than pill */
+  border: 2px solid var(--primary-color);
+  border-radius: 8px;
   overflow: hidden;
-  height: 45px; /* Taller for easier clicking */
-  width: 140px; /* Wider */
+  height: 45px;
+  width: 140px;
   background: white;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05); /* Shadow to make it pop */
-  margin-right: auto; /* Aligns left in flex container */
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  margin-right: auto;
 }
 
 .qty-minus,
 .qty-plus {
-  width: 40px; /* Wider buttons */
+  width: 45px;
   height: 100%;
   border: none;
-  background: #f0f4f2; /* Light distinct background */
+  background: var(--light-color);
   color: var(--primary-color);
   cursor: pointer;
-  font-size: 1.2rem;
+  font-size: 1.3rem;
   font-weight: bold;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: all 0.2s;
+  user-select: none;
 }
 
 .qty-minus:hover,
 .qty-plus:hover {
   background: var(--primary-color);
   color: white;
+  transform: scale(1.05);
 }
 
 .qty-minus:active,
 .qty-plus:active {
   background: var(--secondary-color);
+  transform: scale(0.95);
 }
 
 .qty-input {
@@ -2499,7 +2501,23 @@ body {
   font-size: 1.1rem;
   color: var(--dark-color);
   background: white;
-  pointer-events: none; /* Keeps it read-only but visible */
+  outline: none;
+  pointer-events: none;
+  width: 50px;
+}
+
+/* Add shake animation for error feedback */
+@keyframes shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-5px);
+  }
+  75% {
+    transform: translateX(5px);
+  }
 }
 
 .btn-add-cart-modal {
