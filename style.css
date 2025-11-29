@@ -2085,14 +2085,21 @@ body {
   border-bottom: none;
 }
 
-/* Payment Methods */
+/* Payment Methods - Force 2 per row */
 .payment-methods-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  /* Change 'auto-fit' to '2, 1fr' to lock it to 2 columns */
+  grid-template-columns: repeat(2, 1fr);
   gap: 15px;
   margin: 20px 0;
 }
 
+/* On very small mobile screens, you might want 1 per row, */
+@media (max-width: 480px) {
+  .payment-methods-grid {
+    grid-template-columns: 1fr; /* Stack on tiny screens */
+  }
+}
 .payment-option {
   cursor: pointer;
 }
