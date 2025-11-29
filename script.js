@@ -428,7 +428,6 @@ class ProductManager {
     await this.fetchProducts();
     this.initializeFilters();
     this.initializeSearch();
-    this.renderRecentlyViewed(); // Initialize Recent History
   }
 
   async fetchProducts() {
@@ -553,49 +552,6 @@ class ProductManager {
       </div>
     `;
     return card;
-  }
-
-  // --- RECENTLY VIEWED LOGIC (Feature 1) ---
-  addToRecentlyViewed(product) {
-    // 1. Get existing history from LocalStorage
-    let recent = JSON.parse(localStorage.getItem("recentlyViewed")) || [];
-
-    // 2. Remove if duplicate (so we can move it to the top)
-    recent = recent.filter((p) => p._id !== product._id);
-
-    // 3. Add to top
-    recent.unshift(product);
-
-    // 4. Limit to 5 items
-    if (recent.length > 5) recent.pop();
-
-    // 5. Save back to LocalStorage
-    localStorage.setItem("recentlyViewed", JSON.stringify(recent));
-
-    // 6. Re-render the section
-    this.renderRecentlyViewed();
-  }
-
-  renderRecentlyViewed() {
-    const container = document.getElementById("recently-viewed-container");
-    const section = document.getElementById("recently-viewed-section");
-    if (!container || !section) return;
-
-    const recent = JSON.parse(localStorage.getItem("recentlyViewed")) || [];
-
-    if (recent.length === 0) {
-      section.style.display = "none";
-      return;
-    }
-
-    section.style.display = "block";
-    container.innerHTML = "";
-
-    recent.forEach((product) => {
-      // Re-use your existing card creator!
-      const card = this.createProductCard(product);
-      container.appendChild(card);
-    });
   }
 
   initializeProductEvents() {
@@ -836,9 +792,6 @@ class QuickViewModal {
     if (!this.modal) return;
     this.currentProduct = product;
     this.currentQuantity = 1; // Reset quantity on open
-
-    // Feature: History
-    window.productManager.addToRecentlyViewed(product);
 
     // 1. Fill Basic Info
     this.modal.querySelector("#quick-view-title").textContent = product.title;
@@ -1086,7 +1039,6 @@ function logoutUser() {
   // Clear storage
   localStorage.removeItem("user");
   localStorage.removeItem("token");
-  localStorage.removeItem("recentlyViewed"); // Clear history on logout
 
   if (window.cartManager) {
     window.cartManager.cart = [];
