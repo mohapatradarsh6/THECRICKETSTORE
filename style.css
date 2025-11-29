@@ -1766,12 +1766,13 @@ body {
   color: white;
 }
 
+/* === HOME SCREEN BUTTONS FIX (RECTANGULAR) === */
 .btn-add-cart,
 .btn-buy-now {
   flex: 1;
   padding: 12px 20px;
   border: none;
-  border-radius: 8px;
+  border-radius: 5px !important; /* FIXED: Rectangular */
   font-weight: 600;
   cursor: pointer;
   transition: var(--transition);
@@ -2292,7 +2293,7 @@ body {
   grid-template-columns: 1fr 1fr; /* 50% Image | 50% Details */
   height: 100%;
   overflow: hidden; /* Trap overflow */
-  padding: 0; /* Remove padding here, add to children */
+  padding: 0;
 }
 
 /* Left Side: Image (Fixed) */
@@ -2385,37 +2386,38 @@ body {
 }
 
 /* =========================================
-   2. YELLOW PILL QUANTITY SELECTOR
+   2. YELLOW PILL QUANTITY SELECTOR (FIXED)
    ========================================= */
 .quantity-selector {
   display: flex !important;
   align-items: center;
   justify-content: space-between;
 
-  /* Premium Look */
-  width: 110px; /* Fixed small width */
-  height: 40px; /* Compact height */
-  border: 1px solid #ffc107 !important; /* Subtle yellow border */
-  border-radius: 50px !important; /* Pill shape */
-  background: #fff;
-  flex-shrink: 0; /* Prevent it from getting squashed */
+  /* THE PILL STYLE */
+  border: 2px solid #ffc107 !important; /* Force Yellow */
+  border-radius: 50px !important; /* Pill Shape */
+  background: white;
+
+  height: 45px;
+  width: 140px;
+  flex-shrink: 0; /* Don't get squashed */
   overflow: hidden;
 }
 
 .qty-minus,
 .qty-plus {
-  width: 35px;
+  width: 45px;
   height: 100%;
+  background: transparent !important; /* Clear background */
   border: none !important;
-  background: transparent !important;
-  font-size: 1.2rem !important;
-  font-weight: bold;
+  /* FORCE VISIBILITY */
+  font-size: 1.5rem !important;
+  font-weight: bold !important;
+  color: #000 !important;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #333;
-  transition: background 0.2s;
 }
 
 .qty-minus:hover,
@@ -2424,15 +2426,16 @@ body {
 }
 
 .qty-input {
-  width: 40px;
-  text-align: center;
   border: none !important;
-  font-weight: 600;
-  font-size: 1rem;
-  color: #333;
   background: transparent !important;
-  pointer-events: none; /* User clicks buttons */
+  font-weight: bold;
+  font-size: 1.1rem;
+  width: 100%;
+  text-align: center;
+  padding: 0;
+  color: #333 !important; /* Ensure visibility */
 }
+
 /* =========================================
    3. ADD TO CART BUTTON & STICKY ACTIONS
    ========================================= */
@@ -2454,7 +2457,7 @@ body {
 .btn-add-cart-modal {
   flex: 1; /* Grow to fill space next to quantity */
   height: 40px; /* Match quantity height */
-  border-radius: 50px !important; /* Match pill shape */
+  border-radius: 8px !important; /* Standard corners */
   font-size: 0.95rem;
   font-weight: 600;
   border: none;
