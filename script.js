@@ -958,14 +958,19 @@ class QuickViewModal {
         const size = document.getElementById("qv-size")?.value;
         const color = document.getElementById("qv-color")?.value;
 
-        // FIX: Read quantity directly from the variable we tracked
-        const qtyToAdd = this.currentQuantity;
+        // FIX: Read the exact value from the input field to be 100% sure
+        const qtyInput = this.modal.querySelector(".qty-input");
+        const finalQty = parseInt(qtyInput.value) || 1;
 
-        const success = window.cartManager.addToCart(product, qtyToAdd, {
+        // Pass finalQty instead of this.currentQuantity to be safe
+        const success = window.cartManager.addToCart(product, finalQty, {
           size,
           color,
         });
-        if (success) this.closeModal();
+
+        if (success) {
+          this.closeModal();
+        }
       };
     }
 
