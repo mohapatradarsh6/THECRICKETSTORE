@@ -761,51 +761,6 @@ class ProductManager {
     }
   }
 
-  showSuggestions(query, container, inputElement) {
-    if (!container) return;
-    const matches = this.products
-      .filter(
-        (p) =>
-          p.title.toLowerCase().includes(query.toLowerCase()) ||
-          p.brand.toLowerCase().includes(query.toLowerCase())
-      )
-      .slice(0, 5);
-
-    if (matches.length === 0) {
-      container.classList.remove("active");
-      return;
-    }
-
-    container.innerHTML = matches
-      .map(
-        (p) => `
-        <div class="suggestion-item" onclick="window.productManager.selectSuggestion('${p.title.replace(
-          /'/g,
-          "\\'"
-        )}')">
-            <img src="${p.image}" alt="${
-          p.title
-        }" style="width:30px; height:30px; object-fit:contain; margin-right:10px;">
-            <div class="suggestion-info">
-                <div>${p.title}</div>
-                <small style="color:#666">${p.brand}</small>
-            </div>
-        </div>`
-      )
-      .join("");
-
-    window.productManager.selectSuggestion = (title) => {
-      inputElement.value = title;
-      this.searchProducts(title);
-      container.classList.remove("active");
-      const productsSection = document.querySelector(".products-section");
-      if (productsSection)
-        productsSection.scrollIntoView({ behavior: "smooth" });
-    };
-
-    container.classList.add("active");
-  }
-
   searchProducts(query) {
     const searchTerm = query.toLowerCase().trim();
 

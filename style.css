@@ -4042,3 +4042,11 @@ body {
     display: block !important;
   }
 }
+
+/* Disable Search Suggestions Dropdown */
+#search-suggestions {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none;
+}
