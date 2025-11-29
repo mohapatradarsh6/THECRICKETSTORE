@@ -595,7 +595,10 @@ class ProductManager {
   }
 
   async fetchProducts() {
-    // 1. Show Skeleton
+    // 1. Define container at the top so it's available in try AND catch blocks
+    const container = document.getElementById("products-container");
+
+    // 2. Show Skeleton Loading Screen
     if (container) {
       container.innerHTML = Array(6)
         .fill("")
@@ -628,7 +631,7 @@ class ProductManager {
       this.renderProductCards();
     } catch (error) {
       console.error("Failed to fetch products:", error);
-      const container = document.getElementById("products-container");
+      // 3. Now 'container' is defined, so this won't crash
       if (container) {
         container.innerHTML = `<div style="grid-column: 1 / -1; text-align: center; padding: 40px;"><h3>Failed to load products</h3><p>${error.message}</p></div>`;
       }
