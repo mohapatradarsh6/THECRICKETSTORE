@@ -2392,29 +2392,30 @@ body {
   align-items: center;
   justify-content: space-between;
 
-  /* THE PILL STYLE */
-  border: 2px solid #ffc107 !important; /* Force Yellow */
-  border-radius: 50px !important; /* Pill Shape */
-  background: white;
-
-  height: 45px;
-  width: 140px;
-  flex-shrink: 0; /* Don't get squashed */
+  /* Premium Look */
+  width: 110px; /* Fixed small width */
+  height: 40px; /* Compact height */
+  border: 1px solid #ffc107 !important; /* Subtle yellow border */
+  border-radius: 50px !important; /* Pill shape */
+  background: #fff;
+  flex-shrink: 0; /* Prevent it from getting squashed */
   overflow: hidden;
 }
 
 .qty-minus,
 .qty-plus {
-  width: 45px;
+  width: 35px;
   height: 100%;
-  background: transparent !important; /* Clear background */
   border: none !important;
-  font-size: 1.5rem !important;
+  background: transparent !important;
+  font-size: 1.2rem !important;
+  font-weight: bold;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #000;
+  color: #333;
+  transition: background 0.2s;
 }
 
 .qty-minus:hover,
@@ -2423,46 +2424,44 @@ body {
 }
 
 .qty-input {
-  border: none !important;
-  background: transparent !important;
-  font-weight: bold;
-  font-size: 1.1rem;
-  width: 100%;
+  width: 40px;
   text-align: center;
-  padding: 0;
+  border: none !important;
+  font-weight: 600;
+  font-size: 1rem;
+  color: #333;
+  background: transparent !important;
+  pointer-events: none; /* User clicks buttons */
 }
-
 /* =========================================
    3. ADD TO CART BUTTON & STICKY ACTIONS
    ========================================= */
 .quick-view-actions {
   display: flex;
-  gap: 15px;
   align-items: center;
-  margin-top: auto; /* Push to bottom */
+  gap: 15px; /* Space between quantity and button */
 
-  /* STICKY BOTTOM MAGIC */
+  /* Sticky positioning */
   position: sticky;
-  bottom: -1px; /* -1px fixes gap issues */
+  bottom: 0;
   background: white;
-  padding-top: 15px;
-  padding-bottom: 5px;
+  padding: 15px 0;
+  z-index: 20;
   border-top: 1px solid #f0f0f0;
-  z-index: 10;
 }
 
 /* Make this look like a button, NOT a pill */
 .btn-add-cart-modal {
-  border-radius: 8px !important; /* Standard corners */
-  height: 45px;
+  flex: 1; /* Grow to fill space next to quantity */
+  height: 40px; /* Match quantity height */
+  border-radius: 50px !important; /* Match pill shape */
+  font-size: 0.95rem;
   font-weight: 600;
-  font-size: 1rem;
-  flex: 1; /* Take remaining space */
+  border: none;
   background-color: var(--primary-color);
   color: white;
-  border: none;
   cursor: pointer;
-  transition: all 0.3s ease;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1); /* Premium shadow */
 }
 
 .btn-add-cart-modal:hover:not(:disabled) {
@@ -3330,33 +3329,65 @@ body {
   }
 
   /* --- Product Grid Improvements (Task C) --- */
-  .products-container {
-    grid-template-columns: repeat(2, 1fr); /* 2 columns on tablet/mobile */
-    gap: 15px;
-    padding: 0 10px;
-  }
+  @media (max-width: 768px) {
+    .products-container {
+      /* Force 2 equal columns with small gap to maximize width */
+      grid-template-columns: repeat(2, 1fr) !important;
+      gap: 8px !important; /* Smaller gap = wider cards */
+      padding: 0 5px;
+    }
 
-  .product-card {
-    margin: 0;
-    font-size: 0.9rem;
-  }
+    .product-card {
+      display: flex;
+      flex-direction: column;
+      height: auto; /* Stop forcing fixed height */
+      min-height: 240px; /* Shorter minimum height */
+      border-radius: 8px;
+    }
 
-  .product-image-wrapper {
-    height: 160px; /* Adjust for smaller screens */
-  }
+    .product-image-wrapper {
+      height: 130px; /* Reduce image height to stop elongation */
+      padding: 10px;
+      width: 100%;
+    }
 
-  .product-actions {
-    flex-direction: column; /* Stack buttons on mobile */
-    gap: 8px;
-  }
+    .product-image {
+      object-fit: contain;
+      height: 100%;
+      width: 100%;
+    }
 
-  .btn-add-cart,
-  .btn-buy-now {
-    width: 100%;
-    padding: 10px;
-    font-size: 0.85rem;
-  }
+    .product-info {
+      padding: 8px !important;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      flex: 1; /* Fills remaining height */
+    }
 
+    .product-title {
+      font-size: 0.85rem;
+      white-space: normal; /* Allow text to wrap! */
+      line-height: 1.3;
+      height: 2.6em; /* Limit to 2 lines */
+      overflow: hidden;
+      margin-bottom: 4px;
+    }
+
+    /* Stack buttons nicely on mobile */
+    .product-actions {
+      margin-top: auto;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .btn-add-cart,
+    .btn-buy-now {
+      height: 30px; /* Smaller buttons */
+      font-size: 0.8rem;
+      padding: 0;
+    }
+  }
   /* --- Footer & Other Sections --- */
   .hero-slide {
     flex-direction: column;
