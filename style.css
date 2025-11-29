@@ -2200,9 +2200,16 @@ body {
 /* Payment Methods */
 .payment-methods-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  /* Force exactly 2 columns */
+  grid-template-columns: 1fr 1fr;
   gap: 15px;
   margin: 20px 0;
+}
+
+@media (max-width: 480px) {
+  .payment-methods-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .payment-option {
@@ -3349,73 +3356,72 @@ body {
   @media (max-width: 768px) {
     .products-container {
       display: grid;
-      grid-template-columns: repeat(2, 1fr) !important; /* Force 2 columns */
-      gap: 12px !important; /* Slightly larger gap */
-      padding: 0 12px;
+      /* 2 columns, smaller gap to make cards wider */
+      grid-template-columns: repeat(2, 1fr) !important;
+      gap: 10px !important;
+      padding: 0 10px;
     }
     .product-card {
       display: flex;
       flex-direction: column;
-      height: auto; /* Allow flexible height */
-      min-height: 320px; /* Taller minimum to fit content */
-      background: white;
-      border-radius: 12px;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-      overflow: hidden;
+      /* Auto height allows content to fit naturally without stretching */
+      height: auto;
+      /* Remove min-height or reduce it significantly */
+      min-height: 280px;
+      border-radius: 10px;
+      /* Ensure no overflow cuts off content */
+      overflow: visible;
     }
 
     .product-image-wrapper {
+      height: 140px;
       width: 100%;
-      height: 160px; /* Fixed height, not too tall */
-      padding: 15px;
-      background-color: #f8f9fa;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      padding: 10px;
+      background: #fff; /* White background usually looks cleaner than grey */
     }
 
     .product-image {
-      max-width: 100%;
-      max-height: 100%;
-      object-fit: contain; /* Ensure image fits */
+      object-fit: contain;
+      height: 100%;
+      width: 100%;
     }
 
     .product-info {
-      padding: 12px !important;
+      padding: 10px !important;
       display: flex;
       flex-direction: column;
       justify-content: space-between;
-      flex-grow: 1; /* Fill remaining space */
+      flex: 1;
     }
 
     .product-title {
       font-size: 0.9rem;
       line-height: 1.3;
-      margin-bottom: 5px;
-      white-space: normal; /* Allow wrapping */
+      /* Allow up to 3 lines if needed, prevent cutoff */
+      height: auto;
+      max-height: 3.9em;
+      white-space: normal;
       display: -webkit-box;
-      -webkit-line-clamp: 2; /* Limit to 2 lines */
+      -webkit-line-clamp: 3;
       -webkit-box-orient: vertical;
       overflow: hidden;
+      margin-bottom: 5px;
     }
 
     /* Stack buttons nicely on mobile */
     .product-actions {
       display: flex;
       flex-direction: column; /* Stack vertically */
-      gap: 8px;
-      margin-top: auto;
+      gap: 6px;
+      margin-top: 8px;
     }
 
-    .btn-add-cart,
-    .btn-buy-now {
-      width: 100%;
-      padding: 10px 0;
-      border-radius: 6px !important; /* Standard rounded corners */
-      font-size: 0.9rem;
-      font-weight: 600;
-      text-align: center;
-    }
+    .btn-add-cart, .btn-buy-now {
+    padding: 8px 0;
+    font-size: 0.85rem;
+    height: 32px;
+  }
+}
 
     .btn-add-cart {
       background-color: var(--primary-color);
