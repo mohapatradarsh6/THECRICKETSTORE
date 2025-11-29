@@ -13,6 +13,18 @@ const productSchema = new mongoose.Schema({
   description: String,
   isNewArrival: { type: Boolean, default: false },
   isBestSeller: { type: Boolean, default: false },
+  stock: { type: Number, default: 10 },
+  inStock: { type: Boolean, default: true },
+  sizes: [String],
+  colors: [String],
+
+  // 1. Tags: Keywords for "Related Products" logic (e.g., "english-willow", "power-hitting")
+  tags: [String],
+
+  // 2. FBT: Links to other specific Product IDs
+  frequentlyBoughtTogether: [
+    { type: mongoose.Schema.Types.ObjectId, ref: "Product" },
+  ],
 });
 
 const Product =

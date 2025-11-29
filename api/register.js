@@ -27,7 +27,10 @@ const userSchema = new mongoose.Schema({
       image: String,
     },
   ],
-  recentlyViewed: [String],
+
+  // --- UPDATED FIELD ---
+  // Changed from [String] to ObjectIds to link real product data
+  recentlyViewed: [{ type: mongoose.Schema.Types.ObjectId, ref: "Product" }],
 });
 
 // Prevent model recompilation error

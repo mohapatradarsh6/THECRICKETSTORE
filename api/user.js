@@ -1,7 +1,6 @@
 const mongoose = require("mongoose");
 const jwt = require("jsonwebtoken");
 
-// 1. Define Expanded User Schema (Must match other files)
 const userSchema = new mongoose.Schema({
   name: { type: String, required: true },
   email: { type: String, required: true, unique: true },
@@ -9,8 +8,6 @@ const userSchema = new mongoose.Schema({
   resetPasswordToken: String,
   resetPasswordExpires: Date,
   createdAt: { type: Date, default: Date.now },
-
-  // --- NEW FIELDS ---
   addresses: [
     {
       street: String,
@@ -28,7 +25,10 @@ const userSchema = new mongoose.Schema({
       image: String,
     },
   ],
-  recentlyViewed: [String], // Store Product Titles or IDs
+
+  // --- UPDATED FIELD ---
+  // Changed from [String] to ObjectIds to link real product data
+  recentlyViewed: [{ type: mongoose.Schema.Types.ObjectId, ref: "Product" }],
 });
 
 const User = mongoose.models.User || mongoose.model("User", userSchema);

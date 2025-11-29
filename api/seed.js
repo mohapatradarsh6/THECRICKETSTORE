@@ -487,9 +487,6 @@ const productSchema = new mongoose.Schema({
   category: String,
   brand: String,
   image: String,
-
-  // NEW FIELDS
-  images: [String],
   rating: { type: Number, default: 4.5 },
   reviews: { type: Number, default: 0 },
   description: String,
@@ -499,8 +496,15 @@ const productSchema = new mongoose.Schema({
   inStock: { type: Boolean, default: true },
   sizes: [String],
   colors: [String],
-});
 
+  // 1. Tags: Keywords for "Related Products" logic (e.g., "english-willow", "power-hitting")
+  tags: [String],
+
+  // 2. FBT: Links to other specific Product IDs
+  frequentlyBoughtTogether: [
+    { type: mongoose.Schema.Types.ObjectId, ref: "Product" },
+  ],
+});
 const Product =
   mongoose.models.Product || mongoose.model("Product", productSchema);
 
