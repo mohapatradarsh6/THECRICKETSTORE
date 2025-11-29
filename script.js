@@ -834,24 +834,21 @@ class ProductManager {
 class QuickViewModal {
   constructor() {
     this.modal = document.getElementById("quick-view-modal");
-    this.initializeQuickView();
     this.currentProduct = null;
     this.currentQuantity = 1;
-    this.currentFBT = null; // Store bundle data
+    this.currentFBT = null;
+    this.init();
   }
 
-  initializeQuickView() {
-    // [FIX 4 Part C: Close button fix]
+  init() {
     const closeBtn = document.getElementById("close-quick-view");
-    if (closeBtn) {
-      closeBtn.addEventListener("click", () => this.closeModal());
-    }
+    if (closeBtn) closeBtn.onclick = () => this.closeModal();
 
-    // [FIX 4 Part B: Quantity Logic with Stock Check]
     const qtyMinus = this.modal?.querySelector(".qty-minus");
     const qtyPlus = this.modal?.querySelector(".qty-plus");
     const qtyInput = this.modal?.querySelector(".qty-input");
 
+    // Quantity Decrement
     if (qtyMinus) {
       qtyMinus.onclick = () => {
         if (this.currentQuantity > 1) {
@@ -861,274 +858,194 @@ class QuickViewModal {
       };
     }
 
+    // Quantity Increment (FIX: Strict Stock Check)
     if (qtyPlus) {
       qtyPlus.onclick = () => {
-        // FIX: Check Stock - Cart + Modal Input
         if (this.currentProduct && this.currentProduct.stock !== undefined) {
-          // Find how many of this item are ALREADY in the cart
-          const cartItem = window.cartManager.cart.find(
-            (item) => item.title === this.currentProduct.title
-          );
-          const cartQty = cartItem ? parseInt(cartItem.quantity) : 0;
-          const totalRequested = this.currentQuantity + 1 + cartQty;
-
-          if (totalRequested > this.currentProduct.stock) {
+          // Check Modal Value vs Stock
+          if (this.currentQuantity >= this.currentProduct.stock) {
             window.cartManager.showToast(
-              `Max limit reached! You have ${cartQty} in cart. Stock is ${this.currentProduct.stock}.`,
-              "error"
+              `Max stock reached! Only ${this.currentProduct.stock} available.`,
+              "warning"
             );
-
-            // Visual Shake effect
-            if (qtyInput) {
-              qtyInput.style.borderColor = "red";
-              setTimeout(() => {
-                qtyInput.style.borderColor = "";
-              }, 500);
-            }
-            return;
+            return; // STOP here
           }
         }
-
         this.currentQuantity++;
         if (qtyInput) qtyInput.value = this.currentQuantity;
       };
     }
   }
 
-  // [FIX 4 Part A: Show Description & Variants]
   showQuickView(product) {
     if (!this.modal) return;
     this.currentProduct = product;
-    this.currentQuantity = 1;
+    this.currentQuantity = 1; // Reset quantity on open
 
-    // --- FEATURE 1: Track History ---
+    // Feature: History
     window.productManager.addToRecentlyViewed(product);
 
-    // Basic Info
+    // 1. Fill Basic Info
     this.modal.querySelector("#quick-view-title").textContent = product.title;
     this.modal.querySelector("#quick-view-img").src = product.image;
-
-    // Render Price
     this.modal.querySelector(
       "#quick-view-price"
     ).innerHTML = `<span class="price-current">₹${product.price}</span>`;
 
-    // Reset Quantity
+    // Reset Input UI
     const qtyInput = this.modal.querySelector(".qty-input");
     if (qtyInput) qtyInput.value = 1;
 
-    // --- Inject Description & Variants ---
-
-    // 1. Description
-    const descHTML = `<div style="margin: 15px 0; color: #666; font-size: 0.95rem;">${
-      product.description || "No description available."
+    // 2. Generate Description & Variants
+    const descHTML = `<div style="margin: 10px 0; color: #666; font-size: 0.95rem;">${
+      product.description || "No description."
     }</div>`;
-
-    // 2. Variants (Size/Color)
-    let variantsHTML = '<div class="variant-selector-container">';
-
-    // Add Size dropdown if sizes exist
-    if (product.sizes && product.sizes.length > 0) {
-      variantsHTML += `
-            <div class="variant-group">
-                <label style="font-weight:600; font-size:0.9rem;">Size:</label>
-                <select id="qv-size" style="padding:5px; border-radius:4px; border:1px solid #ccc;">
-                    ${product.sizes
-                      .map((s) => `<option value="${s}">${s}</option>`)
-                      .join("")}
-                </select>
-            </div>
-        `;
-    }
-
-    // Add Color dropdown if colors exist
-    if (product.colors && product.colors.length > 0) {
-      variantsHTML += `
-            <div class="variant-group">
-                <label style="font-weight:600; font-size:0.9rem;">Color:</label>
-                <select id="qv-color" style="padding:5px; border-radius:4px; border:1px solid #ccc;">
-                    ${product.colors
-                      .map((c) => `<option value="${c}">${c}</option>`)
-                      .join("")}
-                </select>
-            </div>
-        `;
-    }
+    let variantsHTML =
+      '<div class="variant-selector-container" style="margin-bottom:15px;">';
+    if (product.sizes?.length)
+      variantsHTML += `<div class="variant-group"><label>Size:</label><select id="qv-size">${product.sizes
+        .map((s) => `<option>${s}</option>`)
+        .join("")}</select></div>`;
+    if (product.colors?.length)
+      variantsHTML += `<div class="variant-group"><label>Color:</label><select id="qv-color">${product.colors
+        .map((c) => `<option>${c}</option>`)
+        .join("")}</select></div>`;
     variantsHTML += "</div>";
 
-    // Locate container to inject (clean old injected content first)
+    // 3. Clean up old dynamic content
     const detailsDiv = this.modal.querySelector(".quick-view-details");
-
-    // Remove all old dynamically injected sections (including FBT and Related)
     detailsDiv
       .querySelectorAll(".qv-injected, .qv-related-section, .qv-fbt-section")
-      .forEach((el) => el.remove());
+      .forEach((e) => e.remove());
 
-    // Create wrapper for description/variants and insert after Price
+    // 4. Inject Description/Variants AFTER Price
     const wrapper = document.createElement("div");
     wrapper.className = "qv-injected";
     wrapper.innerHTML = descHTML + variantsHTML;
+    this.modal
+      .querySelector("#quick-view-price")
+      .insertAdjacentElement("afterend", wrapper);
 
-    const priceEl = this.modal.querySelector("#quick-view-price");
-    priceEl.insertAdjacentElement("afterend", wrapper);
+    // 5. Inject FBT & Related (FIX: Insert BEFORE the Actions buttons)
+    // We append them to detailsDiv, but we use CSS 'order' or insertBefore to position them above buttons
+    const actionsDiv = this.modal.querySelector(".quick-view-actions");
 
-    // --- FEATURE 2 & 3: Render Related & FBT ---
-    this.renderFBT(product);
-    this.renderRelatedProducts(product);
+    // Render functions will now return HTML elements instead of auto-appending
+    const fbtElement = this.createFBTElement(product);
+    const relatedElement = this.createRelatedElement(product);
 
-    // --- Add to Cart Button Logic ---
-    const addToCartBtn = this.modal.querySelector(".btn-add-cart-modal");
-    if (addToCartBtn) {
-      if (product.stock !== undefined && product.stock <= 0) {
-        addToCartBtn.disabled = true;
-        addToCartBtn.textContent = "Out of Stock";
-        addToCartBtn.style.background = "#ccc";
-      } else {
-        addToCartBtn.disabled = false;
-        addToCartBtn.textContent = "Add to Cart";
-        addToCartBtn.style.background = ""; // Reset to default CSS
+    // Insert them specifically before the buttons
+    if (fbtElement) detailsDiv.insertBefore(fbtElement, actionsDiv);
+    if (relatedElement) detailsDiv.insertBefore(relatedElement, actionsDiv);
 
-        // Remove old listeners by cloning
-        const newBtn = addToCartBtn.cloneNode(true);
-        addToCartBtn.parentNode.replaceChild(newBtn, addToCartBtn);
+    // 6. "Add to Cart" Button Logic (FIX: Adding only 1 bug)
+    const btn = this.modal.querySelector(".btn-add-cart-modal");
 
-        newBtn.onclick = () => {
-          const sizeEl = document.getElementById("qv-size");
-          const colorEl = document.getElementById("qv-color");
+    // Reset button state
+    const newBtn = btn.cloneNode(true);
+    btn.parentNode.replaceChild(newBtn, btn);
 
-          const selectedVariants = {
-            size: sizeEl ? sizeEl.value : null,
-            color: colorEl ? colorEl.value : null,
-          };
+    if (product.stock !== undefined && product.stock <= 0) {
+      newBtn.disabled = true;
+      newBtn.textContent = "Out of Stock";
+      newBtn.style.background = "#ccc";
+    } else {
+      newBtn.disabled = false;
+      newBtn.textContent = "Add to Cart";
+      newBtn.style.background = "";
 
-          // FIX: Only close modal if addToCart returns TRUE
-          const success = window.cartManager.addToCart(
-            product,
-            this.currentQuantity,
-            selectedVariants
-          );
+      newBtn.onclick = () => {
+        const size = document.getElementById("qv-size")?.value;
+        const color = document.getElementById("qv-color")?.value;
 
-          if (success) {
-            this.closeModal();
-          }
-        };
-      }
+        // FIX: Read quantity directly from the variable we tracked
+        const qtyToAdd = this.currentQuantity;
+
+        const success = window.cartManager.addToCart(product, qtyToAdd, {
+          size,
+          color,
+        });
+        if (success) this.closeModal();
+      };
     }
+
     this.modal.style.display = "flex";
   }
 
-  // --- FEATURE 2: Related Products Logic ---
-  renderRelatedProducts(currentProduct) {
+  // --- Helper: Create Related HTML Element ---
+  createRelatedElement(currentProduct) {
     const allProducts = window.productManager.products;
-    // Find items in same category, excluding current
     const related = allProducts
       .filter(
         (p) =>
           p.category === currentProduct.category && p._id !== currentProduct._id
       )
-      .slice(0, 3); // Top 3
+      .slice(0, 3);
+    if (related.length === 0) return null;
 
-    if (related.length === 0) return;
-
-    const html = `
-      <div class="qv-section">
-        <h4 style="margin: 15px 0 10px; color: var(--primary-color);">Related Products</h4>
-        <div style="display: flex; gap: 10px; overflow-x: auto;">
+    const div = document.createElement("div");
+    div.className = "qv-related-section";
+    div.innerHTML = `
+        <h4 style="margin: 15px 0 10px; color: var(--primary-color); font-size:1rem;">Related Products</h4>
+        <div style="display: flex; gap: 10px; overflow-x: auto; padding-bottom: 5px;">
           ${related
             .map(
               (p) => `
-            <div class="mini-card" onclick="window.quickViewModal.showQuickView(window.productDataMap['${p._id}'])" style="min-width: 100px; cursor: pointer; border: 1px solid #eee; padding: 5px; border-radius: 8px;">
-              <img src="${p.image}" style="width: 100%; height: 80px; object-fit: contain;">
-              <div style="font-size: 0.8rem; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${p.title}</div>
-              <div style="font-size: 0.8rem; color: var(--primary-color);">₹${p.price}</div>
+            <div onclick="window.quickViewModal.showQuickView(window.productDataMap['${p._id}'])" style="min-width: 90px; cursor: pointer; border: 1px solid #eee; padding: 5px; border-radius: 8px;">
+              <img src="${p.image}" style="width: 100%; height: 60px; object-fit: contain;">
+              <div style="font-size: 0.75rem; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${p.title}</div>
+              <div style="font-size: 0.75rem; color: var(--primary-color);">₹${p.price}</div>
             </div>
           `
             )
             .join("")}
-        </div>
-      </div>`;
-
-    const wrapper = document.createElement("div");
-    wrapper.className = "qv-related-section";
-    wrapper.innerHTML = html;
-    this.modal.querySelector(".quick-view-details").appendChild(wrapper);
+        </div>`;
+    return div;
   }
 
-  // --- FEATURE 3: Frequently Bought Together Logic ---
-  renderFBT(currentProduct) {
-    // Check if product has FBT links (IDs)
-    if (
-      !currentProduct.frequentlyBoughtTogether ||
-      currentProduct.frequentlyBoughtTogether.length === 0
-    )
-      return;
-
-    // Find the full product objects
+  // --- Helper: Create FBT HTML Element ---
+  createFBTElement(currentProduct) {
+    if (!currentProduct.frequentlyBoughtTogether?.length) return null;
     const fbtProducts = window.productManager.products.filter((p) =>
       currentProduct.frequentlyBoughtTogether.includes(p._id)
     );
+    if (fbtProducts.length === 0) return null;
 
-    if (fbtProducts.length === 0) return;
-
-    // Calculate Bundle Price
     const bundlePrice =
       fbtProducts.reduce((sum, p) => sum + p.price, 0) + currentProduct.price;
-    this.currentFBT = fbtProducts; // Store for button action
+    this.currentFBT = fbtProducts;
 
-    const html = `
-      <div class="qv-section" style="background: #f9f9f9; padding: 10px; border-radius: 8px; margin-top: 15px;">
-        <h4 style="margin: 0 0 10px; font-size: 0.95rem;">Frequently Bought Together</h4>
-        <div style="display: flex; align-items: center; gap: 10px;">
+    const div = document.createElement("div");
+    div.className = "qv-fbt-section";
+    div.innerHTML = `
+      <div style="background: #f0f8ff; padding: 10px; border-radius: 8px; margin: 15px 0; border: 1px dashed var(--primary-color);">
+        <h4 style="margin: 0 0 10px; font-size: 0.9rem;">Frequently Bought Together</h4>
+        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
            <img src="${
              currentProduct.image
-           }" style="width: 50px; height: 50px; object-fit: contain;">
+           }" style="width: 40px; height: 40px; object-fit: contain;">
            <span style="font-weight: bold;">+</span>
            ${fbtProducts
              .map(
                (p) =>
-                 `<img src="${p.image}" style="width: 50px; height: 50px; object-fit: contain;" title="${p.title}">`
+                 `<img src="${p.image}" style="width: 40px; height: 40px; object-fit: contain;" title="${p.title}">`
              )
              .join("")}
         </div>
-        <div style="margin-top: 10px; display: flex; justify-content: space-between; align-items: center;">
-            <div>
-               <div style="font-size: 0.8rem; color: #666;">Total for ${
-                 fbtProducts.length + 1
-               } items:</div>
-               <div style="font-weight: bold; color: var(--primary-color); font-size: 1.1rem;">₹${bundlePrice}</div>
-            </div>
-            <button class="btn-secondary" style="font-size: 0.8rem; padding: 5px 10px;" onclick="window.quickViewModal.addBundleToCart()">
-               Add All to Cart
-            </button>
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div style="font-weight: bold; color: var(--primary-color);">Bundle: ₹${bundlePrice}</div>
+            <button class="btn-secondary" style="font-size: 0.8rem; padding: 5px 10px;" onclick="window.quickViewModal.addBundleToCart()">Add All</button>
         </div>
-      </div>
-    `;
-
-    const wrapper = document.createElement("div");
-    wrapper.className = "qv-fbt-section";
-    wrapper.innerHTML = html;
-
-    // Insert BEFORE related products (so it's higher up)
-    const details = this.modal.querySelector(".quick-view-details");
-    const relatedSection = details.querySelector(".qv-related-section");
-    if (relatedSection) {
-      details.insertBefore(wrapper, relatedSection);
-    } else {
-      details.appendChild(wrapper);
-    }
+      </div>`;
+    return div;
   }
 
   addBundleToCart() {
     if (!this.currentFBT) return;
-
     // Add main product
     window.cartManager.addToCart(this.currentProduct, 1);
-
     // Add FBT products
-    this.currentFBT.forEach((p) => {
-      window.cartManager.addToCart(p, 1);
-    });
-
+    this.currentFBT.forEach((p) => window.cartManager.addToCart(p, 1));
     this.closeModal();
     window.cartManager.showToast("Bundle added to cart!", "success");
   }
