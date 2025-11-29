@@ -2273,57 +2273,56 @@ body {
   order: 10;
 }
 
-/* =========================================
-   2. YELLOW PILL QUANTITY SELECTOR (FIXED)
-   ========================================= */
+/* --- Compact & Clear Quantity Selector --- */
 .quantity-selector {
   display: flex !important;
   align-items: center;
   justify-content: space-between;
 
-  /* THE PILL STYLE */
-  border: 2px solid #ffc107 !important; /* Force Yellow */
-  border-radius: 50px !important; /* Pill Shape */
-  background: white;
+  /* Compact Dimensions */
+  width: 100px; /* Small fixed width */
+  height: 40px; /* Standard button height */
 
-  height: 45px;
-  width: 140px;
-  flex-shrink: 0; /* Don't get squashed */
+  /* Styling */
+  border: 1px solid #ddd !important; /* Subtle border */
+  border-radius: 6px !important; /* Slightly rounded rectangle */
+  background: white;
+  flex-shrink: 0;
   overflow: hidden;
+  margin-right: 10px;
 }
 
 .qty-minus,
 .qty-plus {
-  width: 45px;
+  width: 30px;
   height: 100%;
-  background: transparent !important; /* Clear background */
+  background: #f8f9fa !important; /* Light grey background */
   border: none !important;
-  /* FORCE VISIBILITY */
-  font-size: 1.5rem !important;
-  font-weight: bold !important;
-  color: #000 !important;
+  font-size: 1.2rem !important;
+  font-weight: bold;
+  color: #333 !important;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: background 0.2s;
 }
 
 .qty-minus:hover,
 .qty-plus:hover {
-  background-color: #fff8e1 !important; /* Light yellow hover */
+  background: #e9ecef !important; /* Darker grey on hover */
 }
 
 .qty-input {
+  width: 40px;
+  text-align: center;
   border: none !important;
   background: transparent !important;
-  font-weight: bold;
-  font-size: 1.1rem;
-  width: 100%;
-  text-align: center;
+  font-weight: 600;
+  font-size: 1rem;
+  color: #333 !important;
   padding: 0;
-  color: #333 !important; /* Ensure visibility */
 }
-
 /* =========================================
    3. ADD TO CART BUTTON & STICKY ACTIONS
    ========================================= */
@@ -2341,18 +2340,39 @@ body {
   border-top: 1px solid #f0f0f0;
 }
 
+.btn-add-cart,
+.btn-buy-now,
+.btn-add-cart-modal {
+  border-radius: 6px !important; /* Standard rectangular radius */
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-size: 0.85rem;
+  padding: 10px 20px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
 /* Make this look like a button, NOT a pill */
 .btn-add-cart-modal {
   flex: 1; /* Grow to fill space next to quantity */
   height: 40px; /* Match quantity height */
-  border-radius: 8px !important; /* Standard corners */
-  font-size: 0.95rem;
-  font-weight: 600;
-  border: none;
-  background-color: var(--primary-color);
-  color: white;
-  cursor: pointer;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1); /* Premium shadow */
+  font-size: 1rem;
+}
+
+.btn-add-cart:hover,
+.btn-add-cart-modal:hover {
+  background-color: var(--secondary-color);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.btn-buy-now:hover {
+  background-color: #ff5722;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
 
 .btn-add-cart-modal:hover:not(:disabled) {
@@ -3260,18 +3280,23 @@ body {
   /* --- Product Grid Improvements (Task C) --- */
   @media (max-width: 768px) {
     .products-container {
-      /* Force 2 equal columns with small gap to maximize width */
       grid-template-columns: repeat(2, 1fr) !important;
-      gap: 8px !important; /* Smaller gap = wider cards */
-      padding: 0 5px;
+      gap: 10px !important;
+      padding: 0 10px;
+      /* Ensure container respects screen width */
+      width: 100%;
+      box-sizing: border-box;
     }
 
     .product-card {
       display: flex;
       flex-direction: column;
-      height: auto; /* Stop forcing fixed height */
-      min-height: 240px; /* Shorter minimum height */
-      border-radius: 8px;
+      /* Auto height expands to fit content */
+      height: auto !important;
+      min-height: 0; /* Allow shrinking if needed */
+      width: 100%; /* Stay within grid cell */
+      margin: 0;
+      overflow: hidden; /* Crop images, not text */
     }
 
     .product-image-wrapper {
@@ -3287,34 +3312,46 @@ body {
     }
 
     .product-info {
-      padding: 8px !important;
+      padding: 10px !important;
       display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-      flex: 1; /* Fills remaining height */
-    }
-
-    .product-title {
-      font-size: 0.85rem;
-      white-space: normal; /* Allow text to wrap! */
-      line-height: 1.3;
-      height: 2.6em; /* Limit to 2 lines */
-      overflow: hidden;
-      margin-bottom: 4px;
-    }
-
-    /* Stack buttons nicely on mobile */
-    .product-actions {
-      margin-top: auto;
       flex-direction: column;
       gap: 5px;
     }
 
+    .product-title {
+      white-space: normal !important;
+      height: auto !important;
+      max-height: none !important;
+      overflow: visible !important;
+      font-size: 0.85rem;
+      line-height: 1.3;
+      margin-bottom: 5px;
+    }
+
+    .product-price {
+      flex-wrap: wrap; /* Allow price to wrap if too long */
+      gap: 5px;
+      margin: 2px 0;
+    }
+    .price-current {
+      font-size: 1rem;
+    }
+    .price-original {
+      font-size: 0.8rem;
+    }
+
+    .product-actions {
+      margin-top: 8px;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    /* Ensure buttons fit inside padding */
     .btn-add-cart,
     .btn-buy-now {
-      height: 30px; /* Smaller buttons */
+      width: 100%;
+      padding: 8px 0;
       font-size: 0.8rem;
-      padding: 0;
     }
   }
   /* --- Footer & Other Sections --- */
