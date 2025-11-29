@@ -2,7 +2,7 @@
 // GLOBAL CONFIGURATION
 // ====================================================================
 
-// [FIX]: Ensure this points to the correct API path
+// Use "/api" for relative path in Vercel deployment
 const API_BASE_URL = "/api";
 
 // ====================================================================
@@ -15,7 +15,7 @@ let _searchHistoryData = [];
 let _currentUser = null;
 let _authToken = null;
 
-// Initialize state from LocalStorage if available (Keeps you logged in)
+// Initialize state from LocalStorage (Keeps you logged in)
 const storedUser = localStorage.getItem("user");
 const storedToken = localStorage.getItem("token");
 if (storedUser && storedToken) {
@@ -47,6 +47,7 @@ class CartManager {
   }
 
   // --- Cart Actions ---
+  // Returns TRUE if successful, FALSE if failed (e.g. stock limit)
   addToCart(product, quantity = 1, variants = {}) {
     // FIX: Inventory Validation - Ensure numbers are integers
     const stock = parseInt(product.stock);
@@ -67,7 +68,7 @@ class CartManager {
       const currentQty = parseInt(existingItem.quantity);
       if (!isNaN(stock) && currentQty + qty > stock) {
         this.showToast(
-          `Cannot add more! Max stock reached (${stock}).`,
+          `Cannot add more! You have ${currentQty} in cart. Max is ${stock}.`,
           "warning"
         );
         return false;
@@ -92,6 +93,14 @@ class CartManager {
   removeFromCart(productTitle) {
     this.cart = this.cart.filter((item) => item.title !== productTitle);
     this.saveCart();
+
+    // If cart is empty and modal is open, refresh modal to show empty state
+    if (
+      this.cart.length === 0 &&
+      document.getElementById("cart-modal").classList.contains("active")
+    ) {
+      this.updateCartDropdown();
+    }
   }
 
   updateQuantity(productTitle, quantity) {
@@ -123,7 +132,6 @@ class CartManager {
   clearCart() {
     this.cart = [];
     this.saveCart();
-    // this.showToast("Cart cleared!", "info"); // Optional toast
   }
 
   // --- Wishlist Actions ---
@@ -202,7 +210,7 @@ class CartManager {
                 )}', ${item.quantity + 1})">+</button>
               </div>
             </div>
-            <i class="fas fa-trash cart-modal-item-remove" style="color:red; cursor:pointer;" onclick="window.cartManager.removeFromCart('${item.title.replace(
+            <i class="fas fa-trash cart-modal-item-remove" onclick="window.cartManager.removeFromCart('${item.title.replace(
               /'/g,
               "\\'"
             )}')"></i>
@@ -249,48 +257,34 @@ class CartManager {
     const container = document.getElementById("wishlist-items");
     const mobileContainer = document.getElementById("mobile-wishlist-items");
 
-    if (container) {
-      if (this.wishlist.length === 0) {
-        container.innerHTML =
-          '<p style="text-align: center; color: #999; padding: 10px;">No items in wishlist</p>';
-      } else {
-        container.innerHTML = this.wishlist
-          .map(
-            (item) => `
-                <div class="wishlist-item">
-                <div class="wishlist-item-title">${item.title}</div>
-                <i class="fas fa-trash wishlist-item-remove" onclick="window.cartManager.toggleWishlist({title: '${item.title.replace(
-                  /'/g,
-                  "\\'"
-                )}', price: '${item.price}'})"></i>
-                </div>
-            `
-          )
-          .join("");
-      }
-    }
+    // Helper to generate list HTML
+    const generateList = (isMobile) => {
+      if (this.wishlist.length === 0)
+        return '<p style="text-align:center; color:#999; padding:10px;">No items</p>';
+      return this.wishlist
+        .map(
+          (item) => `
+            <div class="${isMobile ? "mobile-wishlist-item" : "wishlist-item"}">
+                <div class="${
+                  isMobile
+                    ? "mobile-wishlist-item-title"
+                    : "wishlist-item-title"
+                }">${item.title}</div>
+                <i class="fas fa-trash ${
+                  isMobile ? "mobile-wishlist-remove" : "wishlist-item-remove"
+                }" 
+                   onclick="window.cartManager.toggleWishlist({title: '${item.title.replace(
+                     /'/g,
+                     "\\'"
+                   )}'})"></i>
+            </div>
+        `
+        )
+        .join("");
+    };
 
-    // Update Mobile Wishlist if it exists
-    if (mobileContainer) {
-      if (this.wishlist.length === 0) {
-        mobileContainer.innerHTML =
-          '<p style="text-align: center; color: #999; padding: 10px;">No items</p>';
-      } else {
-        mobileContainer.innerHTML = this.wishlist
-          .map(
-            (item) => `
-                <div class="mobile-wishlist-item">
-                <div class="mobile-wishlist-item-title">${item.title}</div>
-                <i class="fas fa-trash mobile-wishlist-remove" onclick="window.cartManager.toggleWishlist({title: '${item.title.replace(
-                  /'/g,
-                  "\\'"
-                )}', price: '${item.price}'})"></i>
-                </div>
-            `
-          )
-          .join("");
-      }
-    }
+    if (container) container.innerHTML = generateList(false);
+    if (mobileContainer) mobileContainer.innerHTML = generateList(true);
   }
 
   showToast(message, type = "success") {
@@ -323,7 +317,7 @@ class CartManager {
 }
 
 // ====================================================================
-// 2. PAGINATION SYSTEM (Restored)
+// 2. PAGINATION SYSTEM
 // ====================================================================
 
 class ProductPagination {
@@ -417,7 +411,7 @@ class ProductPagination {
 }
 
 // ====================================================================
-// 3. PRODUCT MANAGEMENT
+// 3. PRODUCT MANAGEMENT (With Recently Viewed Feature)
 // ====================================================================
 
 class ProductManager {
@@ -434,6 +428,7 @@ class ProductManager {
     await this.fetchProducts();
     this.initializeFilters();
     this.initializeSearch();
+    this.renderRecentlyViewed(); // Initialize Recent History
   }
 
   async fetchProducts() {
@@ -502,6 +497,7 @@ class ProductManager {
     const isOutOfStock = product.stock !== undefined && product.stock <= 0;
     let stockBadge = "";
 
+    // Detailed Stock Badge Logic
     if (isOutOfStock) {
       stockBadge = `<div class="product-badge" style="background:#666">Sold Out</div>`;
     } else if (product.stock <= 3) {
@@ -510,6 +506,14 @@ class ProductManager {
     } else {
       // Sufficient Stock
       stockBadge = `<div class="product-badge" style="background:var(--success-color)">In Stock</div>`;
+    }
+
+    // Override with Bestseller/New if plenty of stock
+    if (!isOutOfStock && product.stock > 3) {
+      if (product.isBestSeller)
+        stockBadge = `<div class="product-badge">Bestseller</div>`;
+      else if (product.isNewArrival)
+        stockBadge = `<div class="product-badge" style="background:var(--accent-color)">New</div>`;
     }
 
     const btnState = isOutOfStock
@@ -551,11 +555,52 @@ class ProductManager {
     return card;
   }
 
-  initializeProductEvents() {
-    const container = document.getElementById("products-container");
-    if (!container) return;
+  // --- RECENTLY VIEWED LOGIC (Feature 1) ---
+  addToRecentlyViewed(product) {
+    // 1. Get existing history from LocalStorage
+    let recent = JSON.parse(localStorage.getItem("recentlyViewed")) || [];
 
-    container.addEventListener("click", (e) => {
+    // 2. Remove if duplicate (so we can move it to the top)
+    recent = recent.filter((p) => p._id !== product._id);
+
+    // 3. Add to top
+    recent.unshift(product);
+
+    // 4. Limit to 5 items
+    if (recent.length > 5) recent.pop();
+
+    // 5. Save back to LocalStorage
+    localStorage.setItem("recentlyViewed", JSON.stringify(recent));
+
+    // 6. Re-render the section
+    this.renderRecentlyViewed();
+  }
+
+  renderRecentlyViewed() {
+    const container = document.getElementById("recently-viewed-container");
+    const section = document.getElementById("recently-viewed-section");
+    if (!container || !section) return;
+
+    const recent = JSON.parse(localStorage.getItem("recentlyViewed")) || [];
+
+    if (recent.length === 0) {
+      section.style.display = "none";
+      return;
+    }
+
+    section.style.display = "block";
+    container.innerHTML = "";
+
+    recent.forEach((product) => {
+      // Re-use your existing card creator!
+      const card = this.createProductCard(product);
+      container.appendChild(card);
+    });
+  }
+
+  initializeProductEvents() {
+    // We attach listeners to both main grid AND recently viewed grid
+    const handleClicks = (e) => {
       // 1. Quick View
       const quickViewBtn = e.target.closest(".btn-quick-view");
       if (quickViewBtn) {
@@ -595,7 +640,14 @@ class ProductManager {
           openPaymentModal([productData]);
         }
       }
-    });
+    };
+
+    document
+      .getElementById("products-container")
+      ?.addEventListener("click", handleClicks);
+    document
+      .getElementById("recently-viewed-container")
+      ?.addEventListener("click", handleClicks);
   }
 
   initializeFilters() {
@@ -776,7 +828,7 @@ class ProductManager {
 }
 
 // ====================================================================
-// 4. QUICK VIEW MODAL (Enhanced with Fixes)
+// 4. QUICK VIEW MODAL (Enhanced with Related & FBT)
 // ====================================================================
 
 class QuickViewModal {
@@ -785,6 +837,7 @@ class QuickViewModal {
     this.initializeQuickView();
     this.currentProduct = null;
     this.currentQuantity = 1;
+    this.currentFBT = null; // Store bundle data
   }
 
   initializeQuickView() {
@@ -828,10 +881,8 @@ class QuickViewModal {
             // Visual Shake effect
             if (qtyInput) {
               qtyInput.style.borderColor = "red";
-              qtyInput.style.animation = "shake 0.3s";
               setTimeout(() => {
                 qtyInput.style.borderColor = "";
-                qtyInput.style.animation = "";
               }, 500);
             }
             return;
@@ -849,6 +900,9 @@ class QuickViewModal {
     if (!this.modal) return;
     this.currentProduct = product;
     this.currentQuantity = 1;
+
+    // --- FEATURE 1: Track History ---
+    window.productManager.addToRecentlyViewed(product);
 
     // Basic Info
     this.modal.querySelector("#quick-view-title").textContent = product.title;
@@ -904,16 +958,23 @@ class QuickViewModal {
 
     // Locate container to inject (clean old injected content first)
     const detailsDiv = this.modal.querySelector(".quick-view-details");
-    const oldExtra = detailsDiv.querySelectorAll(".qv-injected");
-    oldExtra.forEach((el) => el.remove());
 
-    // Create wrapper for new content and insert after Price
+    // Remove all old dynamically injected sections (including FBT and Related)
+    detailsDiv
+      .querySelectorAll(".qv-injected, .qv-related-section, .qv-fbt-section")
+      .forEach((el) => el.remove());
+
+    // Create wrapper for description/variants and insert after Price
     const wrapper = document.createElement("div");
     wrapper.className = "qv-injected";
     wrapper.innerHTML = descHTML + variantsHTML;
 
     const priceEl = this.modal.querySelector("#quick-view-price");
     priceEl.insertAdjacentElement("afterend", wrapper);
+
+    // --- FEATURE 2 & 3: Render Related & FBT ---
+    this.renderFBT(product);
+    this.renderRelatedProducts(product);
 
     // --- Add to Cart Button Logic ---
     const addToCartBtn = this.modal.querySelector(".btn-add-cart-modal");
@@ -953,8 +1014,123 @@ class QuickViewModal {
         };
       }
     }
-
     this.modal.style.display = "flex";
+  }
+
+  // --- FEATURE 2: Related Products Logic ---
+  renderRelatedProducts(currentProduct) {
+    const allProducts = window.productManager.products;
+    // Find items in same category, excluding current
+    const related = allProducts
+      .filter(
+        (p) =>
+          p.category === currentProduct.category && p._id !== currentProduct._id
+      )
+      .slice(0, 3); // Top 3
+
+    if (related.length === 0) return;
+
+    const html = `
+      <div class="qv-section">
+        <h4 style="margin: 15px 0 10px; color: var(--primary-color);">Related Products</h4>
+        <div style="display: flex; gap: 10px; overflow-x: auto;">
+          ${related
+            .map(
+              (p) => `
+            <div class="mini-card" onclick="window.quickViewModal.showQuickView(window.productDataMap['${p._id}'])" style="min-width: 100px; cursor: pointer; border: 1px solid #eee; padding: 5px; border-radius: 8px;">
+              <img src="${p.image}" style="width: 100%; height: 80px; object-fit: contain;">
+              <div style="font-size: 0.8rem; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${p.title}</div>
+              <div style="font-size: 0.8rem; color: var(--primary-color);">₹${p.price}</div>
+            </div>
+          `
+            )
+            .join("")}
+        </div>
+      </div>`;
+
+    const wrapper = document.createElement("div");
+    wrapper.className = "qv-related-section";
+    wrapper.innerHTML = html;
+    this.modal.querySelector(".quick-view-details").appendChild(wrapper);
+  }
+
+  // --- FEATURE 3: Frequently Bought Together Logic ---
+  renderFBT(currentProduct) {
+    // Check if product has FBT links (IDs)
+    if (
+      !currentProduct.frequentlyBoughtTogether ||
+      currentProduct.frequentlyBoughtTogether.length === 0
+    )
+      return;
+
+    // Find the full product objects
+    const fbtProducts = window.productManager.products.filter((p) =>
+      currentProduct.frequentlyBoughtTogether.includes(p._id)
+    );
+
+    if (fbtProducts.length === 0) return;
+
+    // Calculate Bundle Price
+    const bundlePrice =
+      fbtProducts.reduce((sum, p) => sum + p.price, 0) + currentProduct.price;
+    this.currentFBT = fbtProducts; // Store for button action
+
+    const html = `
+      <div class="qv-section" style="background: #f9f9f9; padding: 10px; border-radius: 8px; margin-top: 15px;">
+        <h4 style="margin: 0 0 10px; font-size: 0.95rem;">Frequently Bought Together</h4>
+        <div style="display: flex; align-items: center; gap: 10px;">
+           <img src="${
+             currentProduct.image
+           }" style="width: 50px; height: 50px; object-fit: contain;">
+           <span style="font-weight: bold;">+</span>
+           ${fbtProducts
+             .map(
+               (p) =>
+                 `<img src="${p.image}" style="width: 50px; height: 50px; object-fit: contain;" title="${p.title}">`
+             )
+             .join("")}
+        </div>
+        <div style="margin-top: 10px; display: flex; justify-content: space-between; align-items: center;">
+            <div>
+               <div style="font-size: 0.8rem; color: #666;">Total for ${
+                 fbtProducts.length + 1
+               } items:</div>
+               <div style="font-weight: bold; color: var(--primary-color); font-size: 1.1rem;">₹${bundlePrice}</div>
+            </div>
+            <button class="btn-secondary" style="font-size: 0.8rem; padding: 5px 10px;" onclick="window.quickViewModal.addBundleToCart()">
+               Add All to Cart
+            </button>
+        </div>
+      </div>
+    `;
+
+    const wrapper = document.createElement("div");
+    wrapper.className = "qv-fbt-section";
+    wrapper.innerHTML = html;
+
+    // Insert BEFORE related products (so it's higher up)
+    const details = this.modal.querySelector(".quick-view-details");
+    const relatedSection = details.querySelector(".qv-related-section");
+    if (relatedSection) {
+      details.insertBefore(wrapper, relatedSection);
+    } else {
+      details.appendChild(wrapper);
+    }
+  }
+
+  addBundleToCart() {
+    if (!this.currentFBT) return;
+
+    // Add main product
+    window.cartManager.addToCart(this.currentProduct, 1);
+
+    // Add FBT products
+    this.currentFBT.forEach((p) => {
+      window.cartManager.addToCart(p, 1);
+    });
+
+    this.closeModal();
+    window.cartManager.showToast("Bundle added to cart!", "success");
   }
 
   closeModal() {
@@ -1033,6 +1209,7 @@ function logoutUser() {
   // Clear storage
   localStorage.removeItem("user");
   localStorage.removeItem("token");
+  localStorage.removeItem("recentlyViewed"); // Clear history on logout
 
   if (window.cartManager) {
     window.cartManager.cart = [];
@@ -1333,6 +1510,7 @@ window.switchProfileTab = function (tab) {
     tab === "address" ? "auth-tab active" : "auth-tab";
 };
 
+// [FIX 1: Address Sync]
 async function openProfileModal() {
   const user = getUser();
   if (!user) {
