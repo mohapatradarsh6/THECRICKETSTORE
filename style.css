@@ -3987,3 +3987,106 @@ body {
   opacity: 0 !important;
   pointer-events: none;
 }
+
+/* =========================================
+   PHASE 2: NEW FEATURES UI
+   ========================================= */
+
+/* 1. SKELETON LOADING (The "Shimmer" Effect) */
+.skeleton {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 8px;
+}
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+.skeleton-card {
+  height: 300px;
+  width: 100%;
+  border-radius: 12px;
+}
+
+/* 2. COUPON SECTION (In Cart Modal) */
+.coupon-section {
+  margin-top: 15px;
+  padding-top: 15px;
+  border-top: 1px dashed #ddd;
+}
+.coupon-input-group {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+}
+.coupon-input-group input {
+  flex: 1;
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+.btn-apply {
+  background: var(--dark-color);
+  color: white;
+  border: none;
+  padding: 8px 15px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.coupon-message {
+  font-size: 0.85rem;
+  margin-top: 5px;
+}
+.coupon-message.success {
+  color: var(--success-color);
+}
+.coupon-message.error {
+  color: var(--danger-color);
+}
+
+/* 3. SAVED FOR LATER (In Cart Modal) */
+.saved-for-later-section {
+  margin-top: 30px;
+  padding-top: 20px;
+  border-top: 4px solid #f8f9fa;
+}
+.saved-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid #eee;
+  opacity: 0.8;
+}
+.saved-item img {
+  width: 50px;
+  height: 50px;
+  object-fit: contain;
+  filter: grayscale(100%); /* Visual cue it's inactive */
+}
+.btn-move-cart {
+  font-size: 0.8rem;
+  color: var(--primary-color);
+  background: none;
+  border: 1px solid var(--primary-color);
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+/* 4. DELIVERY DATE BADGE */
+.delivery-date {
+  font-size: 0.8rem;
+  color: #27ae60;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 5px;
+  font-weight: 500;
+}

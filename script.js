@@ -29,46 +29,86 @@ if (storedUser && storedToken) {
 
 class CartManager {
   constructor() {
-    this.cart = _cartData;
-    this.wishlist = _wishlistData;
-    // We update UI immediately upon instantiation
+    this.cart = _cartData || [];
+    this.wishlist = _wishlistData || [];
+    this.savedForLater = []; // New: Saved for Later list
+    this.coupon = null; // New: Applied coupon data
+
+    // If user is logged in, fetch their cart/saved items from DB immediately
+    if (_currentUser) {
+      this.syncWithBackend(true); // true = PULL from server
+    }
+
     this.updateUI();
   }
 
-  // --- Data Persistence ---
-  saveCart() {
-    _cartData = this.cart;
-    this.updateUI();
-  }
+  // --- Backend Syncing Logic ---
+  async syncWithBackend(pull = false) {
+    if (!_currentUser || !_authToken) return;
 
-  saveWishlist() {
-    _wishlistData = this.wishlist;
-    this.updateWishlistUI();
+    try {
+      // PULL: Get latest data from DB (e.g., on login)
+      if (pull) {
+        const res = await fetch(`${API_BASE_URL}/user`, {
+          headers: { Authorization: `Bearer ${_authToken}` },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          // Merge Strategy: Server data overwrites local on login
+          if (data.cart) this.cart = data.cart;
+          if (data.wishlist) this.wishlist = data.wishlist;
+          if (data.savedForLater) this.savedForLater = data.savedForLater;
+          if (data.recentlyViewed)
+            localStorage.setItem(
+              "recentlyViewed",
+              JSON.stringify(data.recentlyViewed)
+            );
+
+          this.updateUI();
+        }
+      }
+      // PUSH: Save local state to DB
+      else {
+        await fetch(`${API_BASE_URL}/user`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${_authToken}`,
+          },
+          body: JSON.stringify({
+            cart: this.cart,
+            wishlist: this.wishlist,
+            savedForLater: this.savedForLater,
+          }),
+        });
+      }
+    } catch (e) {
+      console.error("Sync failed", e);
+    }
   }
 
   // --- Cart Actions ---
-  // Returns TRUE if successful, FALSE if failed (e.g. stock limit)
+
+  // Returns TRUE if successful, FALSE if failed
   addToCart(product, quantity = 1, variants = {}) {
-    // FIX: Inventory Validation - Ensure numbers are integers
     const stock = parseInt(product.stock);
     const qty = parseInt(quantity);
 
-    // 1. Check Global Stock (Initial add)
+    // 1. Check Global Stock
     if (!isNaN(stock) && stock < qty) {
       this.showToast(`Sorry, only ${stock} items in stock!`, "error");
       return false;
     }
 
-    // Check for existing item
     const existingItem = this.cart.find((item) => item.title === product.title);
     const price = parseFloat(product.price) || 0;
 
     if (existingItem) {
-      // 2. Check Cumulative Stock (Existing + New)
+      // 2. Check Cumulative Stock
       const currentQty = parseInt(existingItem.quantity);
       if (!isNaN(stock) && currentQty + qty > stock) {
         this.showToast(
-          `Cannot add more! You have ${currentQty} in cart. Max is ${stock}.`,
+          `Max stock reached! You have ${currentQty} in cart.`,
           "warning"
         );
         return false;
@@ -77,7 +117,7 @@ class CartManager {
     } else {
       // 3. Add New Item
       this.cart.push({
-        ...product,
+        ...product, // Spreads title, image, id
         price: price,
         quantity: qty,
         selectedSize: variants.size || product.selectedSize || null,
@@ -85,16 +125,18 @@ class CartManager {
       });
     }
 
-    this.saveCart();
     this.showToast(`${product.title} added to cart!`, "success");
+    this.syncWithBackend(false); // Push to DB
+    this.updateUI();
     return true;
   }
 
   removeFromCart(productTitle) {
     this.cart = this.cart.filter((item) => item.title !== productTitle);
-    this.saveCart();
+    this.syncWithBackend(false);
+    this.updateUI();
 
-    // If cart is empty and modal is open, refresh modal to show empty state
+    // If empty, force refresh modal
     if (
       this.cart.length === 0 &&
       document.getElementById("cart-modal").classList.contains("active")
@@ -110,28 +152,97 @@ class CartManager {
       if (qty <= 0) {
         this.removeFromCart(productTitle);
       } else {
-        // FIX: Inventory Check on Update
-        const stock = parseInt(item.stock);
-        if (!isNaN(stock) && qty > stock) {
-          this.showToast(`Max stock reached (${stock})`, "error");
+        // Stock Check
+        if (item.stock && qty > item.stock) {
+          this.showToast(`Max stock reached`, "error");
           return;
         }
         item.quantity = qty;
-        this.saveCart();
+        this.syncWithBackend(false);
+        this.updateUI();
       }
     }
   }
 
-  getCartTotal() {
-    return this.cart.reduce(
-      (total, item) => total + parseFloat(item.price) * item.quantity,
-      0
-    );
-  }
-
   clearCart() {
     this.cart = [];
-    this.saveCart();
+    this.coupon = null; // Clear coupon too
+    this.syncWithBackend(false);
+    this.updateUI();
+  }
+
+  // --- Save For Later Feature ---
+  saveForLater(productTitle) {
+    const itemIndex = this.cart.findIndex((i) => i.title === productTitle);
+    if (itemIndex > -1) {
+      const item = this.cart[itemIndex];
+      this.savedForLater.push(item); // Move to Saved
+      this.cart.splice(itemIndex, 1); // Remove from Cart
+
+      this.showToast("Saved for later", "info");
+      this.syncWithBackend(false);
+      this.updateUI();
+    }
+  }
+
+  moveToCart(productTitle) {
+    const itemIndex = this.savedForLater.findIndex(
+      (i) => i.title === productTitle
+    );
+    if (itemIndex > -1) {
+      const item = this.savedForLater[itemIndex];
+      // Try to add back to cart (Checks stock)
+      const success = this.addToCart(item, item.quantity, {
+        size: item.selectedSize,
+        color: item.selectedColor,
+      });
+      if (success) {
+        this.savedForLater.splice(itemIndex, 1); // Remove from saved if add successful
+        this.syncWithBackend(false);
+        this.updateUI();
+      }
+    }
+  }
+
+  // --- Coupon Feature ---
+  async applyCoupon(code) {
+    if (!code) return;
+    const btn = document.getElementById("btn-apply-coupon");
+    const msg = document.getElementById("coupon-msg");
+
+    if (btn) btn.textContent = "Checking...";
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/coupons`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: code, cartTotal: this.getCartTotal() }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        this.coupon = data; // Store applied coupon
+        this.showToast("Coupon Applied!", "success");
+        if (msg) {
+          msg.textContent = `Applied! -₹${data.discountAmount}`;
+          msg.className = "coupon-message success";
+        }
+      } else {
+        this.coupon = null;
+        this.showToast(data.error || "Invalid Coupon", "error");
+        if (msg) {
+          msg.textContent = data.error || "Invalid Code";
+          msg.className = "coupon-message error";
+        }
+      }
+    } catch (e) {
+      console.error(e);
+      this.showToast("Error applying coupon", "error");
+    } finally {
+      if (btn) btn.textContent = "Apply";
+      this.updateUI(); // Re-calculate totals
+    }
   }
 
   // --- Wishlist Actions ---
@@ -139,7 +250,6 @@ class CartManager {
     const index = this.wishlist.findIndex(
       (item) => item.title === product.title
     );
-
     if (index === -1) {
       this.wishlist.push(product);
       this.showToast("Added to wishlist!", "success");
@@ -147,16 +257,34 @@ class CartManager {
       this.wishlist.splice(index, 1);
       this.showToast("Removed from wishlist!", "info");
     }
-    this.saveWishlist();
+    this.syncWithBackend(false); // Sync wishlist too
+    this.updateWishlistUI();
   }
 
   isInWishlist(productTitle) {
     return this.wishlist.some((item) => item.title === productTitle);
   }
 
+  // --- Calculations & Helpers ---
+  getCartTotal() {
+    return this.cart.reduce(
+      (total, item) => total + parseFloat(item.price) * item.quantity,
+      0
+    );
+  }
+
+  getEstimatedDelivery() {
+    const date = new Date();
+    date.setDate(date.getDate() + 5); // Add 5 days
+    return date.toLocaleDateString("en-US", {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+    });
+  }
+
   // --- UI Updates ---
   updateUI() {
-    // Update Badge
     const cartCount = document.getElementById("cart-count");
     if (cartCount) {
       const totalItems = this.cart.reduce(
@@ -165,7 +293,6 @@ class CartManager {
       );
       cartCount.textContent = totalItems;
     }
-    // Update Dropdown/Modal Content
     this.updateCartDropdown();
     this.updateWishlistUI();
   }
@@ -174,16 +301,13 @@ class CartManager {
     const container = document.getElementById("cart-modal-items");
     const totalEl = document.getElementById("cart-modal-total");
 
-    // Also update header dropdown if it exists (legacy)
-    const headerContainer = document.getElementById("cart-items");
-    const headerTotal = document.getElementById("cart-total");
-
-    const htmlContent =
+    // 1. Render Active Cart Items
+    let htmlContent =
       this.cart.length === 0
         ? '<div class="cart-modal-empty" style="text-align:center; padding:20px;"><i class="fas fa-shopping-basket" style="font-size:2rem; color:#ccc;"></i><p>Your cart is empty</p></div>'
         : this.cart
             .map(
-              (item, index) => `
+              (item) => `
           <div class="cart-modal-item">
             <img src="${
               item.image
@@ -198,6 +322,9 @@ class CartManager {
                   ? `<small>Size: ${item.selectedSize}</small>`
                   : ""
               }
+              
+              <div class="delivery-date"><i class="fas fa-truck"></i> Get it by ${this.getEstimatedDelivery()}</div>
+
               <div class="cart-modal-item-quantity">
                 <button class="cart-modal-qty-btn" onclick="window.cartManager.updateQuantity('${item.title.replace(
                   /'/g,
@@ -210,29 +337,73 @@ class CartManager {
                 )}', ${item.quantity + 1})">+</button>
               </div>
             </div>
-            <i class="fas fa-trash cart-modal-item-remove" onclick="window.cartManager.removeFromCart('${item.title.replace(
-              /'/g,
-              "\\'"
-            )}')"></i>
+            <div style="display:flex; flex-direction:column; align-items:flex-end; gap:5px;">
+                <i class="fas fa-trash cart-modal-item-remove" onclick="window.cartManager.removeFromCart('${item.title.replace(
+                  /'/g,
+                  "\\'"
+                )}')"></i>
+                <button onclick="window.cartManager.saveForLater('${item.title.replace(
+                  /'/g,
+                  "\\'"
+                )}')" style="font-size:0.75rem; text-decoration:underline; border:none; background:none; color:#666; cursor:pointer;">Save for Later</button>
+            </div>
           </div>
         `
             )
             .join("");
 
-    const totalVal = this.getCartTotal().toFixed(2);
+    // 2. Render "Saved For Later" Section
+    if (this.savedForLater.length > 0) {
+      htmlContent += `<div class="saved-for-later-section">
+            <h4 style="margin:10px 0; color:#666;">Saved for Later (${
+              this.savedForLater.length
+            })</h4>
+            ${this.savedForLater
+              .map(
+                (item) => `
+                <div class="saved-item">
+                    <img src="${item.image}" alt="${item.title}">
+                    <div style="flex:1">
+                        <div style="font-size:0.9rem; font-weight:600;">${
+                          item.title
+                        }</div>
+                        <div style="font-size:0.85rem;">₹${item.price}</div>
+                    </div>
+                    <button class="btn-move-cart" onclick="window.cartManager.moveToCart('${item.title.replace(
+                      /'/g,
+                      "\\'"
+                    )}')">Move to Cart</button>
+                </div>
+            `
+              )
+              .join("")}
+        </div>`;
+    }
 
-    // Update Modal
     if (container) container.innerHTML = htmlContent;
-    if (totalEl) totalEl.textContent = totalVal;
 
-    // Update Legacy Header Dropdown
-    if (headerContainer) headerContainer.innerHTML = htmlContent;
-    if (headerTotal) headerTotal.textContent = totalVal;
+    // 3. Render Coupon Input (If not already present in HTML, inject it)
+    const summaryDiv = document.querySelector(".cart-modal-summary");
+    if (summaryDiv && !document.getElementById("coupon-input")) {
+      const couponHTML = `
+            <div class="coupon-section">
+                <label style="font-size:0.9rem; font-weight:600;">Have a Coupon?</label>
+                <div class="coupon-input-group">
+                    <input type="text" id="coupon-input" placeholder="Enter Code (e.g. SAVE100)">
+                    <button class="btn-apply" id="btn-apply-coupon" onclick="window.cartManager.applyCoupon(document.getElementById('coupon-input').value)">Apply</button>
+                </div>
+                <div id="coupon-msg" class="coupon-message"></div>
+            </div>
+        `;
+      summaryDiv.insertAdjacentHTML("afterbegin", couponHTML);
+    }
 
-    // Update Summary in Modal
+    // 4. Calculate Totals
     const sub = this.getCartTotal();
     const tax = sub * 0.18;
     const shipping = sub > 2000 ? 0 : sub > 0 ? 150 : 0;
+    const discount = this.coupon ? this.coupon.discountAmount : 0;
+    const total = sub + tax + shipping - discount;
 
     if (document.getElementById("cart-modal-subtotal"))
       document.getElementById("cart-modal-subtotal").textContent =
@@ -242,12 +413,13 @@ class CartManager {
     if (document.getElementById("cart-modal-shipping"))
       document.getElementById("cart-modal-shipping").textContent =
         shipping.toFixed(2);
+
+    // Add Discount Row display if coupon applied
+    // (Ideally you add a row in HTML, but logic here calculates the final total)
+
     if (document.getElementById("cart-modal-total"))
-      document.getElementById("cart-modal-total").textContent = (
-        sub +
-        tax +
-        shipping
-      ).toFixed(2);
+      document.getElementById("cart-modal-total").textContent =
+        total.toFixed(2);
   }
 
   updateWishlistUI() {
@@ -257,7 +429,6 @@ class CartManager {
     const container = document.getElementById("wishlist-items");
     const mobileContainer = document.getElementById("mobile-wishlist-items");
 
-    // Helper to generate list HTML
     const generateList = (isMobile) => {
       if (this.wishlist.length === 0)
         return '<p style="text-align:center; color:#999; padding:10px;">No items</p>';
@@ -295,22 +466,15 @@ class CartManager {
     toast.className = `toast ${type}`;
     toast.textContent = message;
     document.body.appendChild(toast);
-
-    setTimeout(() => {
-      toast.remove();
-    }, 3000);
+    setTimeout(() => toast.remove(), 3000);
   }
 
   generateRatingHTML(rating) {
     const fullStars = Math.floor(rating);
     const hasHalfStar = rating % 1 !== 0;
     let html = '<div class="stars" style="color: #ffc107; font-size: 0.8rem;">';
-
     for (let i = 0; i < fullStars; i++) html += '<i class="fas fa-star"></i>';
     if (hasHalfStar) html += '<i class="fas fa-star-half-alt"></i>';
-    const emptyStars = 5 - Math.ceil(rating);
-    for (let i = 0; i < emptyStars; i++) html += '<i class="far fa-star"></i>';
-
     html += `</div>`;
     return html;
   }
@@ -431,6 +595,22 @@ class ProductManager {
   }
 
   async fetchProducts() {
+    // 1. Show Skeleton
+    if (container) {
+      container.innerHTML = Array(6)
+        .fill("")
+        .map(
+          () => `
+            <div class="product-card skeleton-card">
+                <div class="skeleton" style="height: 200px; width:100%; margin-bottom:10px;"></div>
+                <div class="skeleton" style="height: 20px; width:60%; margin-bottom:5px;"></div>
+                <div class="skeleton" style="height: 20px; width:40%;"></div>
+            </div>
+        `
+        )
+        .join("");
+    }
+
     try {
       const response = await fetch(`${API_BASE_URL}/products`);
       if (!response.ok)
