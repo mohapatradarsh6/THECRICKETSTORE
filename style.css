@@ -2284,9 +2284,10 @@ body {
   height: 40px; /* Standard button height */
 
   /* Styling */
-  border: 1px solid #ddd !important; /* Subtle border */
-  border-radius: 6px !important; /* Slightly rounded rectangle */
-  background: white;
+  border: 2px solid #ffc107 !important; /* Bright Yellow Border */
+  background-color: white;
+  border-radius: 50px !important;
+  box-shadow: 0 4px 10px rgba(255, 193, 7, 0.2); /* Soft Yellow Glow */
   flex-shrink: 0;
   overflow: hidden;
   margin-right: 10px;
@@ -2294,33 +2295,35 @@ body {
 
 .qty-minus,
 .qty-plus {
-  width: 30px;
+  width: 45px;
   height: 100%;
-  background: #f8f9fa !important; /* Light grey background */
   border: none !important;
-  font-size: 1.2rem !important;
-  font-weight: bold;
-  color: #333 !important;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
+
+  /* Colors */
+  background-color: #fff9db !important; /* Very Pale Yellow Background */
+  color: var(--primary-color) !important; /* Green Icon */
+  font-size: 1.4rem !important;
+  font-weight: 900 !important;
   transition: background 0.2s;
 }
 
 .qty-minus:hover,
 .qty-plus:hover {
-  background: #e9ecef !important; /* Darker grey on hover */
+  background-color: #ffe082 !important; /* Darker Yellow on Hover */
+  color: #000 !important;
 }
-
 .qty-input {
-  width: 40px;
-  text-align: center;
   border: none !important;
   background: transparent !important;
-  font-weight: 600;
-  font-size: 1rem;
+  font-weight: 800;
+  font-size: 1.2rem;
   color: #333 !important;
+  width: 100%;
+  text-align: center;
   padding: 0;
 }
 /* =========================================
@@ -2360,6 +2363,20 @@ body {
   flex: 1; /* Grow to fill space next to quantity */
   height: 40px; /* Match quantity height */
   font-size: 1rem;
+
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+
+  /* Vibrant Green Gradient */
+  background: linear-gradient(135deg, #1a5f3f 0%, #2ecc71 100%) !important;
+  color: white !important;
+
+  text-transform: uppercase;
+  letter-spacing: 1px;
+
+  /* Shadow for "Pop" */
+  box-shadow: 0 5px 15px rgba(46, 204, 113, 0.4);
 }
 
 .btn-add-cart:hover,
@@ -2376,13 +2393,14 @@ body {
 }
 
 .btn-add-cart-modal:hover:not(:disabled) {
-  background: var(--secondary-color);
+  background: linear-gradient(135deg, #144d32 0%, #1a5f3f 100%) !important;
   transform: translateY(-2px);
-  box-shadow: 0 5px 15px rgba(26, 95, 63, 0.3);
+  box-shadow: 0 8px 20px rgba(46, 204, 113, 0.6);
 }
 
 .btn-add-cart-modal:disabled {
-  background: #ccc;
+  background: #ccc !important;
+  box-shadow: none;
   cursor: not-allowed;
 }
 
