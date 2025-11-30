@@ -132,27 +132,35 @@ class CartManager {
   // --- Cart Actions ---
 
   // Returns TRUE if successful, FALSE if failed (e.g. stock limit)
+  // --- Robust Add to Cart Logic ---
   addToCart(product, quantity = 1, variants = {}) {
-    const stock = parseInt(product.stock);
-    const qty = parseInt(quantity);
-
-    // 1. Check Global Stock (Initial add check)
-    if (!isNaN(stock) && stock < qty) {
-      this.showToast(`Sorry, only ${stock} items in stock!`, "error");
+    // Safety Check: Ensure product exists
+    if (!product || !product.title) {
+      console.error("Error: Invalid product data", product);
       return false;
     }
 
-    // Check if item exists (matching ID/Title)
-    // We use title as a unique identifier here, but ideally this would use _id
+    const stock = product.stock !== undefined ? parseInt(product.stock) : 999;
+    const qty = parseInt(quantity) || 1;
+
+    // 1. Check Global Stock
+    if (stock < qty) {
+      this.showToast(`Sorry, Out of Stock! (Only ${stock} left)`, "error");
+      return false;
+    }
+
+    // Ensure cart array exists
+    if (!Array.isArray(this.cart)) this.cart = [];
+
     const existingItem = this.cart.find((item) => item.title === product.title);
     const price = parseFloat(product.price) || 0;
 
     if (existingItem) {
-      // 2. Check Cumulative Stock (Existing + New)
-      const currentQty = parseInt(existingItem.quantity);
-      if (!isNaN(stock) && currentQty + qty > stock) {
+      // 2. Check Cumulative Stock
+      const currentQty = parseInt(existingItem.quantity) || 0;
+      if (currentQty + qty > stock) {
         this.showToast(
-          `Max stock reached! You have ${currentQty} in cart.`,
+          `Max limit reached! You already have ${currentQty}.`,
           "warning"
         );
         return false;
@@ -160,7 +168,6 @@ class CartManager {
       existingItem.quantity = currentQty + qty;
     } else {
       // 3. Add New Item
-      // We spread the product properties to ensure we keep image, id, etc.
       this.cart.push({
         ...product,
         price: price,
@@ -170,9 +177,15 @@ class CartManager {
       });
     }
 
+    // Success Feedback
     this.showToast(`${product.title} added to cart!`, "success");
-    this.syncWithBackend(false); // Push changes to DB immediately
+
+    // IMMEDIATE UI UPDATE
     this.updateUI();
+
+    // Sync in background
+    this.syncWithBackend(false);
+
     return true;
   }
 
@@ -432,14 +445,21 @@ class CartManager {
 
   // --- UI Updates ---
   updateUI() {
+    // Update Badge Count
     const cartCount = document.getElementById("cart-count");
     if (cartCount) {
       const totalItems = this.cart.reduce(
-        (total, item) => total + item.quantity,
+        (total, item) => total + (parseInt(item.quantity) || 0),
         0
       );
       cartCount.textContent = totalItems;
+
+      // Optional: Add a little 'bump' animation to draw attention
+      cartCount.style.transform = "scale(1.2)";
+      setTimeout(() => (cartCount.style.transform = "scale(1)"), 200);
     }
+
+    // Update Modal & Wishlist
     this.updateCartDropdown();
     this.updateWishlistUI();
   }
