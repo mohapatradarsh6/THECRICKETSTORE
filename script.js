@@ -3,21 +3,19 @@
 // ====================================================================
 
 // Use "/api" for relative path in Vercel deployment
-// This ensures the frontend talks to the backend on the same domain
 const API_BASE_URL = "/api";
 
 // ====================================================================
 // IN-MEMORY STORAGE & STATE MANAGEMENT
 // ====================================================================
 
-// Global variables to hold application state
 let _cartData = [];
 let _wishlistData = [];
 let _searchHistoryData = [];
 let _currentUser = null;
 let _authToken = null;
 
-// Initialize state from LocalStorage (Keeps you logged in across refreshes)
+// Initialize state from LocalStorage (Keeps you logged in)
 const storedUser = localStorage.getItem("user");
 const storedToken = localStorage.getItem("token");
 
@@ -27,7 +25,7 @@ if (storedUser && storedToken) {
     _authToken = storedToken;
     console.log("User session restored:", _currentUser.email);
   } catch (e) {
-    console.error("Failed to parse user data from local storage", e);
+    console.error("Failed to parse user data", e);
     localStorage.clear();
   }
 }
@@ -40,12 +38,11 @@ class CartManager {
   constructor() {
     this.cart = _cartData || [];
     this.wishlist = _wishlistData || [];
-    this.savedForLater = []; // New: Saved for Later list
-    this.coupon = null; // New: Applied coupon data
+    this.savedForLater = [];
+    this.coupon = null;
 
     // If user is logged in, fetch their cart/saved items from DB immediately
     if (_currentUser && _authToken) {
-      console.log("User is logged in. Initiating Cart Sync...");
       this.syncWithBackend(true); // true = PULL from server
     }
 
@@ -53,29 +50,19 @@ class CartManager {
   }
 
   // --- Backend Syncing Logic ---
-  // This function handles two-way synchronization between Frontend and MongoDB
   async syncWithBackend(pull = false) {
-    // If no user is logged in, we cannot sync, so we just return.
-    if (!_currentUser || !_authToken) {
-      return;
-    }
+    if (!_currentUser || !_authToken) return;
 
     try {
       let res;
 
       if (pull) {
         // PULL: Get latest data from DB
-        // This is usually called on Page Load or Login
-        console.log("Syncing: Pulling data from server...");
         res = await fetch(`${API_BASE_URL}/user`, {
-          headers: {
-            Authorization: `Bearer ${_authToken}`,
-          },
+          headers: { Authorization: `Bearer ${_authToken}` },
         });
       } else {
         // PUSH: Save local state to DB
-        // This is called whenever the user modifies the cart (Add, Remove, Update)
-        console.log("Syncing: Pushing data to server...");
         res = await fetch(`${API_BASE_URL}/user`, {
           method: "PUT",
           headers: {
@@ -90,29 +77,18 @@ class CartManager {
         });
       }
 
-      // REQUEST: Auto-logout logic on 401 has been REMOVED.
-      // We simply log the warning if something goes wrong.
       if (!res.ok) {
-        console.warn("Sync response was not OK. Status:", res.status);
-        // We do NOT logoutUser() here anymore.
+        console.warn("Sync response not OK:", res.status);
       }
 
       // Process Data (Only if pulling and success)
       if (pull && res.ok) {
         const data = await res.json();
 
-        // Update local state with server data if it exists
-        if (data.cart) {
-          this.cart = data.cart;
-        }
-        if (data.wishlist) {
-          this.wishlist = data.wishlist;
-        }
-        if (data.savedForLater) {
-          this.savedForLater = data.savedForLater;
-        }
+        if (data.cart) this.cart = data.cart;
+        if (data.wishlist) this.wishlist = data.wishlist;
+        if (data.savedForLater) this.savedForLater = data.savedForLater;
 
-        // Also sync recently viewed if available in the user profile
         if (data.recentlyViewed) {
           localStorage.setItem(
             "recentlyViewed",
@@ -120,37 +96,32 @@ class CartManager {
           );
         }
 
-        console.log("Sync successful. UI Updated.");
         this.updateUI();
       }
     } catch (e) {
-      // If fetch fails (e.g. network error), we just log it and keep working locally
-      console.warn("Sync failed (Offline mode or Network Error):", e);
+      console.warn("Sync failed (Offline mode):", e);
     }
   }
 
   // --- Cart Actions ---
 
-  // Returns TRUE if successful, FALSE if failed (e.g. stock limit)
-  // --- Robust Add to Cart Logic ---
+  // Returns TRUE if successful, FALSE if failed
   addToCart(product, quantity = 1, variants = {}) {
-    // Safety Check: Ensure product exists
-    if (!product || !product.title) {
-      console.error("Error: Invalid product data", product);
+    // Safety Check
+    if (!product) {
+      console.error("Product undefined in addToCart");
       return false;
     }
 
+    // Default stock to 999 if not defined to prevent blocking sales
     const stock = product.stock !== undefined ? parseInt(product.stock) : 999;
     const qty = parseInt(quantity) || 1;
 
     // 1. Check Global Stock
     if (stock < qty) {
-      this.showToast(`Sorry, Out of Stock! (Only ${stock} left)`, "error");
+      this.showToast(`Sorry, only ${stock} items in stock!`, "error");
       return false;
     }
-
-    // Ensure cart array exists
-    if (!Array.isArray(this.cart)) this.cart = [];
 
     const existingItem = this.cart.find((item) => item.title === product.title);
     const price = parseFloat(product.price) || 0;
@@ -160,7 +131,7 @@ class CartManager {
       const currentQty = parseInt(existingItem.quantity) || 0;
       if (currentQty + qty > stock) {
         this.showToast(
-          `Max limit reached! You already have ${currentQty}.`,
+          `Max limit reached! You have ${currentQty} in cart.`,
           "warning"
         );
         return false;
@@ -177,10 +148,8 @@ class CartManager {
       });
     }
 
-    // Success Feedback
+    // UPDATE UI IMMEDIATELY
     this.showToast(`${product.title} added to cart!`, "success");
-
-    // IMMEDIATE UI UPDATE
     this.updateUI();
 
     // Sync in background
@@ -191,10 +160,9 @@ class CartManager {
 
   removeFromCart(productTitle) {
     this.cart = this.cart.filter((item) => item.title !== productTitle);
-    this.syncWithBackend(false); // Push changes to DB
-    this.updateUI();
+    this.updateUI(); // Update immediately
+    this.syncWithBackend(false);
 
-    // If empty, force refresh modal to show "Empty" state
     if (
       this.cart.length === 0 &&
       document.getElementById("cart-modal").classList.contains("active")
@@ -207,30 +175,26 @@ class CartManager {
     const item = this.cart.find((item) => item.title === productTitle);
     if (item) {
       const qty = parseInt(quantity);
-      // If quantity becomes 0 or less, remove the item
       if (qty <= 0) {
         this.removeFromCart(productTitle);
       } else {
-        // Stock Check before updating
+        // Stock Check
         if (item.stock && qty > item.stock) {
-          this.showToast(
-            `Max stock reached (${item.stock} available)`,
-            "error"
-          );
+          this.showToast(`Max stock reached (${item.stock})`, "error");
           return;
         }
         item.quantity = qty;
-        this.syncWithBackend(false); // Push changes to DB
         this.updateUI();
+        this.syncWithBackend(false);
       }
     }
   }
 
   clearCart() {
     this.cart = [];
-    this.coupon = null; // Clear applied coupon when cart is cleared
-    this.syncWithBackend(false);
+    this.coupon = null;
     this.updateUI();
+    this.syncWithBackend(false);
   }
 
   // --- Save For Later Feature ---
@@ -238,12 +202,12 @@ class CartManager {
     const itemIndex = this.cart.findIndex((i) => i.title === productTitle);
     if (itemIndex > -1) {
       const item = this.cart[itemIndex];
-      this.savedForLater.push(item); // Move to Saved array
-      this.cart.splice(itemIndex, 1); // Remove from Cart array
+      this.savedForLater.push(item);
+      this.cart.splice(itemIndex, 1);
 
       this.showToast("Item saved for later", "info");
-      this.syncWithBackend(false); // Push both arrays to DB
       this.updateUI();
+      this.syncWithBackend(false);
     }
   }
 
@@ -253,16 +217,15 @@ class CartManager {
     );
     if (itemIndex > -1) {
       const item = this.savedForLater[itemIndex];
-      // Try to add back to cart (Reuse addToCart so it checks stock automatically)
       const success = this.addToCart(item, item.quantity, {
         size: item.selectedSize,
         color: item.selectedColor,
       });
 
       if (success) {
-        this.savedForLater.splice(itemIndex, 1); // Remove from saved if successful
-        this.syncWithBackend(false);
+        this.savedForLater.splice(itemIndex, 1);
         this.updateUI();
+        this.syncWithBackend(false);
       }
     }
   }
@@ -285,7 +248,7 @@ class CartManager {
       const data = await res.json();
 
       if (res.ok && data.success) {
-        this.coupon = data; // Store applied coupon object
+        this.coupon = data;
         this.showToast("Coupon Applied Successfully!", "success");
         if (msg) {
           msg.textContent = `Applied! -₹${data.discountAmount}`;
@@ -304,7 +267,7 @@ class CartManager {
       this.showToast("Error verifying coupon", "error");
     } finally {
       if (btn) btn.textContent = "Apply";
-      this.updateUI(); // Re-calculate totals with new discount
+      this.updateUI();
     }
   }
 
@@ -326,7 +289,7 @@ class CartManager {
       this.wishlist.splice(index, 1);
       this.showToast("Removed from wishlist!", "info");
     }
-    this.syncWithBackend(false); // Sync wishlist too
+    this.syncWithBackend(false);
     this.updateWishlistUI();
   }
 
@@ -343,7 +306,7 @@ class CartManager {
     }
   }
 
-  // --- Calculations & Helpers ---
+  // --- Calculations ---
   getCartTotal() {
     return this.cart.reduce(
       (total, item) =>
@@ -354,7 +317,7 @@ class CartManager {
 
   getEstimatedDelivery() {
     const date = new Date();
-    date.setDate(date.getDate() + 5); // Add 5 days standard
+    date.setDate(date.getDate() + 5);
     return date.toLocaleDateString("en-US", {
       weekday: "short",
       month: "short",
@@ -362,13 +325,9 @@ class CartManager {
     });
   }
 
-  // Comprehensive Total Calculation for Checkout
-  // This handles Tax, Shipping, Bulk Discounts, and Coupon Logic
   calculateTotals(customItems = null) {
-    // Support calculating for specific items (Buy Now) or full cart
     const itemsToCalc = customItems || this.cart;
 
-    // If no items, return zeros to prevent NaN
     if (itemsToCalc.length === 0) {
       return {
         subtotal: 0,
@@ -388,8 +347,6 @@ class CartManager {
     itemsToCalc.forEach((item) => {
       let itemTotal =
         (parseFloat(item.price) || 0) * (parseInt(item.quantity) || 1);
-
-      // Feature: Bulk Discount (Buy 2+, get 10% off that item)
       if (item.quantity >= 2) {
         const discount = itemTotal * 0.1;
         bulkSavings += discount;
@@ -397,7 +354,6 @@ class CartManager {
       subtotal += itemTotal;
     });
 
-    // Check UI checkboxes for extras (only if they exist in the DOM)
     const isGift = document.getElementById("is-gift")?.checked || false;
     const hasInsurance =
       document.getElementById("has-insurance")?.checked || false;
@@ -406,10 +362,9 @@ class CartManager {
     const insuranceCost = hasInsurance ? 100 : 0;
 
     const tax = (subtotal - bulkSavings) * 0.18;
-    const shipping = subtotal - bulkSavings > 2000 ? 0 : 150; // Free shipping over 2000
+    const shipping = subtotal - bulkSavings > 2000 ? 0 : 150;
 
     let couponDiscount = 0;
-    // Only apply coupon if calculating for the main cart
     if (this.coupon && !customItems) {
       couponDiscount = this.coupon.discountAmount;
     }
@@ -425,7 +380,6 @@ class CartManager {
         couponDiscount
     );
 
-    // Update the Total Price display if it exists on screen (in Checkout Modal)
     if (document.getElementById("payment-total")) {
       document.getElementById("payment-total").textContent =
         finalTotal.toFixed(2);
@@ -445,7 +399,7 @@ class CartManager {
 
   // --- UI Updates ---
   updateUI() {
-    // Update Badge Count
+    // Badge Update
     const cartCount = document.getElementById("cart-count");
     if (cartCount) {
       const totalItems = this.cart.reduce(
@@ -454,12 +408,11 @@ class CartManager {
       );
       cartCount.textContent = totalItems;
 
-      // Optional: Add a little 'bump' animation to draw attention
+      // Animation Bump
       cartCount.style.transform = "scale(1.2)";
       setTimeout(() => (cartCount.style.transform = "scale(1)"), 200);
     }
 
-    // Update Modal & Wishlist
     this.updateCartDropdown();
     this.updateWishlistUI();
   }
@@ -467,16 +420,14 @@ class CartManager {
   updateCartDropdown() {
     const container = document.getElementById("cart-modal-items");
 
-    // 1. Render Active Cart Items
     let htmlContent =
       this.cart.length === 0
         ? '<div class="cart-modal-empty" style="text-align:center; padding:40px;"><i class="fas fa-shopping-basket" style="font-size:3rem; color:#eee; margin-bottom:15px;"></i><p style="color:#666;">Your cart is empty</p></div>'
         : this.cart
             .map((item) => {
-              // FEATURE: Limited Stock Warning in Cart
               const isLowStock = item.stock && item.stock <= 3;
               const stockWarning = isLowStock
-                ? `<div class="stock-warning"><i class="fas fa-exclamation-circle"></i> Hurry! Only ${item.stock} left</div>`
+                ? `<div class="stock-warning" style="color:#e67e22; font-size:0.75rem; margin-top:4px;"><i class="fas fa-exclamation-circle"></i> Hurry! Only ${item.stock} left</div>`
                 : "";
 
               return `
@@ -525,7 +476,6 @@ class CartManager {
             })
             .join("");
 
-    // 2. Render "Saved For Later" Section
     if (this.savedForLater.length > 0) {
       htmlContent += `<div class="saved-for-later-section" style="margin-top:20px; padding-top:15px; border-top:1px dashed #ddd;">
             <h4 style="margin:10px 0; color:#666; font-size:0.9rem;">Saved for Later (${
@@ -557,9 +507,9 @@ class CartManager {
 
     if (container) container.innerHTML = htmlContent;
 
-    // 3. Render Coupon Input (If not already present in HTML, inject it)
     const summaryDiv = document.querySelector(".cart-modal-summary");
     if (summaryDiv) {
+      // Refresh Coupon UI
       const oldCoupon = document.querySelector(".coupon-section");
       if (oldCoupon) oldCoupon.remove();
 
@@ -575,7 +525,7 @@ class CartManager {
                          ${
                            this.coupon
                              ? `<button class="btn-remove-coupon" onclick="window.cartManager.removeCoupon()" style="background:#dc3545; color:white; border:none; padding:0 15px; border-radius:4px; cursor:pointer;">Remove</button>`
-                             : `<button class="btn-apply" id="btn-apply-coupon" onclick="window.cartManager.applyCoupon(document.getElementById('coupon-input').value)" style="background:#333; color:white; border:none; padding:0 15px; border-radius:4px; cursor:pointer;">Apply</button>`
+                             : `<button class="btn-apply-coupon" onclick="window.cartManager.applyCoupon(document.getElementById('coupon-input').value)" style="background:#333; color:white; border:none; padding:0 15px; border-radius:4px; cursor:pointer;">Apply</button>`
                          }
                     </div>
                     <div id="coupon-msg" class="coupon-message" style="font-size:0.8rem; margin-top:5px;"></div>
@@ -585,7 +535,6 @@ class CartManager {
       }
     }
 
-    // 4. Calculate and Display Totals
     const calc = this.calculateTotals();
 
     if (document.getElementById("cart-modal-subtotal"))
@@ -601,7 +550,6 @@ class CartManager {
       document.getElementById("cart-modal-total").textContent =
         calc.finalTotal.toFixed(2);
 
-    // Inject Discount Row in Cart Summary
     const discountRowId = "cart-discount-row";
     let discountRow = document.getElementById(discountRowId);
 
@@ -611,7 +559,6 @@ class CartManager {
         discountRow.id = discountRowId;
         discountRow.className = "summary-row";
         discountRow.style.color = "var(--success-color)";
-        // Insert before Total
         const totalRow = document.querySelector(
           ".cart-modal-summary .summary-row.total"
         );
@@ -659,6 +606,19 @@ class CartManager {
 
     if (container) container.innerHTML = generateList(false);
     if (mobileContainer) mobileContainer.innerHTML = generateList(true);
+  }
+
+  showToast(message, type = "success") {
+    const existingToast = document.querySelector(".toast");
+    if (existingToast) existingToast.remove();
+
+    const toast = document.createElement("div");
+    toast.className = `toast ${type}`;
+    // FORCE HIGH Z-INDEX
+    toast.style.zIndex = "999999";
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
   }
 }
 
@@ -756,15 +716,14 @@ class ProductPagination {
 }
 
 // ====================================================================
-// 3. PRODUCT MANAGEMENT (With Recently Viewed Feature)
+// 3. PRODUCT MANAGEMENT
 // ====================================================================
 
 class ProductManager {
   constructor() {
     this.products = [];
     this.filteredProducts = [];
-    this.searchHistory = _searchHistoryData;
-    if (!window.productDataMap) window.productDataMap = {};
+    window.productDataMap = {};
     this.init();
   }
 
@@ -773,13 +732,10 @@ class ProductManager {
     await this.fetchProducts();
     this.initializeFilters();
     this.initializeSearch();
-    this.renderRecentlyViewed();
-
-    // Catalogue System: Read URL for deep linking
     this.syncFiltersFromURL();
+    this.renderRecentlyViewed();
   }
 
-  // --- Catalogue Logic ---
   syncFiltersFromURL() {
     const params = new URLSearchParams(window.location.search);
 
@@ -807,9 +763,8 @@ class ProductManager {
 
   updateBreadcrumbs(category, brand, search) {
     const breadcrumbs = document.getElementById("catalogue-breadcrumbs");
-    // If element exists (optional feature), update text
     if (breadcrumbs) {
-      // logic to update breadcrumb text based on selection
+      // logic to update breadcrumbs
     }
   }
 
@@ -832,10 +787,7 @@ class ProductManager {
   }
 
   async fetchProducts() {
-    // 1. Define container at the top so it's available in try AND catch blocks
     const container = document.getElementById("products-container");
-
-    // 2. Show Skeleton Loading Screen
     if (container) {
       container.innerHTML = Array(6)
         .fill("")
@@ -866,8 +818,6 @@ class ProductManager {
       this.products = data;
       this.filteredProducts = [...this.products];
       this.renderProductCards();
-
-      // Re-sync filters once data is loaded to apply any URL params
       this.syncFiltersFromURL();
     } catch (error) {
       console.error("Failed to fetch products:", error);
@@ -915,7 +865,6 @@ class ProductManager {
     }
 
     const isOutOfStock = product.stock !== undefined && product.stock <= 0;
-    // Low Stock Warning Logic for Main Card
     const stockWarning =
       !isOutOfStock && product.stock <= 3
         ? `<div class="stock-warning" style="color:#e67e22; font-size:0.7rem; margin-top:4px; background:rgba(230,126,34,0.1); padding:2px 6px; border-radius:4px; width:fit-content;">Only ${product.stock} left!</div>`
@@ -1147,7 +1096,7 @@ class ProductManager {
 }
 
 // ====================================================================
-// 4. QUICK VIEW MODAL (Enhanced with Related & FBT)
+// 4. QUICK VIEW MODAL
 // ====================================================================
 
 class QuickViewModal {
@@ -1167,7 +1116,6 @@ class QuickViewModal {
     const qtyPlus = this.modal?.querySelector(".qty-plus");
     const qtyInput = this.modal?.querySelector(".qty-input");
 
-    // Quantity Decrement
     if (qtyMinus) {
       qtyMinus.onclick = () => {
         if (this.currentQuantity > 1) {
@@ -1177,18 +1125,15 @@ class QuickViewModal {
       };
     }
 
-    // Quantity Increment (FIX: Strict Stock Check)
     if (qtyPlus) {
       qtyPlus.onclick = () => {
         if (this.currentProduct && this.currentProduct.stock !== undefined) {
-          // Check Modal Value vs Stock
-          // We should ideally check Cart + Current Quantity, but for simple UI:
           if (this.currentQuantity >= this.currentProduct.stock) {
             window.cartManager.showToast(
               `Max stock reached! Only ${this.currentProduct.stock} available.`,
               "warning"
             );
-            return; // STOP here
+            return;
           }
         }
         this.currentQuantity++;
@@ -1204,18 +1149,15 @@ class QuickViewModal {
 
     window.productManager.addToRecentlyViewed(product);
 
-    // 1. Fill Basic Info
     this.modal.querySelector("#quick-view-title").textContent = product.title;
     this.modal.querySelector("#quick-view-img").src = product.image;
     this.modal.querySelector(
       "#quick-view-price"
     ).innerHTML = `<span class="price-current">₹${product.price}</span>`;
 
-    // Reset Input UI
     const qtyInput = this.modal.querySelector(".qty-input");
     if (qtyInput) qtyInput.value = 1;
 
-    // 2. Generate Description & Variants
     const descHTML = `<div style="margin: 10px 0; color: #666; font-size: 0.95rem;">${
       product.description || "No description."
     }</div>`;
@@ -1231,13 +1173,11 @@ class QuickViewModal {
         .join("")}</select></div>`;
     variantsHTML += "</div>";
 
-    // 3. Clean up old dynamic content
     const detailsDiv = this.modal.querySelector(".quick-view-details");
     detailsDiv
       .querySelectorAll(".qv-injected, .qv-related-section, .qv-fbt-section")
       .forEach((e) => e.remove());
 
-    // 4. Inject Description/Variants AFTER Price
     const wrapper = document.createElement("div");
     wrapper.className = "qv-injected";
     wrapper.innerHTML = descHTML + variantsHTML;
@@ -1245,15 +1185,15 @@ class QuickViewModal {
       .querySelector("#quick-view-price")
       .insertAdjacentElement("afterend", wrapper);
 
-    // 5. Inject FBT & Related (FIX: Insert BEFORE the Actions buttons)
     const actionsDiv = this.modal.querySelector(".quick-view-actions");
+
+    // FIX: Insert New Sections BEFORE the Add to Cart Button
     const fbtElement = this.createFBTElement(product);
     const relatedElement = this.createRelatedElement(product);
 
     if (fbtElement) detailsDiv.insertBefore(fbtElement, actionsDiv);
     if (relatedElement) detailsDiv.insertBefore(relatedElement, actionsDiv);
 
-    // 6. "Add to Cart" Button Logic
     const btn = this.modal.querySelector(".btn-add-cart-modal");
     const newBtn = btn.cloneNode(true);
     btn.parentNode.replaceChild(newBtn, btn);
@@ -1487,7 +1427,7 @@ function updateAccountUI() {
         <li class="auth-dynamic-item"><a href="#" class="auth-action" data-action="logout"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
       `;
     } else {
-      authHTML = ``; // Mobile default login is often in header or different logic, adjust as needed
+      authHTML = ``; // Mobile default login
     }
     // Insert auth items after Home if needed
     if (mobileMenu.children.length > 0) {
