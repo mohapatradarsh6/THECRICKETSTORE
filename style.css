@@ -2331,22 +2331,27 @@ body {
 /* =========================================
    3. ADD TO CART BUTTON & STICKY ACTIONS
    ========================================= */
+/* FIX: Force Sticky Bottom for Add to Cart */
 .quick-view-actions {
   display: flex;
-  align-items: center;
   gap: 15px;
+  align-items: center;
 
-  /* Sticky Logic */
-  position: sticky;
-  bottom: 0;
+  position: sticky !important; /* Force sticky */
+  bottom: 0 !important; /* Force bottom */
+
   background: white;
+  padding: 15px 20px; /* Ensure padding */
+  margin-top: auto;
 
-  /* Design */
-  padding: 15px 0; /* Padding inside the sticky bar */
-  margin-top: auto; /* Push to bottom if content is short */
-  z-index: 50; /* Ensure it stays on top of content */
-  border-top: 1px solid #f0f0f0;
-  box-shadow: 0 -4px 20px rgba(255, 255, 255, 0.9); /* Fade effect above */
+  z-index: 999 !important; /* Ensure it sits on top of everything else in the modal */
+  border-top: 1px solid #eee;
+  box-shadow: 0 -4px 10px rgba(0, 0, 0, 0.05); /* Shadow to separate from content */
+}
+
+/* Ensure parent has no bottom padding that conflicts */
+.quick-view-details {
+  padding-bottom: 0 !important;
 }
 .btn-add-cart,
 .btn-buy-now,

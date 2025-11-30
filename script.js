@@ -98,6 +98,13 @@ class CartManager {
 
         this.updateUI();
       }
+
+      if (data.addresses) {
+        _currentUser.addresses = data.addresses;
+        saveUser(_currentUser); // Save to local storage
+      }
+
+      this.updateUI();
     } catch (e) {
       console.warn("Sync failed (Offline mode):", e);
     }
@@ -1603,6 +1610,28 @@ function openPaymentModal(items) {
   newPayBtn.onclick = async () => {
     const methodInput = document.querySelector('input[name="payment"]:checked');
     const method = methodInput ? methodInput.value : "cod";
+
+    if (method === "card") {
+      const num = document.querySelector(
+        "#card-form input[placeholder*='Card Number']"
+      )?.value;
+      const cvv = document.querySelector(
+        "#card-form input[placeholder*='CVV']"
+      )?.value;
+      if (!num || !cvv || num.length < 16 || cvv.length < 3) {
+        window.cartManager.showToast(
+          "Please enter valid card details",
+          "error"
+        );
+        return; // STOP HERE
+      }
+    } else if (method === "upi") {
+      const upiId = document.querySelector("#upi-form input")?.value;
+      if (!upiId || !upiId.includes("@")) {
+        window.cartManager.showToast("Please enter valid UPI ID", "error");
+        return; // STOP HERE
+      }
+    }
 
     newPayBtn.textContent = "Processing...";
     newPayBtn.disabled = true;
