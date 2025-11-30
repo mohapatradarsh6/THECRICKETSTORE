@@ -18,6 +18,7 @@ let _authToken = null;
 // Initialize state from LocalStorage (Keeps you logged in)
 const storedUser = localStorage.getItem("user");
 const storedToken = localStorage.getItem("token");
+
 if (storedUser && storedToken) {
   try {
     _currentUser = JSON.parse(storedUser);
@@ -49,6 +50,7 @@ class CartManager {
 
   // --- Backend Syncing Logic ---
   async syncWithBackend(pull = false) {
+    // If no user is logged in, we cannot sync, so we just return.
     if (!_currentUser || !_authToken) return;
 
     try {
@@ -57,7 +59,9 @@ class CartManager {
       if (pull) {
         // PULL: Get latest data from DB
         res = await fetch(`${API_BASE_URL}/user`, {
-          headers: { Authorization: `Bearer ${_authToken}` },
+          headers: {
+            Authorization: `Bearer ${_authToken}`,
+          },
         });
       } else {
         // PUSH: Save local state to DB
@@ -75,44 +79,55 @@ class CartManager {
         });
       }
 
+      // NOTE: Auto-logout logic on 401 has been REMOVED as per request.
+      // We simply log the warning if something goes wrong but don't force logout.
+      if (!res.ok) {
+        console.warn("Sync response not OK:", res.status);
+      }
+
       // Process Data (Only if pulling and success)
       if (pull && res.ok) {
         const data = await res.json();
+
+        // Update local state with server data
         if (data.cart) this.cart = data.cart;
         if (data.wishlist) this.wishlist = data.wishlist;
         if (data.savedForLater) this.savedForLater = data.savedForLater;
-        // Sync recently viewed if available
+
+        // Also sync recently viewed if available
         if (data.recentlyViewed) {
           localStorage.setItem(
             "recentlyViewed",
             JSON.stringify(data.recentlyViewed)
           );
         }
+
         this.updateUI();
       }
     } catch (e) {
-      console.warn("Sync failed (Offline mode active):", e);
+      console.warn("Sync failed (Offline mode or Network Error):", e);
     }
   }
 
   // --- Cart Actions ---
 
-  // Returns TRUE if successful, FALSE if failed
+  // Returns TRUE if successful, FALSE if failed (e.g. stock limit)
   addToCart(product, quantity = 1, variants = {}) {
     const stock = parseInt(product.stock);
     const qty = parseInt(quantity);
 
-    // 1. Check Global Stock (Initial add)
+    // 1. Check Global Stock (Initial add check)
     if (!isNaN(stock) && stock < qty) {
       this.showToast(`Sorry, only ${stock} items in stock!`, "error");
       return false;
     }
 
+    // Check if item exists (matching ID/Title)
     const existingItem = this.cart.find((item) => item.title === product.title);
     const price = parseFloat(product.price) || 0;
 
     if (existingItem) {
-      // 2. Check Cumulative Stock
+      // 2. Check Cumulative Stock (Existing + New)
       const currentQty = parseInt(existingItem.quantity);
       if (!isNaN(stock) && currentQty + qty > stock) {
         this.showToast(
@@ -125,7 +140,7 @@ class CartManager {
     } else {
       // 3. Add New Item
       this.cart.push({
-        ...product,
+        ...product, // Spreads title, image, id, stock
         price: price,
         quantity: qty,
         selectedSize: variants.size || product.selectedSize || null,
@@ -133,38 +148,10 @@ class CartManager {
       });
     }
 
-    // --- CRITICAL FIX: Persist to LocalStorage immediately ---
-    if (!_currentUser) {
-      // If guest, save cart to local storage so it persists on reload
-      // (You'll need to add logic to load this in constructor if you want guest persistence)
-    }
-
     this.showToast(`${product.title} added to cart!`, "success");
-
-    // Force UI Update immediately
+    this.syncWithBackend(false); // Push changes to DB
     this.updateUI();
-
-    // Sync with backend (optimistic)
-    this.syncWithBackend(false);
-
     return true;
-  }
-
-  updateUI() {
-    const cartCount = document.getElementById("cart-count");
-    if (cartCount) {
-      const totalItems = this.cart.reduce(
-        (total, item) => total + item.quantity,
-        0
-      );
-      cartCount.textContent = totalItems;
-      // Animation for visual feedback
-      cartCount.classList.remove("bump");
-      void cartCount.offsetWidth; // Trigger reflow
-      cartCount.classList.add("bump");
-    }
-    this.updateCartDropdown();
-    this.updateWishlistUI();
   }
 
   removeFromCart(productTitle) {
@@ -297,7 +284,7 @@ class CartManager {
       this.wishlist.splice(index, 1);
       this.showToast("Removed from wishlist!", "info");
     }
-    this.syncWithBackend(false);
+    this.syncWithBackend(false); // Sync wishlist too
     this.updateWishlistUI();
   }
 
@@ -423,7 +410,7 @@ class CartManager {
               // FEATURE: Limited Stock Warning in Cart
               const isLowStock = item.stock && item.stock <= 3;
               const stockWarning = isLowStock
-                ? `<div class="stock-warning" style="color:#e67e22; font-size:0.75rem; margin-top:4px;"><i class="fas fa-exclamation-circle"></i> Hurry! Only ${item.stock} left</div>`
+                ? `<div class="stock-warning" style="color:#e67e22; font-size:0.75rem; margin-top:4px; background:rgba(230,126,34,0.1); padding:2px 6px; border-radius:4px; width:fit-content;"><i class="fas fa-exclamation-circle"></i> Hurry! Only ${item.stock} left</div>`
                 : "";
 
               return `
@@ -571,6 +558,27 @@ class CartManager {
 
     if (container) container.innerHTML = generateList(false);
     if (mobileContainer) mobileContainer.innerHTML = generateList(true);
+  }
+
+  showToast(message, type = "success") {
+    const existingToast = document.querySelector(".toast");
+    if (existingToast) existingToast.remove();
+
+    const toast = document.createElement("div");
+    toast.className = `toast ${type}`;
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+  }
+
+  generateRatingHTML(rating) {
+    const fullStars = Math.floor(rating);
+    const hasHalfStar = rating % 1 !== 0;
+    let html = '<div class="stars" style="color: #ffc107; font-size: 0.8rem;">';
+    for (let i = 0; i < fullStars; i++) html += '<i class="fas fa-star"></i>';
+    if (hasHalfStar) html += '<i class="fas fa-star-half-alt"></i>';
+    html += `</div>`;
+    return html;
   }
 }
 
@@ -1022,8 +1030,6 @@ class ProductManager {
     const input = document.getElementById("search-input");
     const btn = document.getElementById("search-btn");
 
-    // Removed search suggestions logic as requested to fix dropdown issue
-
     const performSearch = (query) => {
       if (!query) return;
       this.searchProducts(query);
@@ -1117,6 +1123,7 @@ class QuickViewModal {
       };
     }
   }
+
   showQuickView(product) {
     if (!this.modal) return;
     this.currentProduct = product;
@@ -1157,7 +1164,7 @@ class QuickViewModal {
       .querySelectorAll(".qv-injected, .qv-related-section, .qv-fbt-section")
       .forEach((e) => e.remove());
 
-    // 4. Inject Description/Variants
+    // 4. Inject Description/Variants AFTER Price
     const wrapper = document.createElement("div");
     wrapper.className = "qv-injected";
     wrapper.innerHTML = descHTML + variantsHTML;
@@ -1165,20 +1172,15 @@ class QuickViewModal {
       .querySelector("#quick-view-price")
       .insertAdjacentElement("afterend", wrapper);
 
-    // 5. Inject FBT & Related
-    // We create them but DO NOT insert them yet. We want to control order.
+    // 5. Inject FBT & Related (FIX: Insert BEFORE the Actions buttons)
+    const actionsDiv = this.modal.querySelector(".quick-view-actions");
     const fbtElement = this.createFBTElement(product);
     const relatedElement = this.createRelatedElement(product);
 
-    if (fbtElement) detailsDiv.appendChild(fbtElement);
-    if (relatedElement) detailsDiv.appendChild(relatedElement);
+    if (fbtElement) detailsDiv.insertBefore(fbtElement, actionsDiv);
+    if (relatedElement) detailsDiv.insertBefore(relatedElement, actionsDiv);
 
-    // 6. CRITICAL FIX: Move Actions to the VERY BOTTOM
-    // This ensures they sit below everything else and the sticky 'bottom:0' works correctly
-    const actionsDiv = this.modal.querySelector(".quick-view-actions");
-    detailsDiv.appendChild(actionsDiv);
-
-    // 7. Button Logic
+    // 6. "Add to Cart" Button Logic
     const btn = this.modal.querySelector(".btn-add-cart-modal");
     const newBtn = btn.cloneNode(true);
     btn.parentNode.replaceChild(newBtn, btn);
@@ -1190,7 +1192,7 @@ class QuickViewModal {
     } else {
       newBtn.disabled = false;
       newBtn.textContent = "Add to Cart";
-      newBtn.style.background = ""; // Reset to CSS default
+      newBtn.style.background = "";
 
       newBtn.onclick = () => {
         const size = document.getElementById("qv-size")?.value;
@@ -1202,7 +1204,10 @@ class QuickViewModal {
           size,
           color,
         });
-        if (success) this.closeModal();
+
+        if (success) {
+          this.closeModal();
+        }
       };
     }
 
@@ -1409,8 +1414,9 @@ function updateAccountUI() {
         <li class="auth-dynamic-item"><a href="#" class="auth-action" data-action="logout"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
       `;
     } else {
-      authHTML = ``;
+      authHTML = ``; // Mobile default login is often in header or different logic, adjust as needed
     }
+    // Insert auth items after Home if needed
     if (mobileMenu.children.length > 0) {
       mobileMenu.children[0].insertAdjacentHTML("afterend", authHTML);
     }
@@ -1450,7 +1456,7 @@ function openAuthModal(mode = "login") {
     }
 
     modal.style.display = "flex";
-    modal.classList.add("active");
+    modal.classList.add("active"); // Ensure active class for flex display
   }
 }
 
