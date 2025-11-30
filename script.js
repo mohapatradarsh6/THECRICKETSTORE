@@ -19,8 +19,13 @@ let _authToken = null;
 const storedUser = localStorage.getItem("user");
 const storedToken = localStorage.getItem("token");
 if (storedUser && storedToken) {
-  _currentUser = JSON.parse(storedUser);
-  _authToken = storedToken;
+  try {
+    _currentUser = JSON.parse(storedUser);
+    _authToken = storedToken;
+  } catch (e) {
+    console.error("Failed to parse user data", e);
+    localStorage.clear();
+  }
 }
 
 // ====================================================================
@@ -31,8 +36,8 @@ class CartManager {
   constructor() {
     this.cart = _cartData || [];
     this.wishlist = _wishlistData || [];
-    this.savedForLater = []; // New: Saved for Later list
-    this.coupon = null; // New: Applied coupon data
+    this.savedForLater = []; // Saved for Later list
+    this.coupon = null; // Applied coupon data
 
     // If user is logged in, fetch their cart/saved items from DB immediately
     if (_currentUser && _authToken) {
@@ -47,15 +52,15 @@ class CartManager {
     if (!_currentUser || !_authToken) return;
 
     try {
-      let res; // Declare res outside
+      let res;
 
       if (pull) {
-        // PULL: Get data
+        // PULL: Get latest data from DB
         res = await fetch(`${API_BASE_URL}/user`, {
           headers: { Authorization: `Bearer ${_authToken}` },
         });
       } else {
-        // PUSH: Save data
+        // PUSH: Save local state to DB
         res = await fetch(`${API_BASE_URL}/user`, {
           method: "PUT",
           headers: {
@@ -70,24 +75,23 @@ class CartManager {
         });
       }
 
-      // REMOVED: Auto-logout on 401 as requested
-      /*
-      if (res.status === 401) {
-        console.warn("Session expired.");
-        return;
-      }
-      */
-
       // Process Data (Only if pulling and success)
       if (pull && res.ok) {
         const data = await res.json();
         if (data.cart) this.cart = data.cart;
         if (data.wishlist) this.wishlist = data.wishlist;
         if (data.savedForLater) this.savedForLater = data.savedForLater;
+        // Sync recently viewed if available
+        if (data.recentlyViewed) {
+          localStorage.setItem(
+            "recentlyViewed",
+            JSON.stringify(data.recentlyViewed)
+          );
+        }
         this.updateUI();
       }
     } catch (e) {
-      console.error("Sync failed", e);
+      console.warn("Sync failed (Offline mode active):", e);
     }
   }
 
@@ -98,7 +102,7 @@ class CartManager {
     const stock = parseInt(product.stock);
     const qty = parseInt(quantity);
 
-    // 1. Check Global Stock
+    // 1. Check Global Stock (Initial add)
     if (!isNaN(stock) && stock < qty) {
       this.showToast(`Sorry, only ${stock} items in stock!`, "error");
       return false;
@@ -108,7 +112,7 @@ class CartManager {
     const price = parseFloat(product.price) || 0;
 
     if (existingItem) {
-      // 2. Check Cumulative Stock
+      // 2. Check Cumulative Stock (Existing + New)
       const currentQty = parseInt(existingItem.quantity);
       if (!isNaN(stock) && currentQty + qty > stock) {
         this.showToast(
@@ -130,7 +134,7 @@ class CartManager {
     }
 
     this.showToast(`${product.title} added to cart!`, "success");
-    this.syncWithBackend(false); // Push to DB
+    this.syncWithBackend(false); // Push changes to DB
     this.updateUI();
     return true;
   }
@@ -140,7 +144,7 @@ class CartManager {
     this.syncWithBackend(false);
     this.updateUI();
 
-    // If empty, force refresh modal
+    // If empty, force refresh modal to show "Empty" state
     if (
       this.cart.length === 0 &&
       document.getElementById("cart-modal").classList.contains("active")
@@ -158,7 +162,10 @@ class CartManager {
       } else {
         // Stock Check
         if (item.stock && qty > item.stock) {
-          this.showToast(`Max stock reached`, "error");
+          this.showToast(
+            `Max stock reached (${item.stock} available)`,
+            "error"
+          );
           return;
         }
         item.quantity = qty;
@@ -170,7 +177,7 @@ class CartManager {
 
   clearCart() {
     this.cart = [];
-    this.coupon = null; // Clear coupon too
+    this.coupon = null; // Clear applied coupon
     this.syncWithBackend(false);
     this.updateUI();
   }
@@ -183,7 +190,7 @@ class CartManager {
       this.savedForLater.push(item); // Move to Saved
       this.cart.splice(itemIndex, 1); // Remove from Cart
 
-      this.showToast("Saved for later", "info");
+      this.showToast("Item saved for later", "info");
       this.syncWithBackend(false);
       this.updateUI();
     }
@@ -195,13 +202,14 @@ class CartManager {
     );
     if (itemIndex > -1) {
       const item = this.savedForLater[itemIndex];
-      // Try to add back to cart (Checks stock)
+      // Try to add back to cart (Checks stock automatically)
       const success = this.addToCart(item, item.quantity, {
         size: item.selectedSize,
         color: item.selectedColor,
       });
+
       if (success) {
-        this.savedForLater.splice(itemIndex, 1); // Remove from saved if add successful
+        this.savedForLater.splice(itemIndex, 1); // Remove from saved if successful
         this.syncWithBackend(false);
         this.updateUI();
       }
@@ -227,7 +235,7 @@ class CartManager {
 
       if (res.ok && data.success) {
         this.coupon = data; // Store applied coupon
-        this.showToast("Coupon Applied!", "success");
+        this.showToast("Coupon Applied Successfully!", "success");
         if (msg) {
           msg.textContent = `Applied! -₹${data.discountAmount}`;
           msg.className = "coupon-message success";
@@ -242,10 +250,10 @@ class CartManager {
       }
     } catch (e) {
       console.error(e);
-      this.showToast("Error applying coupon", "error");
+      this.showToast("Error verifying coupon", "error");
     } finally {
       if (btn) btn.textContent = "Apply";
-      this.updateUI(); // Re-calculate totals
+      this.updateUI(); // Re-calculate totals with new discount
     }
   }
 
@@ -261,7 +269,7 @@ class CartManager {
       this.wishlist.splice(index, 1);
       this.showToast("Removed from wishlist!", "info");
     }
-    this.syncWithBackend(false); // Sync wishlist too
+    this.syncWithBackend(false);
     this.updateWishlistUI();
   }
 
@@ -289,7 +297,7 @@ class CartManager {
 
   getEstimatedDelivery() {
     const date = new Date();
-    date.setDate(date.getDate() + 5); // Add 5 days
+    date.setDate(date.getDate() + 5); // Add 5 days standard
     return date.toLocaleDateString("en-US", {
       weekday: "short",
       month: "short",
@@ -297,14 +305,19 @@ class CartManager {
     });
   }
 
+  // Comprehensive Total Calculation for Checkout
   calculateTotals(customItems = null) {
+    // Support calculating for specific items (Buy Now) or full cart
     const itemsToCalc = customItems || this.cart;
+
     let subtotal = 0;
     let bulkSavings = 0;
 
     itemsToCalc.forEach((item) => {
       let itemTotal =
         (parseFloat(item.price) || 0) * (parseInt(item.quantity) || 1);
+
+      // Feature: Bulk Discount (Buy 2+, get 10% off that item)
       if (item.quantity >= 2) {
         const discount = itemTotal * 0.1;
         bulkSavings += discount;
@@ -312,6 +325,7 @@ class CartManager {
       subtotal += itemTotal;
     });
 
+    // Check UI checkboxes for extras
     const isGift = document.getElementById("is-gift")?.checked || false;
     const hasInsurance =
       document.getElementById("has-insurance")?.checked || false;
@@ -320,9 +334,10 @@ class CartManager {
     const insuranceCost = hasInsurance ? 100 : 0;
 
     const tax = (subtotal - bulkSavings) * 0.18;
-    const shipping = subtotal - bulkSavings > 2000 ? 0 : 150;
+    const shipping = subtotal - bulkSavings > 2000 ? 0 : 150; // Free shipping over 2000
 
     let couponDiscount = 0;
+    // Only apply coupon if calculating for the main cart
     if (this.coupon && !customItems) {
       couponDiscount = this.coupon.discountAmount;
     }
@@ -335,6 +350,12 @@ class CartManager {
       giftCost +
       insuranceCost -
       couponDiscount;
+
+    // Update the Total Price display if it exists on screen
+    if (document.getElementById("payment-total")) {
+      document.getElementById("payment-total").textContent =
+        finalTotal.toFixed(2);
+    }
 
     return {
       subtotal,
@@ -368,20 +389,20 @@ class CartManager {
     // 1. Render Active Cart Items
     let htmlContent =
       this.cart.length === 0
-        ? '<div class="cart-modal-empty" style="text-align:center; padding:20px;"><i class="fas fa-shopping-basket" style="font-size:2rem; color:#ccc;"></i><p>Your cart is empty</p></div>'
+        ? '<div class="cart-modal-empty" style="text-align:center; padding:40px;"><i class="fas fa-shopping-basket" style="font-size:3rem; color:#eee; margin-bottom:15px;"></i><p style="color:#666;">Your cart is empty</p></div>'
         : this.cart
             .map((item) => {
-              // STOCK WARNING LOGIC
+              // FEATURE: Limited Stock Warning in Cart
               const isLowStock = item.stock && item.stock <= 3;
               const stockWarning = isLowStock
-                ? `<span class="stock-warning"><i class="fas fa-exclamation-triangle"></i> Hurry! Only ${item.stock} left</span>`
+                ? `<div class="stock-warning" style="color:#e67e22; font-size:0.75rem; margin-top:4px;"><i class="fas fa-exclamation-circle"></i> Hurry! Only ${item.stock} left</div>`
                 : "";
 
               return `
                   <div class="cart-modal-item">
-                    <img src="${
-                      item.image
-                    }" alt="product" class="cart-modal-item-image">
+                    <img src="${item.image}" alt="${
+                item.title
+              }" class="cart-modal-item-image">
                     <div class="cart-modal-item-details">
                       <div class="cart-modal-item-title">${item.title}</div>
                       <div class="cart-modal-item-price">₹${parseFloat(
@@ -389,12 +410,14 @@ class CartManager {
                       ).toFixed(2)}</div>
                       ${
                         item.selectedSize
-                          ? `<small>Size: ${item.selectedSize}</small>`
+                          ? `<small style="color:#888; font-size:0.8rem;">Size: ${item.selectedSize}</small>`
                           : ""
                       }
                       
-                      <div class="delivery-date"><i class="fas fa-truck"></i> Get it by ${this.getEstimatedDelivery()}</div>
-                      ${stockWarning} <div class="cart-modal-item-quantity">
+                      <div class="delivery-date" style="font-size:0.75rem; color:#27ae60; margin-top:2px;"><i class="fas fa-truck"></i> Get by ${this.getEstimatedDelivery()}</div>
+                      ${stockWarning}
+
+                      <div class="cart-modal-item-quantity">
                         <button class="cart-modal-qty-btn" onclick="window.cartManager.updateQuantity('${item.title.replace(
                           /'/g,
                           "\\'"
@@ -406,15 +429,15 @@ class CartManager {
                         )}', ${item.quantity + 1})">+</button>
                       </div>
                     </div>
-                    <div style="display:flex; flex-direction:column; align-items:flex-end; gap:5px;">
-                        <i class="fas fa-trash cart-modal-item-remove" onclick="window.cartManager.removeFromCart('${item.title.replace(
+                    <div style="display:flex; flex-direction:column; align-items:flex-end; gap:10px;">
+                        <i class="fas fa-trash cart-modal-item-remove" title="Remove" onclick="window.cartManager.removeFromCart('${item.title.replace(
                           /'/g,
                           "\\'"
                         )}')"></i>
                         <button onclick="window.cartManager.saveForLater('${item.title.replace(
                           /'/g,
                           "\\'"
-                        )}')" style="font-size:0.75rem; text-decoration:underline; border:none; background:none; color:#666; cursor:pointer;">Save for Later</button>
+                        )}')" style="font-size:0.7rem; text-decoration:underline; border:none; background:none; color:#666; cursor:pointer;">Save for Later</button>
                     </div>
                   </div>
                 `;
@@ -423,25 +446,27 @@ class CartManager {
 
     // 2. Render "Saved For Later" Section
     if (this.savedForLater.length > 0) {
-      htmlContent += `<div class="saved-for-later-section">
-            <h4 style="margin:10px 0; color:#666;">Saved for Later (${
+      htmlContent += `<div class="saved-for-later-section" style="margin-top:20px; padding-top:15px; border-top:1px dashed #ddd;">
+            <h4 style="margin:10px 0; color:#666; font-size:0.9rem;">Saved for Later (${
               this.savedForLater.length
             })</h4>
             ${this.savedForLater
               .map(
                 (item) => `
-                <div class="saved-item">
-                    <img src="${item.image}" alt="${item.title}">
+                <div class="saved-item" style="display:flex; gap:10px; margin-bottom:10px; opacity:0.8;">
+                    <img src="${item.image}" alt="${
+                  item.title
+                }" style="width:40px; height:40px; object-fit:contain;">
                     <div style="flex:1">
-                        <div style="font-size:0.9rem; font-weight:600;">${
+                        <div style="font-size:0.85rem; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:180px;">${
                           item.title
                         }</div>
-                        <div style="font-size:0.85rem;">₹${item.price}</div>
+                        <div style="font-size:0.8rem;">₹${item.price}</div>
                     </div>
                     <button class="btn-move-cart" onclick="window.cartManager.moveToCart('${item.title.replace(
                       /'/g,
                       "\\'"
-                    )}')">Move to Cart</button>
+                    )}')" style="font-size:0.75rem; border:1px solid var(--primary-color); color:var(--primary-color); background:white; padding:2px 8px; border-radius:4px; cursor:pointer;">Move to Cart</button>
                 </div>
             `
               )
@@ -451,23 +476,23 @@ class CartManager {
 
     if (container) container.innerHTML = htmlContent;
 
-    // 3. Render Coupon Input
+    // 3. Render Coupon Input (If not already present in HTML, inject it)
     const summaryDiv = document.querySelector(".cart-modal-summary");
     if (summaryDiv && !document.getElementById("coupon-input")) {
       const couponHTML = `
-            <div class="coupon-section">
+            <div class="coupon-section" style="margin-bottom:15px; padding-bottom:15px; border-bottom:1px solid #eee;">
                 <label style="font-size:0.9rem; font-weight:600;">Have a Coupon?</label>
-                <div class="coupon-input-group">
-                    <input type="text" id="coupon-input" placeholder="Enter Code (e.g. SAVE100)">
-                    <button class="btn-apply" id="btn-apply-coupon" onclick="window.cartManager.applyCoupon(document.getElementById('coupon-input').value)">Apply</button>
+                <div class="coupon-input-group" style="display:flex; gap:10px; margin-top:5px;">
+                    <input type="text" id="coupon-input" placeholder="Enter Code (e.g. WELCOME10)" style="flex:1; padding:8px; border:1px solid #ddd; border-radius:4px;">
+                    <button class="btn-apply" id="btn-apply-coupon" onclick="window.cartManager.applyCoupon(document.getElementById('coupon-input').value)" style="background:#333; color:white; border:none; padding:0 15px; border-radius:4px; cursor:pointer;">Apply</button>
                 </div>
-                <div id="coupon-msg" class="coupon-message"></div>
+                <div id="coupon-msg" class="coupon-message" style="font-size:0.8rem; margin-top:5px;"></div>
             </div>
         `;
       summaryDiv.insertAdjacentHTML("afterbegin", couponHTML);
     }
 
-    // 4. Calculate Totals
+    // 4. Calculate and Display Totals
     const calc = this.calculateTotals();
 
     if (document.getElementById("cart-modal-subtotal"))
@@ -633,11 +658,15 @@ class ProductManager {
     this.initializeFilters();
     this.initializeSearch();
     this.renderRecentlyViewed();
+
+    // Catalogue System: Read URL for deep linking
     this.syncFiltersFromURL();
   }
 
+  // --- Catalogue Logic ---
   syncFiltersFromURL() {
     const params = new URLSearchParams(window.location.search);
+
     const category = params.get("category");
     const brand = params.get("brand");
     const sort = params.get("sort");
@@ -649,13 +678,23 @@ class ProductManager {
       document.getElementById("brand-filter").value = brand;
     if (sort && document.getElementById("sort-filter"))
       document.getElementById("sort-filter").value = sort;
+
     if (search && document.getElementById("search-input")) {
       document.getElementById("search-input").value = search;
       const hero = document.querySelector(".hero-section");
       if (hero) hero.style.display = "none";
     }
 
+    this.updateBreadcrumbs(category, brand, search);
     this.applyFilters(false);
+  }
+
+  updateBreadcrumbs(category, brand, search) {
+    const breadcrumbs = document.getElementById("catalogue-breadcrumbs");
+    // If element exists (optional feature), update text
+    if (breadcrumbs) {
+      // logic to update breadcrumb text based on selection
+    }
   }
 
   updateURLState() {
@@ -674,15 +713,13 @@ class ProductManager {
       params.toString() ? "?" + params.toString() : ""
     }`;
     window.history.replaceState({}, "", newURL);
-
-    // Update Breadcrumbs logic could go here
   }
 
   async fetchProducts() {
-    // 1. Define container at the top
+    // 1. Define container at the top so it's available in try AND catch blocks
     const container = document.getElementById("products-container");
 
-    // 2. Show Skeleton
+    // 2. Show Skeleton Loading Screen
     if (container) {
       container.innerHTML = Array(6)
         .fill("")
@@ -713,7 +750,9 @@ class ProductManager {
       this.products = data;
       this.filteredProducts = [...this.products];
       this.renderProductCards();
-      this.syncFiltersFromURL(); // Re-apply filters after fetch
+
+      // Re-sync filters once data is loaded to apply any URL params
+      this.syncFiltersFromURL();
     } catch (error) {
       console.error("Failed to fetch products:", error);
       if (container) {
@@ -768,7 +807,6 @@ class ProductManager {
       // Low Stock Warning
       stockBadge = `<div class="product-badge" style="background:var(--accent-color); font-size:0.75rem;">Hurry! Only ${product.stock} Left</div>`;
     } else {
-      // Sufficient Stock
       stockBadge = `<div class="product-badge" style="background:var(--success-color)">In Stock</div>`;
     }
 
@@ -791,7 +829,7 @@ class ProductManager {
         <img class="product-image" src="${product.image}" alt="${
       product.title
     }" />
-    <button class="btn-wishlist"><i class="far fa-heart"></i></button>
+        <button class="btn-wishlist"><i class="far fa-heart"></i></button>
         <div class="product-overlay">
           <button class="btn-quick-view">Quick View</button>
         </div>
@@ -828,7 +866,6 @@ class ProductManager {
   }
 
   renderRecentlyViewed() {
-    // Only if user kept the HTML section, otherwise this does nothing safely
     const container = document.getElementById("recently-viewed-container");
     const section = document.getElementById("recently-viewed-section");
     if (!container || !section) return;
@@ -838,8 +875,10 @@ class ProductManager {
       section.style.display = "none";
       return;
     }
+
     section.style.display = "block";
     container.innerHTML = "";
+
     recent.forEach((product) => {
       const card = this.createProductCard(product);
       container.appendChild(card);
@@ -871,7 +910,6 @@ class ProductManager {
     document
       .getElementById("products-container")
       ?.addEventListener("click", handleClicks);
-
     document
       .getElementById("recently-viewed-container")
       ?.addEventListener("click", handleClicks);
@@ -955,7 +993,8 @@ class ProductManager {
   initializeSearch() {
     const input = document.getElementById("search-input");
     const btn = document.getElementById("search-btn");
-    const suggestions = document.getElementById("search-suggestions");
+
+    // Removed search suggestions logic as requested to fix dropdown issue
 
     const performSearch = (query) => {
       if (!query) return;
@@ -968,15 +1007,6 @@ class ProductManager {
     };
 
     if (input) {
-      input.addEventListener("input", (e) => {
-        const query = e.target.value;
-        if (query.length > 0) {
-          this.showSuggestions(query, suggestions, input);
-        } else {
-          if (suggestions) suggestions.classList.remove("active");
-        }
-      });
-
       input.addEventListener("keypress", (e) => {
         if (e.key === "Enter") performSearch(input.value);
       });
@@ -987,12 +1017,6 @@ class ProductManager {
         if (input) performSearch(input.value);
       });
     }
-  }
-
-  showSuggestions(query, container, inputElement) {
-    // Disabled as per request, but method kept for structure if needed
-    if (!container) return;
-    container.classList.remove("active");
   }
 
   searchProducts(query) {
@@ -1051,6 +1075,7 @@ class QuickViewModal {
       qtyPlus.onclick = () => {
         if (this.currentProduct && this.currentProduct.stock !== undefined) {
           // Check Modal Value vs Stock
+          // We should ideally check Cart + Current Quantity, but for simple UI:
           if (this.currentQuantity >= this.currentProduct.stock) {
             window.cartManager.showToast(
               `Max stock reached! Only ${this.currentProduct.stock} available.`,
@@ -1070,7 +1095,6 @@ class QuickViewModal {
     this.currentProduct = product;
     this.currentQuantity = 1; // Reset quantity on open
 
-    // Save history
     window.productManager.addToRecentlyViewed(product);
 
     // 1. Fill Basic Info
@@ -1139,6 +1163,8 @@ class QuickViewModal {
       newBtn.onclick = () => {
         const size = document.getElementById("qv-size")?.value;
         const color = document.getElementById("qv-color")?.value;
+
+        // FIX: Read exact value from input
         const qtyInput = this.modal.querySelector(".qty-input");
         const finalQty = parseInt(qtyInput.value) || 1;
 
@@ -1238,42 +1264,55 @@ class QuickViewModal {
 // ====================================================================
 // 5. HERO CAROUSEL
 // ====================================================================
-// ... (Same as before)
+
 class HeroCarousel {
   constructor() {
     this.currentSlide = 1;
     this.totalSlides = 3;
     this.init();
   }
+
   init() {
     this.slides = document.querySelectorAll(".hero-slide");
     this.dots = document.querySelectorAll(".hero-dots .dot");
     if (this.slides.length === 0) return;
+
     this.startAutoPlay();
   }
+
   changeSlide(direction) {
     this.currentSlide += direction;
-    if (this.currentSlide > this.totalSlides) this.currentSlide = 1;
-    if (this.currentSlide < 1) this.currentSlide = this.totalSlides;
+    if (this.currentSlide > this.totalSlides) {
+      this.currentSlide = 1;
+    }
+    if (this.currentSlide < 1) {
+      this.currentSlide = this.totalSlides;
+    }
     this.updateSlide();
   }
+
   updateSlide() {
     this.slides.forEach((s) => s.classList.remove("active"));
     this.dots.forEach((d) => d.classList.remove("active"));
-    document
-      .querySelector(`.hero-slide[data-slide="${this.currentSlide}"]`)
-      ?.classList.add("active");
-    document
-      .querySelector(`.dot[data-slide="${this.currentSlide}"]`)
-      ?.classList.add("active");
+
+    const activeSlide = document.querySelector(
+      `.hero-slide[data-slide="${this.currentSlide}"]`
+    );
+    const activeDot = document.querySelector(
+      `.dot[data-slide="${this.currentSlide}"]`
+    );
+
+    if (activeSlide) activeSlide.classList.add("active");
+    if (activeDot) activeDot.classList.add("active");
   }
+
   startAutoPlay() {
     setInterval(() => this.changeSlide(1), 5000);
   }
 }
 
 // ====================================================================
-// 6. AUTH & USER FUNCTIONS
+// 6. AUTHENTICATION & USER MANAGEMENT
 // ====================================================================
 
 function saveUser(user) {
@@ -1291,10 +1330,13 @@ function logoutUser() {
   _authToken = null;
   localStorage.removeItem("user");
   localStorage.removeItem("token");
+  localStorage.removeItem("recentlyViewed");
 
   if (window.cartManager) {
     window.cartManager.cart = [];
     window.cartManager.wishlist = [];
+    _cartData = [];
+    _wishlistData = [];
     window.cartManager.updateUI();
     window.cartManager.showToast("Logged out successfully!");
   }
@@ -1358,10 +1400,13 @@ function openAuthModal(mode = "login") {
   const signupTab = document.getElementById("signup-tab");
   const loginForm = document.getElementById("login-form");
   const signupForm = document.getElementById("signup-form");
+  const forgotForm = document.getElementById("forgot-password-form");
 
   if (modal) {
     loginForm?.reset();
     signupForm?.reset();
+    forgotForm?.reset();
+
     document
       .querySelectorAll(".auth-form")
       .forEach((f) => f.classList.remove("active"));
@@ -1390,6 +1435,7 @@ function closeAuthModal() {
   }
 }
 
+// [FIX 3: Checkout Flow (Cart -> Address -> Payment)]
 function openPaymentModal(items) {
   const user = getUser();
   if (!user) {
@@ -1401,7 +1447,7 @@ function openPaymentModal(items) {
   const modal = document.getElementById("demo-payment-modal");
   if (!modal) return;
 
-  // Render Items
+  // Render Items List
   document.getElementById("payment-items").innerHTML = items
     .map(
       (item) => `
@@ -1437,7 +1483,7 @@ function openPaymentModal(items) {
   document.getElementById("checkout-address-section").style.display = "block";
   document.getElementById("checkout-payment-section").style.display = "none";
 
-  // Continue Button
+  // Continue Button Logic
   const continueBtn = document.getElementById("btn-continue-payment");
   const newContinueBtn = continueBtn.cloneNode(true);
   continueBtn.parentNode.replaceChild(newContinueBtn, continueBtn);
@@ -1452,7 +1498,7 @@ function openPaymentModal(items) {
     document.getElementById("checkout-payment-section").style.display = "block";
   };
 
-  // Summary Render
+  // Detailed Price Breakdown Logic (The Fix for C)
   const renderSummary = () => {
     const calc = window.cartManager.calculateTotals(items);
     const summaryHTML = `
@@ -1482,10 +1528,18 @@ function openPaymentModal(items) {
                 )}</span></div>`
               : ""
           }
+          ${
+            calc.couponDiscount > 0
+              ? `<div style="display:flex; justify-content:space-between; margin-bottom:5px; color:#27ae60;"><span>Coupon</span><span>-₹${calc.couponDiscount.toFixed(
+                  2
+                )}</span></div>`
+              : ""
+          }
           <div style="display:flex; justify-content:space-between; margin-top:10px; padding-top:10px; border-top:1px solid #ddd; font-weight:bold; font-size:1.1rem;">
               <span>Total</span><span>₹${calc.finalTotal.toFixed(2)}</span>
           </div>
       `;
+    // Use .order-summary which is the container in your HTML
     document.querySelector(".order-summary").innerHTML = summaryHTML;
   };
 
@@ -1508,9 +1562,20 @@ function openPaymentModal(items) {
     newPayBtn.disabled = true;
 
     const calc = window.cartManager.calculateTotals(items);
+
+    // Safely get address
     const selectedAddrIdx =
       document.querySelector(".address-option-card.selected")?.dataset.idx || 0;
-    const address = user.addresses[selectedAddrIdx];
+    const shippingAddress = user.addresses
+      ? user.addresses[selectedAddrIdx]
+      : null;
+
+    if (!shippingAddress) {
+      window.cartManager.showToast("Address error. Please re-select.", "error");
+      newPayBtn.disabled = false;
+      return;
+    }
+
     const deliverySlot =
       document.getElementById("delivery-slot")?.value || "Standard";
     const isGift = document.getElementById("is-gift")?.checked || false;
@@ -1526,7 +1591,7 @@ function openPaymentModal(items) {
         shipping: calc.shipping,
         tax: calc.tax,
         paymentMethod: method,
-        address: address,
+        address: shippingAddress, // Fix for Defect A
         deliverySlot: deliverySlot,
         giftOption: { isGift, message: giftMessage, wrapCost: isGift ? 50 : 0 },
         insurance: { hasInsurance, cost: hasInsurance ? 100 : 0 },
@@ -1542,6 +1607,7 @@ function openPaymentModal(items) {
       });
 
       if (!res.ok) throw new Error("Order creation failed");
+      const data = await res.json();
 
       window.cartManager.showToast("Order placed successfully!", "success");
       window.cartManager.clearCart();
@@ -1599,6 +1665,153 @@ function openCartModal() {
   }
 }
 
+// --- Profile & Orders ---
+
+window.switchProfileTab = function (tab) {
+  document.getElementById("profile-info-section").style.display =
+    tab === "info" ? "block" : "none";
+  document.getElementById("profile-address-section").style.display =
+    tab === "address" ? "block" : "none";
+  document.getElementById("tab-info").className =
+    tab === "info" ? "auth-tab active" : "auth-tab";
+  document.getElementById("tab-address").className =
+    tab === "address" ? "auth-tab active" : "auth-tab";
+};
+
+async function openProfileModal() {
+  const user = getUser();
+  if (!user) {
+    openAuthModal("login");
+    return;
+  }
+
+  const modal = document.getElementById("profile-modal");
+  modal.style.display = "flex";
+  document.getElementById("address-list").innerHTML =
+    '<p style="text-align:center;">Syncing profile...</p>';
+
+  try {
+    const res = await fetch(`${API_BASE_URL}/user`, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${_authToken}`,
+        "Content-Type": "application/json",
+      },
+    });
+
+    if (res.ok) {
+      const freshUser = await res.json();
+      saveUser(freshUser);
+      document.getElementById("profile-name").value = freshUser.name;
+      document.getElementById("profile-email").value = freshUser.email;
+      renderAddresses(freshUser.addresses || []);
+    } else {
+      renderAddresses(user.addresses || []);
+    }
+  } catch (e) {
+    console.error("Profile sync failed", e);
+    renderAddresses(user.addresses || []);
+  }
+}
+
+function renderAddresses(addresses) {
+  const container = document.getElementById("address-list");
+  container.innerHTML = "";
+  if (addresses.length === 0) {
+    container.innerHTML =
+      "<p style='text-align:center; color:#999'>No saved addresses.</p>";
+    return;
+  }
+  addresses.forEach((addr, index) => {
+    const div = document.createElement("div");
+    div.className = "address-card";
+    div.innerHTML = `
+      <h5 style="color:var(--primary-color); margin-bottom:5px; font-size:1rem;">Address #${
+        index + 1
+      }</h5>
+      <p style="color:#555; margin-bottom:2px;">${addr.street}, ${addr.city}</p>
+      <p style="color:#777; font-size:0.9rem;">${addr.state} - ${addr.zip}, ${
+      addr.country
+    }</p>
+      <button class="btn-delete-addr" onclick="deleteAddress(${index})" style="position:absolute; top:15px; right:15px; color:#dc3545; background:none; border:none; cursor:pointer;"><i class="fas fa-trash"></i></button>
+    `;
+    container.appendChild(div);
+  });
+}
+
+async function openOrdersModal() {
+  const user = getUser();
+  if (!user) {
+    openAuthModal("login");
+    return;
+  }
+
+  const modal = document.getElementById("orders-modal");
+  modal.innerHTML = `
+      <div class="modal-content">
+        <div class="modal-header"><h2>My Orders</h2><span class="close" onclick="this.closest('.modal').style.display='none'">&times;</span></div>
+        <div class="modal-body"><p style="text-align:center; padding:20px;">Fetching orders...</p></div>
+      </div>
+    `;
+  modal.style.display = "flex";
+
+  try {
+    const res = await fetch(`${API_BASE_URL}/orders`, {
+      method: "GET",
+      headers: { Authorization: `Bearer ${_authToken}` },
+    });
+
+    if (!res.ok) throw new Error("Failed to fetch");
+    const orders = await res.json();
+
+    if (orders.length === 0) {
+      modal.querySelector(".modal-body").innerHTML = `
+                <div style="text-align:center; padding:40px;">
+                    <i class="fas fa-box-open" style="font-size:3rem; color:#ccc;"></i>
+                    <p>No past orders found.</p>
+                </div>`;
+    } else {
+      const ordersHTML = orders
+        .map(
+          (o) => `
+               <div class="order-card">
+                   <div class="order-header">
+                       <div><strong>Order #${o._id
+                         .slice(-6)
+                         .toUpperCase()}</strong> <span style="font-size:0.8rem; color:#666;">${new Date(
+            o.orderDate
+          ).toLocaleDateString()}</span></div>
+                       <div class="order-status status-${
+                         o.status?.toLowerCase() || "processing"
+                       }">${o.status || "Processing"}</div>
+                   </div>
+                   <div class="order-items">
+                       ${o.items
+                         .map(
+                           (i) =>
+                             `<div class="order-item"><span>${i.title} x${i.quantity}</span><span>₹${i.price}</span></div>`
+                         )
+                         .join("")}
+                   </div>
+                   <div class="order-footer">Total: <strong>₹${o.total.toFixed(
+                     2
+                   )}</strong></div>
+               </div>
+           `
+        )
+        .join("");
+      modal.querySelector(
+        ".modal-body"
+      ).innerHTML = `<div class="orders-list">${ordersHTML}</div>`;
+    }
+  } catch (error) {
+    console.error(error);
+    modal.querySelector(
+      ".modal-body"
+    ).innerHTML = `<p style="text-align:center; color:red;">Failed to load orders.</p>`;
+  }
+}
+
 // ====================================================================
 // 8. INITIALIZATION & EVENT LISTENERS
 // ====================================================================
@@ -1624,6 +1837,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const overlay = document.getElementById("mobile-nav-overlay");
         if (overlay) overlay.style.display = "none";
       }
+
       if (action === "login") openAuthModal("login");
       else if (action === "signup") openAuthModal("signup");
       else if (action === "profile") openProfileModal();
@@ -1632,6 +1846,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
+  // AUTH HANDLERS
   document
     .getElementById("login-form")
     ?.addEventListener("submit", async (e) => {
@@ -1650,7 +1865,7 @@ document.addEventListener("DOMContentLoaded", () => {
         saveUser(data.user);
         closeAuthModal();
         updateAccountUI();
-        window.cartManager.syncWithBackend(true);
+        window.cartManager.syncWithBackend(true); // Trigger Sync on Login
         window.cartManager.showToast("Welcome back!", "success");
       } catch (err) {
         window.cartManager.showToast("Invalid credentials", "error");
@@ -1681,6 +1896,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
 
+  // ADDRESS HANDLERS
   document
     .getElementById("save-address-btn")
     ?.addEventListener("click", async () => {
@@ -1733,6 +1949,15 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("add-address-btn").style.display = "none";
   });
 
+  // UTILS
+  document
+    .querySelector(".newsletter-form")
+    ?.addEventListener("submit", (e) => {
+      e.preventDefault();
+      window.cartManager.showToast("Subscribed successfully!", "success");
+      e.target.reset();
+    });
+
   const loginTab = document.getElementById("login-tab");
   const signupTab = document.getElementById("signup-tab");
 
@@ -1753,6 +1978,7 @@ document.addEventListener("DOMContentLoaded", () => {
   updateAccountUI();
   console.log("✅ App fully initialized");
 
+  // GLOBAL CLICK HANDLERS
   window.addEventListener("click", (e) => {
     if (e.target.classList.contains("modal")) {
       e.target.classList.remove("active");
