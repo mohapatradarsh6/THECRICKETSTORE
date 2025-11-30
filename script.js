@@ -401,28 +401,7 @@ class CartManager {
       summaryDiv.insertAdjacentHTML("afterbegin", couponHTML);
     }
 
-    // 4. Calculate Totals
-    const sub = this.getCartTotal();
-    const tax = sub * 0.18;
-    const shipping = sub > 2000 ? 0 : sub > 0 ? 150 : 0;
-    const discount = this.coupon ? this.coupon.discountAmount : 0;
-    const total = sub + tax + shipping - discount;
-
-    if (document.getElementById("cart-modal-subtotal"))
-      document.getElementById("cart-modal-subtotal").textContent =
-        sub.toFixed(2);
-    if (document.getElementById("cart-modal-tax"))
-      document.getElementById("cart-modal-tax").textContent = tax.toFixed(2);
-    if (document.getElementById("cart-modal-shipping"))
-      document.getElementById("cart-modal-shipping").textContent =
-        shipping.toFixed(2);
-
-    // Add Discount Row display if coupon applied
-    // (Ideally you add a row in HTML, but logic here calculates the final total)
-
-    if (document.getElementById("cart-modal-total"))
-      document.getElementById("cart-modal-total").textContent =
-        total.toFixed(2);
+    this.calculateTotals();
   }
 
   updateWishlistUI() {
@@ -481,8 +460,59 @@ class CartManager {
     html += `</div>`;
     return html;
   }
-}
 
+  moveToWishlist(productTitle) {
+    const item = this.cart.find((i) => i.title === productTitle);
+    if (item) {
+      // 1. Add to wishlist
+      if (!this.isInWishlist(item.title)) {
+        this.toggleWishlist(item);
+      }
+      // 2. Remove from cart
+      this.removeFromCart(item.title);
+      this.showToast("Moved to Wishlist", "info");
+    }
+  }
+
+  // --- NEW FEATURE: Bulk Discount Logic ---
+  // Returns object with total and savings
+  calculateTotals() {
+    let subtotal = 0;
+    let bulkSavings = 0;
+
+    this.cart.forEach((item) => {
+      let itemTotal = item.price * item.quantity;
+
+      // BULK RULE: Buy 2 or more of same item, get 10% off that item
+      if (item.quantity >= 2) {
+        const discount = itemTotal * 0.1;
+        bulkSavings += discount;
+      }
+
+      subtotal += itemTotal;
+    });
+
+    const tax = (subtotal - bulkSavings) * 0.18;
+    const shipping = subtotal - bulkSavings > 2000 ? 0 : 150;
+
+    // Apply Coupon if exists
+    let couponDiscount = 0;
+    if (this.coupon) {
+      couponDiscount = this.coupon.discountAmount;
+    }
+
+    const finalTotal = subtotal - bulkSavings + tax + shipping - couponDiscount;
+
+    return {
+      subtotal,
+      bulkSavings,
+      tax,
+      shipping,
+      couponDiscount,
+      finalTotal,
+    };
+  }
+}
 // ====================================================================
 // 2. PAGINATION SYSTEM
 // ====================================================================

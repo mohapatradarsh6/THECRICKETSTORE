@@ -2,7 +2,6 @@ const mongoose = require("mongoose");
 const jwt = require("jsonwebtoken");
 
 // 1. Define Order Schema
-// This schema includes fields for Tracking and Shipping integration
 const orderSchema = new mongoose.Schema({
   userEmail: { type: String, required: true },
   items: [
@@ -11,6 +10,8 @@ const orderSchema = new mongoose.Schema({
       price: Number,
       quantity: Number,
       image: String,
+      // Store bulk discount info if applied
+      discountApplied: { type: Number, default: 0 },
     },
   ],
   total: Number,
@@ -18,16 +19,49 @@ const orderSchema = new mongoose.Schema({
   shipping: Number,
   tax: Number,
   paymentMethod: String,
+
   // --- NEW FEATURES ---
+  giftOption: {
+    isGift: { type: Boolean, default: false },
+    message: String,
+    wrapCost: { type: Number, default: 0 },
+  },
+  insurance: {
+    hasInsurance: { type: Boolean, default: false },
+    cost: { type: Number, default: 0 },
+  },
+  deliverySlot: { type: String }, // e.g., "Morning (9AM-12PM)"
+  scheduledDate: { type: Date }, // For rescheduling
+
   status: {
     type: String,
     default: "Processing",
-    enum: ["Processing", "Shipped", "Out for Delivery", "Delivered"],
-  }, // For Order Tracking
+    enum: [
+      "Processing",
+      "Shipped",
+      "Out for Delivery",
+      "Delivered",
+      "Cancelled",
+      "Returned",
+      "Return Requested",
+    ],
+  },
+
+  cancellation: {
+    reason: String,
+    cancelledAt: Date,
+  },
+
+  returnRequest: {
+    reason: String,
+    status: String, // "Pending", "Approved"
+    requestedAt: Date,
+  },
+
   trackingId: {
     type: String,
     default: () => "TRK" + Math.floor(100000 + Math.random() * 900000),
-  }, // Simulated Shipping Integration
+  },
   orderDate: { type: Date, default: Date.now },
 });
 
@@ -47,10 +81,7 @@ async function connectToDatabase() {
 const allowCors = (fn) => async (req, res) => {
   res.setHeader("Access-Control-Allow-Credentials", true);
   res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader(
-    "Access-Control-Allow-Methods",
-    "GET,OPTIONS,PATCH,DELETE,POST,PUT"
-  );
+  res.setHeader("Access-Control-Allow-Methods", "GET,OPTIONS,POST,PUT,PATCH");
   res.setHeader(
     "Access-Control-Allow-Headers",
     "X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization"
@@ -66,11 +97,9 @@ const allowCors = (fn) => async (req, res) => {
 const handler = async (req, res) => {
   await connectToDatabase();
 
-  // --- SECURITY: Verify User Token ---
+  // Verify Token
   const authHeader = req.headers.authorization;
-  if (!authHeader) {
-    return res.status(401).json({ error: "No token provided" });
-  }
+  if (!authHeader) return res.status(401).json({ error: "No token provided" });
   const token = authHeader.replace("Bearer ", "");
 
   let decodedUser;
@@ -83,10 +112,9 @@ const handler = async (req, res) => {
     return res.status(401).json({ error: "Invalid token" });
   }
 
-  // --- GET: Fetch User's Orders ---
+  // --- GET: Fetch Orders ---
   if (req.method === "GET") {
     try {
-      // Find orders belonging to this email, sort by newest first
       const orders = await Order.find({ userEmail: decodedUser.email }).sort({
         orderDate: -1,
       });
@@ -99,7 +127,20 @@ const handler = async (req, res) => {
   // --- POST: Create New Order ---
   if (req.method === "POST") {
     try {
-      const { items, total, subtotal, shipping, tax, paymentMethod } = req.body;
+      const {
+        items,
+        total,
+        subtotal,
+        shipping,
+        tax,
+        paymentMethod,
+        giftOption,
+        insurance,
+        deliverySlot,
+      } = req.body;
+
+      // Basic validation for bulk discount logic could go here
+      // For now, we trust the frontend calculation but typically you recalculate on backend
 
       const newOrder = new Order({
         userEmail: decodedUser.email,
@@ -109,7 +150,10 @@ const handler = async (req, res) => {
         shipping,
         tax,
         paymentMethod,
-        // status and trackingId are set by default values in Schema
+        giftOption,
+        insurance,
+        deliverySlot,
+        scheduledDate: new Date(new Date().setDate(new Date().getDate() + 5)), // Default 5 days out
       });
 
       await newOrder.save();
@@ -118,6 +162,53 @@ const handler = async (req, res) => {
         .json({ message: "Order placed successfully", order: newOrder });
     } catch (error) {
       return res.status(500).json({ error: "Failed to create order" });
+    }
+  }
+
+  // --- PATCH: Update Order (Cancel/Return/Reschedule) ---
+  if (req.method === "PATCH") {
+    try {
+      const { orderId, action, reason, newDate } = req.body;
+      const order = await Order.findOne({
+        _id: orderId,
+        userEmail: decodedUser.email,
+      });
+
+      if (!order) return res.status(404).json({ error: "Order not found" });
+
+      if (action === "cancel") {
+        if (order.status === "Delivered")
+          return res
+            .status(400)
+            .json({ error: "Cannot cancel delivered order" });
+        order.status = "Cancelled";
+        order.cancellation = { reason, cancelledAt: new Date() };
+      } else if (action === "return") {
+        if (order.status !== "Delivered")
+          return res
+            .status(400)
+            .json({ error: "Can only return delivered orders" });
+        order.status = "Return Requested";
+        order.returnRequest = {
+          reason,
+          status: "Pending",
+          requestedAt: new Date(),
+        };
+      } else if (action === "reschedule") {
+        if (["Delivered", "Cancelled", "Returned"].includes(order.status)) {
+          return res
+            .status(400)
+            .json({ error: "Cannot reschedule this order" });
+        }
+        order.scheduledDate = new Date(newDate);
+      }
+
+      await order.save();
+      return res
+        .status(200)
+        .json({ message: `Order ${action} successful`, order });
+    } catch (error) {
+      return res.status(500).json({ error: "Update failed" });
     }
   }
 
