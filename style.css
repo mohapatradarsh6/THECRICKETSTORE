@@ -3313,15 +3313,15 @@ body {
 
     .product-card {
       display: flex;
-      flex-direction: column;
-      /* Auto height expands to fit content */
-      height: auto !important;
-      min-height: 0; /* Allow shrinking if needed */
-      width: 100%; /* Stay within grid cell */
-      margin: 0;
-      overflow: hidden; /* Crop images, not text */
+      flex-direction: column; /* Stack content vertically */
+      height: 100%; /* Force card to fill grid height */
+      background-color: white;
+      border-radius: 15px;
+      overflow: hidden;
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+      transition: var(--transition);
+      position: relative;
     }
-
     .product-image-wrapper {
       height: 130px; /* Reduce image height to stop elongation */
       padding: 10px;
@@ -3334,11 +3334,44 @@ body {
       width: 100%;
     }
 
+    /* --- CARD ALIGNMENT FIX --- */
+
+    .product-card {
+      display: flex;
+      flex-direction: column; /* Stack content vertically */
+      height: 100%; /* Force card to fill grid height */
+      background-color: white;
+      border-radius: 15px;
+      overflow: hidden;
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+      transition: var(--transition);
+      position: relative;
+    }
+
     .product-info {
-      padding: 10px !important;
+      padding: 15px !important;
       display: flex;
       flex-direction: column;
-      gap: 5px;
+      flex: 1; /* Grow to fill remaining space */
+    }
+
+    .product-title {
+      font-size: 0.9rem;
+      /* Force 2 lines max for title consistency */
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      height: 2.8em; /* Fixed height for title area */
+      margin-bottom: 5px;
+    }
+    /* Pushes the buttons to the bottom */
+    .product-actions {
+      margin-top: auto; /* This is the magic alignment property */
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      padding-top: 10px;
     }
 
     .product-title {

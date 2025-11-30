@@ -321,9 +321,23 @@ class CartManager {
   }
 
   // Comprehensive Total Calculation for Checkout
+  // FIXED: Handle Empty Cart & Coupon Removal
   calculateTotals(customItems = null) {
-    // Support calculating for specific items (Buy Now) or full cart
     const itemsToCalc = customItems || this.cart;
+
+    // 1. If empty, return zeros immediately
+    if (itemsToCalc.length === 0) {
+      return {
+        subtotal: 0,
+        bulkSavings: 0,
+        tax: 0,
+        shipping: 0,
+        giftCost: 0,
+        insuranceCost: 0,
+        couponDiscount: 0,
+        finalTotal: 0,
+      };
+    }
 
     let subtotal = 0;
     let bulkSavings = 0;
@@ -331,8 +345,6 @@ class CartManager {
     itemsToCalc.forEach((item) => {
       let itemTotal =
         (parseFloat(item.price) || 0) * (parseInt(item.quantity) || 1);
-
-      // Feature: Bulk Discount (Buy 2+, get 10% off that item)
       if (item.quantity >= 2) {
         const discount = itemTotal * 0.1;
         bulkSavings += discount;
@@ -340,7 +352,6 @@ class CartManager {
       subtotal += itemTotal;
     });
 
-    // Check UI checkboxes for extras
     const isGift = document.getElementById("is-gift")?.checked || false;
     const hasInsurance =
       document.getElementById("has-insurance")?.checked || false;
@@ -349,24 +360,24 @@ class CartManager {
     const insuranceCost = hasInsurance ? 100 : 0;
 
     const tax = (subtotal - bulkSavings) * 0.18;
-    const shipping = subtotal - bulkSavings > 2000 ? 0 : 150; // Free shipping over 2000
+    const shipping = subtotal - bulkSavings > 2000 ? 0 : 150;
 
     let couponDiscount = 0;
-    // Only apply coupon if calculating for the main cart
     if (this.coupon && !customItems) {
       couponDiscount = this.coupon.discountAmount;
     }
 
-    const finalTotal =
+    const finalTotal = Math.max(
+      0,
       subtotal -
-      bulkSavings +
-      tax +
-      shipping +
-      giftCost +
-      insuranceCost -
-      couponDiscount;
+        bulkSavings +
+        tax +
+        shipping +
+        giftCost +
+        insuranceCost -
+        couponDiscount
+    );
 
-    // Update the Total Price display if it exists on screen
     if (document.getElementById("payment-total")) {
       document.getElementById("payment-total").textContent =
         finalTotal.toFixed(2);
@@ -382,6 +393,13 @@ class CartManager {
       couponDiscount,
       finalTotal,
     };
+  }
+
+  // NEW: Remove Coupon
+  removeCoupon() {
+    this.coupon = null;
+    this.showToast("Coupon Removed", "info");
+    this.updateUI();
   }
 
   // --- UI Updates ---
