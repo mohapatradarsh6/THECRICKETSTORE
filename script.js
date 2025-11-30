@@ -84,24 +84,15 @@ class CartManager {
       // Process Data (Only if pulling and success)
       if (pull && res.ok) {
         const data = await res.json();
-
+        if (data.addresses) {
+          _currentUser.addresses = data.addresses;
+          saveUser(_currentUser); // Update LocalStorage
+        }
         if (data.cart) this.cart = data.cart;
         if (data.wishlist) this.wishlist = data.wishlist;
         if (data.savedForLater) this.savedForLater = data.savedForLater;
 
-        if (data.recentlyViewed) {
-          localStorage.setItem(
-            "recentlyViewed",
-            JSON.stringify(data.recentlyViewed)
-          );
-        }
-
         this.updateUI();
-      }
-
-      if (data.addresses) {
-        _currentUser.addresses = data.addresses;
-        saveUser(_currentUser); // Save to local storage
       }
 
       this.updateUI();
@@ -1369,6 +1360,7 @@ class HeroCarousel {
 
 function saveUser(user) {
   _currentUser = user;
+  if (!user.addresses) user.addresses = [];
   localStorage.setItem("user", JSON.stringify(user));
   if (_authToken) localStorage.setItem("token", _authToken);
 }

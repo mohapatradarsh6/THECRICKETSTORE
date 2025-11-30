@@ -2210,13 +2210,14 @@ body {
 /* Right Side: Details (Scrollable) */
 .quick-view-details {
   padding: 30px;
+  /* Remove bottom padding so sticky bar hits the edge */
+  padding-bottom: 0;
+  /* Ensure this is the scrollable element */
   overflow-y: auto;
   height: 100%;
   display: flex;
   flex-direction: column;
   position: relative;
-  /* Important: Add padding at bottom so content scrolls ABOVE the sticky button */
-  padding-bottom: 0;
 }
 
 .quick-view-details::-webkit-scrollbar {
@@ -2333,20 +2334,24 @@ body {
    ========================================= */
 /* FIX: Force Sticky Bottom for Add to Cart */
 .quick-view-actions {
-  display: flex;
-  gap: 15px;
-  align-items: center;
-
-  position: sticky !important; /* Force sticky */
-  bottom: 0 !important; /* Force bottom */
-
+  /* Sticky positioning relative to .quick-view-details */
+  position: sticky;
+  bottom: 0;
   background: white;
-  padding: 15px 20px; /* Ensure padding */
-  margin-top: auto;
+  z-index: 20;
 
-  z-index: 999 !important; /* Ensure it sits on top of everything else in the modal */
-  border-top: 1px solid #eee;
-  box-shadow: 0 -4px 10px rgba(0, 0, 0, 0.05); /* Shadow to separate from content */
+  /* Compensate for parent padding to stretch full width */
+  margin-left: -30px;
+  margin-right: -30px;
+  padding: 15px 30px; /* Add internal padding back */
+
+  border-top: 1px solid #f0f0f0;
+  box-shadow: 0 -4px 15px rgba(0, 0, 0, 0.05);
+  margin-top: auto; /* Push to bottom if content is short */
+
+  display: flex;
+  align-items: center;
+  gap: 15px;
 }
 
 /* Ensure parent has no bottom padding that conflicts */
