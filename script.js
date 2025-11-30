@@ -47,29 +47,16 @@ class CartManager {
     if (!_currentUser || !_authToken) return;
 
     try {
-      // PULL: Get latest data from DB (e.g., on login)
+      let res; // 1. Declare 'res' here so it exists for both blocks
+
       if (pull) {
-        const res = await fetch(`${API_BASE_URL}/user`, {
+        // PULL: Get data
+        res = await fetch(`${API_BASE_URL}/user`, {
           headers: { Authorization: `Bearer ${_authToken}` },
         });
-        if (res.ok) {
-          const data = await res.json();
-          // Merge Strategy: Server data overwrites local on login
-          if (data.cart) this.cart = data.cart;
-          if (data.wishlist) this.wishlist = data.wishlist;
-          if (data.savedForLater) this.savedForLater = data.savedForLater;
-          if (data.recentlyViewed)
-            localStorage.setItem(
-              "recentlyViewed",
-              JSON.stringify(data.recentlyViewed)
-            );
-
-          this.updateUI();
-        }
-      }
-      // PUSH: Save local state to DB
-      else {
-        await fetch(`${API_BASE_URL}/user`, {
+      } else {
+        // PUSH: Save data
+        res = await fetch(`${API_BASE_URL}/user`, {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
@@ -82,10 +69,21 @@ class CartManager {
           }),
         });
       }
+
+      // 2. Check for 401 Unauthorized (Expired Session)
       if (res.status === 401) {
         console.warn("Session expired. Logging out.");
-        logoutUser(); // This clears bad tokens
+        logoutUser();
         return;
+      }
+
+      // 3. Process Data (Only if pulling and success)
+      if (pull && res.ok) {
+        const data = await res.json();
+        if (data.cart) this.cart = data.cart;
+        if (data.wishlist) this.wishlist = data.wishlist;
+        if (data.savedForLater) this.savedForLater = data.savedForLater;
+        this.updateUI();
       }
     } catch (e) {
       console.error("Sync failed", e);
