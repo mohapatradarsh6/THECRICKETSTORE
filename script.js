@@ -3,19 +3,21 @@
 // ====================================================================
 
 // Use "/api" for relative path in Vercel deployment
+// This ensures the frontend talks to the backend on the same domain
 const API_BASE_URL = "/api";
 
 // ====================================================================
 // IN-MEMORY STORAGE & STATE MANAGEMENT
 // ====================================================================
 
+// Global variables to hold application state
 let _cartData = [];
 let _wishlistData = [];
 let _searchHistoryData = [];
 let _currentUser = null;
 let _authToken = null;
 
-// Initialize state from LocalStorage (Keeps you logged in)
+// Initialize state from LocalStorage (Keeps you logged in across refreshes)
 const storedUser = localStorage.getItem("user");
 const storedToken = localStorage.getItem("token");
 
@@ -23,8 +25,9 @@ if (storedUser && storedToken) {
   try {
     _currentUser = JSON.parse(storedUser);
     _authToken = storedToken;
+    console.log("User session restored:", _currentUser.email);
   } catch (e) {
-    console.error("Failed to parse user data", e);
+    console.error("Failed to parse user data from local storage", e);
     localStorage.clear();
   }
 }
@@ -37,11 +40,12 @@ class CartManager {
   constructor() {
     this.cart = _cartData || [];
     this.wishlist = _wishlistData || [];
-    this.savedForLater = []; // Saved for Later list
-    this.coupon = null; // Applied coupon data
+    this.savedForLater = []; // New: Saved for Later list
+    this.coupon = null; // New: Applied coupon data
 
     // If user is logged in, fetch their cart/saved items from DB immediately
     if (_currentUser && _authToken) {
+      console.log("User is logged in. Initiating Cart Sync...");
       this.syncWithBackend(true); // true = PULL from server
     }
 
@@ -49,15 +53,20 @@ class CartManager {
   }
 
   // --- Backend Syncing Logic ---
+  // This function handles two-way synchronization between Frontend and MongoDB
   async syncWithBackend(pull = false) {
     // If no user is logged in, we cannot sync, so we just return.
-    if (!_currentUser || !_authToken) return;
+    if (!_currentUser || !_authToken) {
+      return;
+    }
 
     try {
       let res;
 
       if (pull) {
         // PULL: Get latest data from DB
+        // This is usually called on Page Load or Login
+        console.log("Syncing: Pulling data from server...");
         res = await fetch(`${API_BASE_URL}/user`, {
           headers: {
             Authorization: `Bearer ${_authToken}`,
@@ -65,6 +74,8 @@ class CartManager {
         });
       } else {
         // PUSH: Save local state to DB
+        // This is called whenever the user modifies the cart (Add, Remove, Update)
+        console.log("Syncing: Pushing data to server...");
         res = await fetch(`${API_BASE_URL}/user`, {
           method: "PUT",
           headers: {
@@ -79,22 +90,29 @@ class CartManager {
         });
       }
 
-      // NOTE: Auto-logout logic on 401 has been REMOVED as per request.
-      // We simply log the warning if something goes wrong but don't force logout.
+      // REQUEST: Auto-logout logic on 401 has been REMOVED.
+      // We simply log the warning if something goes wrong.
       if (!res.ok) {
-        console.warn("Sync response not OK:", res.status);
+        console.warn("Sync response was not OK. Status:", res.status);
+        // We do NOT logoutUser() here anymore.
       }
 
       // Process Data (Only if pulling and success)
       if (pull && res.ok) {
         const data = await res.json();
 
-        // Update local state with server data
-        if (data.cart) this.cart = data.cart;
-        if (data.wishlist) this.wishlist = data.wishlist;
-        if (data.savedForLater) this.savedForLater = data.savedForLater;
+        // Update local state with server data if it exists
+        if (data.cart) {
+          this.cart = data.cart;
+        }
+        if (data.wishlist) {
+          this.wishlist = data.wishlist;
+        }
+        if (data.savedForLater) {
+          this.savedForLater = data.savedForLater;
+        }
 
-        // Also sync recently viewed if available
+        // Also sync recently viewed if available in the user profile
         if (data.recentlyViewed) {
           localStorage.setItem(
             "recentlyViewed",
@@ -102,9 +120,11 @@ class CartManager {
           );
         }
 
+        console.log("Sync successful. UI Updated.");
         this.updateUI();
       }
     } catch (e) {
+      // If fetch fails (e.g. network error), we just log it and keep working locally
       console.warn("Sync failed (Offline mode or Network Error):", e);
     }
   }
@@ -123,6 +143,7 @@ class CartManager {
     }
 
     // Check if item exists (matching ID/Title)
+    // We use title as a unique identifier here, but ideally this would use _id
     const existingItem = this.cart.find((item) => item.title === product.title);
     const price = parseFloat(product.price) || 0;
 
@@ -139,8 +160,9 @@ class CartManager {
       existingItem.quantity = currentQty + qty;
     } else {
       // 3. Add New Item
+      // We spread the product properties to ensure we keep image, id, etc.
       this.cart.push({
-        ...product, // Spreads title, image, id, stock
+        ...product,
         price: price,
         quantity: qty,
         selectedSize: variants.size || product.selectedSize || null,
@@ -149,14 +171,14 @@ class CartManager {
     }
 
     this.showToast(`${product.title} added to cart!`, "success");
-    this.syncWithBackend(false); // Push changes to DB
+    this.syncWithBackend(false); // Push changes to DB immediately
     this.updateUI();
     return true;
   }
 
   removeFromCart(productTitle) {
     this.cart = this.cart.filter((item) => item.title !== productTitle);
-    this.syncWithBackend(false);
+    this.syncWithBackend(false); // Push changes to DB
     this.updateUI();
 
     // If empty, force refresh modal to show "Empty" state
@@ -172,10 +194,11 @@ class CartManager {
     const item = this.cart.find((item) => item.title === productTitle);
     if (item) {
       const qty = parseInt(quantity);
+      // If quantity becomes 0 or less, remove the item
       if (qty <= 0) {
         this.removeFromCart(productTitle);
       } else {
-        // Stock Check
+        // Stock Check before updating
         if (item.stock && qty > item.stock) {
           this.showToast(
             `Max stock reached (${item.stock} available)`,
@@ -184,7 +207,7 @@ class CartManager {
           return;
         }
         item.quantity = qty;
-        this.syncWithBackend(false);
+        this.syncWithBackend(false); // Push changes to DB
         this.updateUI();
       }
     }
@@ -192,7 +215,7 @@ class CartManager {
 
   clearCart() {
     this.cart = [];
-    this.coupon = null; // Clear applied coupon
+    this.coupon = null; // Clear applied coupon when cart is cleared
     this.syncWithBackend(false);
     this.updateUI();
   }
@@ -202,11 +225,11 @@ class CartManager {
     const itemIndex = this.cart.findIndex((i) => i.title === productTitle);
     if (itemIndex > -1) {
       const item = this.cart[itemIndex];
-      this.savedForLater.push(item); // Move to Saved
-      this.cart.splice(itemIndex, 1); // Remove from Cart
+      this.savedForLater.push(item); // Move to Saved array
+      this.cart.splice(itemIndex, 1); // Remove from Cart array
 
       this.showToast("Item saved for later", "info");
-      this.syncWithBackend(false);
+      this.syncWithBackend(false); // Push both arrays to DB
       this.updateUI();
     }
   }
@@ -217,7 +240,7 @@ class CartManager {
     );
     if (itemIndex > -1) {
       const item = this.savedForLater[itemIndex];
-      // Try to add back to cart (Checks stock automatically)
+      // Try to add back to cart (Reuse addToCart so it checks stock automatically)
       const success = this.addToCart(item, item.quantity, {
         size: item.selectedSize,
         color: item.selectedColor,
@@ -249,7 +272,7 @@ class CartManager {
       const data = await res.json();
 
       if (res.ok && data.success) {
-        this.coupon = data; // Store applied coupon
+        this.coupon = data; // Store applied coupon object
         this.showToast("Coupon Applied Successfully!", "success");
         if (msg) {
           msg.textContent = `Applied! -₹${data.discountAmount}`;
@@ -270,6 +293,12 @@ class CartManager {
       if (btn) btn.textContent = "Apply";
       this.updateUI(); // Re-calculate totals with new discount
     }
+  }
+
+  removeCoupon() {
+    this.coupon = null;
+    this.showToast("Coupon Removed", "info");
+    this.updateUI();
   }
 
   // --- Wishlist Actions ---
@@ -321,11 +350,12 @@ class CartManager {
   }
 
   // Comprehensive Total Calculation for Checkout
-  // FIXED: Handle Empty Cart & Coupon Removal
+  // This handles Tax, Shipping, Bulk Discounts, and Coupon Logic
   calculateTotals(customItems = null) {
+    // Support calculating for specific items (Buy Now) or full cart
     const itemsToCalc = customItems || this.cart;
 
-    // 1. If empty, return zeros immediately
+    // If no items, return zeros to prevent NaN
     if (itemsToCalc.length === 0) {
       return {
         subtotal: 0,
@@ -345,6 +375,8 @@ class CartManager {
     itemsToCalc.forEach((item) => {
       let itemTotal =
         (parseFloat(item.price) || 0) * (parseInt(item.quantity) || 1);
+
+      // Feature: Bulk Discount (Buy 2+, get 10% off that item)
       if (item.quantity >= 2) {
         const discount = itemTotal * 0.1;
         bulkSavings += discount;
@@ -352,6 +384,7 @@ class CartManager {
       subtotal += itemTotal;
     });
 
+    // Check UI checkboxes for extras (only if they exist in the DOM)
     const isGift = document.getElementById("is-gift")?.checked || false;
     const hasInsurance =
       document.getElementById("has-insurance")?.checked || false;
@@ -360,9 +393,10 @@ class CartManager {
     const insuranceCost = hasInsurance ? 100 : 0;
 
     const tax = (subtotal - bulkSavings) * 0.18;
-    const shipping = subtotal - bulkSavings > 2000 ? 0 : 150;
+    const shipping = subtotal - bulkSavings > 2000 ? 0 : 150; // Free shipping over 2000
 
     let couponDiscount = 0;
+    // Only apply coupon if calculating for the main cart
     if (this.coupon && !customItems) {
       couponDiscount = this.coupon.discountAmount;
     }
@@ -378,6 +412,7 @@ class CartManager {
         couponDiscount
     );
 
+    // Update the Total Price display if it exists on screen (in Checkout Modal)
     if (document.getElementById("payment-total")) {
       document.getElementById("payment-total").textContent =
         finalTotal.toFixed(2);
@@ -393,13 +428,6 @@ class CartManager {
       couponDiscount,
       finalTotal,
     };
-  }
-
-  // NEW: Remove Coupon
-  removeCoupon() {
-    this.coupon = null;
-    this.showToast("Coupon Removed", "info");
-    this.updateUI();
   }
 
   // --- UI Updates ---
@@ -428,7 +456,7 @@ class CartManager {
               // FEATURE: Limited Stock Warning in Cart
               const isLowStock = item.stock && item.stock <= 3;
               const stockWarning = isLowStock
-                ? `<div class="stock-warning" style="color:#e67e22; font-size:0.75rem; margin-top:4px; background:rgba(230,126,34,0.1); padding:2px 6px; border-radius:4px; width:fit-content;"><i class="fas fa-exclamation-circle"></i> Hurry! Only ${item.stock} left</div>`
+                ? `<div class="stock-warning"><i class="fas fa-exclamation-circle"></i> Hurry! Only ${item.stock} left</div>`
                 : "";
 
               return `
@@ -511,18 +539,30 @@ class CartManager {
 
     // 3. Render Coupon Input (If not already present in HTML, inject it)
     const summaryDiv = document.querySelector(".cart-modal-summary");
-    if (summaryDiv && !document.getElementById("coupon-input")) {
-      const couponHTML = `
-            <div class="coupon-section" style="margin-bottom:15px; padding-bottom:15px; border-bottom:1px solid #eee;">
-                <label style="font-size:0.9rem; font-weight:600;">Have a Coupon?</label>
-                <div class="coupon-input-group" style="display:flex; gap:10px; margin-top:5px;">
-                    <input type="text" id="coupon-input" placeholder="Enter Code (e.g. WELCOME10)" style="flex:1; padding:8px; border:1px solid #ddd; border-radius:4px;">
-                    <button class="btn-apply" id="btn-apply-coupon" onclick="window.cartManager.applyCoupon(document.getElementById('coupon-input').value)" style="background:#333; color:white; border:none; padding:0 15px; border-radius:4px; cursor:pointer;">Apply</button>
+    if (summaryDiv) {
+      const oldCoupon = document.querySelector(".coupon-section");
+      if (oldCoupon) oldCoupon.remove();
+
+      if (this.cart.length > 0) {
+        const couponCode = this.coupon ? this.coupon.code : "";
+        const couponHTML = `
+                <div class="coupon-section" style="margin-bottom:15px; padding-bottom:15px; border-bottom:1px solid #eee;">
+                    <label style="font-size:0.9rem; font-weight:600;">Have a Coupon?</label>
+                    <div class="coupon-input-group" style="display:flex; gap:10px; margin-top:5px;">
+                        <input type="text" id="coupon-input" value="${couponCode}" ${
+          this.coupon ? "disabled" : ""
+        } placeholder="Enter Code (e.g. WELCOME10)" style="flex:1; padding:8px; border:1px solid #ddd; border-radius:4px;">
+                         ${
+                           this.coupon
+                             ? `<button class="btn-remove-coupon" onclick="window.cartManager.removeCoupon()" style="background:#dc3545; color:white; border:none; padding:0 15px; border-radius:4px; cursor:pointer;">Remove</button>`
+                             : `<button class="btn-apply" id="btn-apply-coupon" onclick="window.cartManager.applyCoupon(document.getElementById('coupon-input').value)" style="background:#333; color:white; border:none; padding:0 15px; border-radius:4px; cursor:pointer;">Apply</button>`
+                         }
+                    </div>
+                    <div id="coupon-msg" class="coupon-message" style="font-size:0.8rem; margin-top:5px;"></div>
                 </div>
-                <div id="coupon-msg" class="coupon-message" style="font-size:0.8rem; margin-top:5px;"></div>
-            </div>
-        `;
-      summaryDiv.insertAdjacentHTML("afterbegin", couponHTML);
+            `;
+        summaryDiv.insertAdjacentHTML("afterbegin", couponHTML);
+      }
     }
 
     // 4. Calculate and Display Totals
@@ -540,6 +580,29 @@ class CartManager {
     if (document.getElementById("cart-modal-total"))
       document.getElementById("cart-modal-total").textContent =
         calc.finalTotal.toFixed(2);
+
+    // Inject Discount Row in Cart Summary
+    const discountRowId = "cart-discount-row";
+    let discountRow = document.getElementById(discountRowId);
+
+    if (calc.couponDiscount > 0) {
+      if (!discountRow) {
+        discountRow = document.createElement("div");
+        discountRow.id = discountRowId;
+        discountRow.className = "summary-row";
+        discountRow.style.color = "var(--success-color)";
+        // Insert before Total
+        const totalRow = document.querySelector(
+          ".cart-modal-summary .summary-row.total"
+        );
+        if (totalRow) totalRow.parentNode.insertBefore(discountRow, totalRow);
+      }
+      discountRow.innerHTML = `<span>Coupon (${
+        this.coupon.code
+      })</span><span>-₹${calc.couponDiscount.toFixed(2)}</span>`;
+    } else if (discountRow) {
+      discountRow.remove();
+    }
   }
 
   updateWishlistUI() {
@@ -576,27 +639,6 @@ class CartManager {
 
     if (container) container.innerHTML = generateList(false);
     if (mobileContainer) mobileContainer.innerHTML = generateList(true);
-  }
-
-  showToast(message, type = "success") {
-    const existingToast = document.querySelector(".toast");
-    if (existingToast) existingToast.remove();
-
-    const toast = document.createElement("div");
-    toast.className = `toast ${type}`;
-    toast.textContent = message;
-    document.body.appendChild(toast);
-    setTimeout(() => toast.remove(), 3000);
-  }
-
-  generateRatingHTML(rating) {
-    const fullStars = Math.floor(rating);
-    const hasHalfStar = rating % 1 !== 0;
-    let html = '<div class="stars" style="color: #ffc107; font-size: 0.8rem;">';
-    for (let i = 0; i < fullStars; i++) html += '<i class="fas fa-star"></i>';
-    if (hasHalfStar) html += '<i class="fas fa-star-half-alt"></i>';
-    html += `</div>`;
-    return html;
   }
 }
 
@@ -853,23 +895,11 @@ class ProductManager {
     }
 
     const isOutOfStock = product.stock !== undefined && product.stock <= 0;
-    let stockBadge = "";
-
-    if (isOutOfStock) {
-      stockBadge = `<div class="product-badge" style="background:#666">Sold Out</div>`;
-    } else if (product.stock <= 3) {
-      // Low Stock Warning
-      stockBadge = `<div class="product-badge" style="background:var(--accent-color); font-size:0.75rem;">Hurry! Only ${product.stock} Left</div>`;
-    } else {
-      stockBadge = `<div class="product-badge" style="background:var(--success-color)">In Stock</div>`;
-    }
-
-    if (!isOutOfStock && product.stock > 3) {
-      if (product.isBestSeller)
-        stockBadge = `<div class="product-badge">Bestseller</div>`;
-      else if (product.isNewArrival)
-        stockBadge = `<div class="product-badge" style="background:var(--accent-color)">New</div>`;
-    }
+    // Low Stock Warning Logic for Main Card
+    const stockWarning =
+      !isOutOfStock && product.stock <= 3
+        ? `<div class="stock-warning" style="color:#e67e22; font-size:0.7rem; margin-top:4px; background:rgba(230,126,34,0.1); padding:2px 6px; border-radius:4px; width:fit-content;">Only ${product.stock} left!</div>`
+        : "";
 
     const btnState = isOutOfStock
       ? 'disabled style="background:#ccc; cursor:not-allowed;"'
@@ -878,7 +908,11 @@ class ProductManager {
     const buyBtnState = isOutOfStock ? 'disabled style="display:none"' : "";
 
     card.innerHTML = `
-      ${stockBadge}
+      ${
+        isOutOfStock
+          ? '<div class="product-badge" style="background:#666">Sold Out</div>'
+          : ""
+      }
       <div class="product-image-wrapper">
         <img class="product-image" src="${product.image}" alt="${
       product.title
@@ -901,6 +935,7 @@ class ProductManager {
           }
           ${discountBadge}
         </div>
+        ${stockWarning}
         <div class="product-actions">
           <button class="btn-add-cart" ${btnState}>${btnText}</button>
           <button class="btn-buy-now" ${buyBtnState}>Buy Now</button>
