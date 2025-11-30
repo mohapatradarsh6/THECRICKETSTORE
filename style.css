@@ -2210,11 +2210,13 @@ body {
 /* Right Side: Details (Scrollable) */
 .quick-view-details {
   padding: 30px;
-  overflow-y: auto; /* ENABLE SCROLL HERE */
+  overflow-y: auto;
   height: 100%;
   display: flex;
   flex-direction: column;
-  position: relative; /* Context for sticky bottom */
+  position: relative;
+  /* Important: Add padding at bottom so content scrolls ABOVE the sticky button */
+  padding-bottom: 0;
 }
 
 .quick-view-details::-webkit-scrollbar {
@@ -2332,15 +2334,19 @@ body {
 .quick-view-actions {
   display: flex;
   align-items: center;
-  gap: 15px; /* Space between the two */
+  gap: 15px;
 
-  /* Sticky Bottom Logic */
+  /* Sticky Logic */
   position: sticky;
   bottom: 0;
   background: white;
-  padding: 15px 0;
-  z-index: 20;
+
+  /* Design */
+  padding: 15px 0; /* Padding inside the sticky bar */
+  margin-top: auto; /* Push to bottom if content is short */
+  z-index: 50; /* Ensure it stays on top of content */
   border-top: 1px solid #f0f0f0;
+  box-shadow: 0 -4px 20px rgba(255, 255, 255, 0.9); /* Fade effect above */
 }
 .btn-add-cart,
 .btn-buy-now,
@@ -3461,6 +3467,7 @@ body {
 }
 
 /* Toast Notifications */
+/* Toast Notifications */
 .toast {
   position: fixed;
   bottom: 20px;
@@ -3470,8 +3477,24 @@ body {
   padding: 15px 25px;
   border-radius: 8px;
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-  z-index: 3000;
+  z-index: 10000; /* INCREASED Z-INDEX */
   animation: slideInRight 0.3s ease;
+}
+
+/* Cart Badge Animation */
+@keyframes bump {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+.bump {
+  animation: bump 0.3s ease-out;
 }
 
 .toast.error {

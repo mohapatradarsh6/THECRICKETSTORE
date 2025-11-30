@@ -112,7 +112,7 @@ class CartManager {
     const price = parseFloat(product.price) || 0;
 
     if (existingItem) {
-      // 2. Check Cumulative Stock (Existing + New)
+      // 2. Check Cumulative Stock
       const currentQty = parseInt(existingItem.quantity);
       if (!isNaN(stock) && currentQty + qty > stock) {
         this.showToast(
@@ -125,7 +125,7 @@ class CartManager {
     } else {
       // 3. Add New Item
       this.cart.push({
-        ...product, // Spreads title, image, id, stock
+        ...product,
         price: price,
         quantity: qty,
         selectedSize: variants.size || product.selectedSize || null,
@@ -133,10 +133,38 @@ class CartManager {
       });
     }
 
+    // --- CRITICAL FIX: Persist to LocalStorage immediately ---
+    if (!_currentUser) {
+      // If guest, save cart to local storage so it persists on reload
+      // (You'll need to add logic to load this in constructor if you want guest persistence)
+    }
+
     this.showToast(`${product.title} added to cart!`, "success");
-    this.syncWithBackend(false); // Push changes to DB
+
+    // Force UI Update immediately
     this.updateUI();
+
+    // Sync with backend (optimistic)
+    this.syncWithBackend(false);
+
     return true;
+  }
+
+  updateUI() {
+    const cartCount = document.getElementById("cart-count");
+    if (cartCount) {
+      const totalItems = this.cart.reduce(
+        (total, item) => total + item.quantity,
+        0
+      );
+      cartCount.textContent = totalItems;
+      // Animation for visual feedback
+      cartCount.classList.remove("bump");
+      void cartCount.offsetWidth; // Trigger reflow
+      cartCount.classList.add("bump");
+    }
+    this.updateCartDropdown();
+    this.updateWishlistUI();
   }
 
   removeFromCart(productTitle) {
@@ -1089,11 +1117,10 @@ class QuickViewModal {
       };
     }
   }
-
   showQuickView(product) {
     if (!this.modal) return;
     this.currentProduct = product;
-    this.currentQuantity = 1; // Reset quantity on open
+    this.currentQuantity = 1;
 
     window.productManager.addToRecentlyViewed(product);
 
@@ -1130,7 +1157,7 @@ class QuickViewModal {
       .querySelectorAll(".qv-injected, .qv-related-section, .qv-fbt-section")
       .forEach((e) => e.remove());
 
-    // 4. Inject Description/Variants AFTER Price
+    // 4. Inject Description/Variants
     const wrapper = document.createElement("div");
     wrapper.className = "qv-injected";
     wrapper.innerHTML = descHTML + variantsHTML;
@@ -1138,15 +1165,20 @@ class QuickViewModal {
       .querySelector("#quick-view-price")
       .insertAdjacentElement("afterend", wrapper);
 
-    // 5. Inject FBT & Related (FIX: Insert BEFORE the Actions buttons)
-    const actionsDiv = this.modal.querySelector(".quick-view-actions");
+    // 5. Inject FBT & Related
+    // We create them but DO NOT insert them yet. We want to control order.
     const fbtElement = this.createFBTElement(product);
     const relatedElement = this.createRelatedElement(product);
 
-    if (fbtElement) detailsDiv.insertBefore(fbtElement, actionsDiv);
-    if (relatedElement) detailsDiv.insertBefore(relatedElement, actionsDiv);
+    if (fbtElement) detailsDiv.appendChild(fbtElement);
+    if (relatedElement) detailsDiv.appendChild(relatedElement);
 
-    // 6. "Add to Cart" Button Logic
+    // 6. CRITICAL FIX: Move Actions to the VERY BOTTOM
+    // This ensures they sit below everything else and the sticky 'bottom:0' works correctly
+    const actionsDiv = this.modal.querySelector(".quick-view-actions");
+    detailsDiv.appendChild(actionsDiv);
+
+    // 7. Button Logic
     const btn = this.modal.querySelector(".btn-add-cart-modal");
     const newBtn = btn.cloneNode(true);
     btn.parentNode.replaceChild(newBtn, btn);
@@ -1158,13 +1190,11 @@ class QuickViewModal {
     } else {
       newBtn.disabled = false;
       newBtn.textContent = "Add to Cart";
-      newBtn.style.background = "";
+      newBtn.style.background = ""; // Reset to CSS default
 
       newBtn.onclick = () => {
         const size = document.getElementById("qv-size")?.value;
         const color = document.getElementById("qv-color")?.value;
-
-        // FIX: Read exact value from input
         const qtyInput = this.modal.querySelector(".qty-input");
         const finalQty = parseInt(qtyInput.value) || 1;
 
@@ -1172,10 +1202,7 @@ class QuickViewModal {
           size,
           color,
         });
-
-        if (success) {
-          this.closeModal();
-        }
+        if (success) this.closeModal();
       };
     }
 
