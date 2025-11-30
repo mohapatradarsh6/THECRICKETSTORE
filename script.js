@@ -35,7 +35,7 @@ class CartManager {
     this.coupon = null; // New: Applied coupon data
 
     // If user is logged in, fetch their cart/saved items from DB immediately
-    if (_currentUser) {
+    if (_currentUser && _authToken) {
       this.syncWithBackend(true); // true = PULL from server
     }
 
@@ -81,6 +81,11 @@ class CartManager {
             savedForLater: this.savedForLater,
           }),
         });
+      }
+      if (res.status === 401) {
+        console.warn("Session expired. Logging out.");
+        logoutUser(); // This clears bad tokens
+        return;
       }
     } catch (e) {
       console.error("Sync failed", e);
