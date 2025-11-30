@@ -10,7 +10,6 @@ const orderSchema = new mongoose.Schema({
       price: Number,
       quantity: Number,
       image: String,
-      // Store bulk discount info if applied
       discountApplied: { type: Number, default: 0 },
     },
   ],
@@ -20,7 +19,15 @@ const orderSchema = new mongoose.Schema({
   tax: Number,
   paymentMethod: String,
 
-  // --- NEW FEATURES ---
+  // --- FIX: Added Address Field (Was missing) ---
+  address: {
+    street: String,
+    city: String,
+    state: String,
+    zip: String,
+    country: String,
+  },
+
   giftOption: {
     isGift: { type: Boolean, default: false },
     message: String,
@@ -30,8 +37,8 @@ const orderSchema = new mongoose.Schema({
     hasInsurance: { type: Boolean, default: false },
     cost: { type: Number, default: 0 },
   },
-  deliverySlot: { type: String }, // e.g., "Morning (9AM-12PM)"
-  scheduledDate: { type: Date }, // For rescheduling
+  deliverySlot: { type: String },
+  scheduledDate: { type: Date },
 
   status: {
     type: String,
@@ -54,7 +61,7 @@ const orderSchema = new mongoose.Schema({
 
   returnRequest: {
     reason: String,
-    status: String, // "Pending", "Approved"
+    status: String,
     requestedAt: Date,
   },
 
@@ -97,7 +104,6 @@ const allowCors = (fn) => async (req, res) => {
 const handler = async (req, res) => {
   await connectToDatabase();
 
-  // Verify Token
   const authHeader = req.headers.authorization;
   if (!authHeader) return res.status(401).json({ error: "No token provided" });
   const token = authHeader.replace("Bearer ", "");
@@ -127,6 +133,7 @@ const handler = async (req, res) => {
   // --- POST: Create New Order ---
   if (req.method === "POST") {
     try {
+      // FIX: Extract 'address' from body
       const {
         items,
         total,
@@ -137,10 +144,8 @@ const handler = async (req, res) => {
         giftOption,
         insurance,
         deliverySlot,
+        address,
       } = req.body;
-
-      // Basic validation for bulk discount logic could go here
-      // For now, we trust the frontend calculation but typically you recalculate on backend
 
       const newOrder = new Order({
         userEmail: decodedUser.email,
@@ -153,7 +158,8 @@ const handler = async (req, res) => {
         giftOption,
         insurance,
         deliverySlot,
-        scheduledDate: new Date(new Date().setDate(new Date().getDate() + 5)), // Default 5 days out
+        address, // FIX: Save Address
+        scheduledDate: new Date(new Date().setDate(new Date().getDate() + 5)),
       });
 
       await newOrder.save();
@@ -165,7 +171,7 @@ const handler = async (req, res) => {
     }
   }
 
-  // --- PATCH: Update Order (Cancel/Return/Reschedule) ---
+  // --- PATCH: Update Order ---
   if (req.method === "PATCH") {
     try {
       const { orderId, action, reason, newDate } = req.body;

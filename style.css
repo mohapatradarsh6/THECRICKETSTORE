@@ -4177,3 +4177,14 @@ body {
   border-radius: 4px;
   margin-left: 5px;
 }
+
+.stock-warning {
+  color: #e67e22; /* Orange */
+  font-size: 0.75rem;
+  font-weight: 600;
+  margin-top: 2px;
+  display: block;
+}
+.stock-warning i {
+  margin-right: 4px;
+}
