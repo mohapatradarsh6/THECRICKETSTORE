@@ -482,32 +482,52 @@ class CartManager {
 
     this.cart.forEach((item) => {
       let itemTotal = item.price * item.quantity;
-
-      // BULK RULE: Buy 2 or more of same item, get 10% off that item
+      // BULK RULE: Buy 2+, get 10% off
       if (item.quantity >= 2) {
         const discount = itemTotal * 0.1;
         bulkSavings += discount;
       }
-
       subtotal += itemTotal;
     });
+
+    // Check UI checkboxes (only if modal is open)
+    const isGift = document.getElementById("is-gift")?.checked || false;
+    const hasInsurance =
+      document.getElementById("has-insurance")?.checked || false;
+
+    const giftCost = isGift ? 50 : 0;
+    const insuranceCost = hasInsurance ? 100 : 0;
 
     const tax = (subtotal - bulkSavings) * 0.18;
     const shipping = subtotal - bulkSavings > 2000 ? 0 : 150;
 
-    // Apply Coupon if exists
     let couponDiscount = 0;
     if (this.coupon) {
       couponDiscount = this.coupon.discountAmount;
     }
 
-    const finalTotal = subtotal - bulkSavings + tax + shipping - couponDiscount;
+    const finalTotal =
+      subtotal -
+      bulkSavings +
+      tax +
+      shipping +
+      giftCost +
+      insuranceCost -
+      couponDiscount;
+
+    // Update UI Elements if they exist
+    if (document.getElementById("payment-total")) {
+      document.getElementById("payment-total").textContent =
+        finalTotal.toFixed(2);
+    }
 
     return {
       subtotal,
       bulkSavings,
       tax,
       shipping,
+      giftCost,
+      insuranceCost,
       couponDiscount,
       finalTotal,
     };
@@ -1463,6 +1483,9 @@ function openPaymentModal(items) {
         tax: tax,
         paymentMethod: method,
         address: user.addresses[0], // ideally get selected address
+        deliverySlot: deliverySlot,
+        giftOption: { isGift, message: giftMessage, wrapCost: isGift ? 50 : 0 },
+        insurance: { hasInsurance, cost: hasInsurance ? 100 : 0 },
       };
 
       const res = await fetch(`${API_BASE_URL}/orders`, {

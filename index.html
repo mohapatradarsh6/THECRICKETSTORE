@@ -732,7 +732,79 @@
                 ><span>₹<span id="payment-total">0</span></span>
               </div>
             </div>
+            <div
+              class="checkout-extras"
+              style="
+                margin-bottom: 20px;
+                border-top: 1px solid #eee;
+                padding-top: 15px;
+              "
+            >
+              <div class="extra-option">
+                <label><i class="fas fa-clock"></i> Delivery Slot:</label>
+                <select id="delivery-slot" class="delivery-slot-select">
+                  <option value="Standard">Standard Delivery (Anytime)</option>
+                  <option value="Morning">Morning (9 AM - 12 PM)</option>
+                  <option value="Afternoon">Afternoon (12 PM - 5 PM)</option>
+                  <option value="Evening">Evening (5 PM - 9 PM)</option>
+                </select>
+              </div>
 
+              <div class="extra-option">
+                <label
+                  style="
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+                    cursor: pointer;
+                  "
+                >
+                  <input
+                    type="checkbox"
+                    id="is-gift"
+                    onchange="toggleGiftMessage()"
+                  />
+                  <span><i class="fas fa-gift"></i> Add Gift Wrap (+₹50)</span>
+                </label>
+                <div
+                  id="gift-message-box"
+                  style="display: none; margin-top: 10px"
+                >
+                  <input
+                    type="text"
+                    id="gift-message"
+                    placeholder="Enter gift message..."
+                    style="
+                      width: 100%;
+                      padding: 8px;
+                      border: 1px solid #ddd;
+                      border-radius: 4px;
+                    "
+                  />
+                </div>
+              </div>
+
+              <div class="extra-option">
+                <label
+                  style="
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+                    cursor: pointer;
+                  "
+                >
+                  <input
+                    type="checkbox"
+                    id="has-insurance"
+                    onchange="window.cartManager.updateUI()"
+                  />
+                  <span
+                    ><i class="fas fa-shield-alt"></i> Add Shipping Insurance
+                    (+₹100)</span
+                  >
+                </label>
+              </div>
+            </div>
             <h3>Select Payment Method</h3>
             <div class="payment-methods-grid">
               <label class="payment-option">
