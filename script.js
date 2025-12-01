@@ -1930,12 +1930,7 @@ async function openOrdersModal() {
       </div>
     `;
   modal.style.display = "flex";
-  const getStepClass = (currentStatus, stepStatus) => {
-    const stages = ["Processing", "Shipped", "Out for Delivery", "Delivered"];
-    return stages.indexOf(currentStatus) >= stages.indexOf(stepStatus)
-      ? "active"
-      : "";
-  };
+
   try {
     const res = await fetch(`${API_BASE_URL}/orders`, {
       method: "GET",
@@ -1957,36 +1952,36 @@ async function openOrdersModal() {
           (o) => `
                <div class="order-card">
                    <div class="order-header">
-                       <div><strong>Order #${o._id
-                         .slice(-6)
-                         .toUpperCase()}</strong> <span style="font-size:0.8rem; color:#666;">${new Date(
-            o.orderDate
-          ).toLocaleDateString()}</span></div>
-                       <div class="order-timeline">
-    <div class="timeline-step ${getStepClass(o.status, "Processing")}">
-        <div class="timeline-icon"><i class="fas fa-box"></i></div>
-        <p>Processing</p>
-    </div>
-    <div class="timeline-step ${getStepClass(o.status, "Shipped")}">
-        <div class="timeline-icon"><i class="fas fa-shipping-fast"></i></div>
-        <p>Shipped</p>
-    </div>
-    <div class="timeline-step ${getStepClass(o.status, "Delivered")}">
-        <div class="timeline-icon"><i class="fas fa-check"></i></div>
-        <p>Delivered</p>
-    </div>
-</div>
+                       <div>
+                           <strong>Order #${o._id
+                             .slice(-6)
+                             .toUpperCase()}</strong> 
+                           <div style="font-size:0.8rem; color:#666; margin-top:2px;">${new Date(
+                             o.orderDate
+                           ).toLocaleDateString()}</div>
+                       </div>
+                       <div class="order-status status-${
+                         o.status?.toLowerCase() || "processing"
+                       }">${o.status || "Processing"}</div>
+                   </div>
+                   
                    <div class="order-items">
                        ${o.items
                          .map(
                            (i) =>
-                             `<div class="order-item"><span>${i.title} x${i.quantity}</span><span>₹${i.price}</span></div>`
+                             `<div class="order-item">
+                                <span>${i.title} <span style="color:#666;">x${i.quantity}</span></span>
+                                <span>₹${i.price}</span>
+                              </div>`
                          )
                          .join("")}
                    </div>
-                   <div class="order-footer">Total: <strong>₹${o.total.toFixed(
-                     2
-                   )}</strong></div>
+                   
+                   <div class="order-footer">
+                        <span>Total: <strong>₹${o.total.toFixed(
+                          2
+                        )}</strong></span>
+                   </div>
                </div>
            `
         )
