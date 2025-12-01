@@ -998,17 +998,8 @@ class ProductManager {
         window.cartManager.toggleWishlist(product);
       } else if (e.target.closest(".btn-buy-now")) {
         if (e.target.disabled) return;
-        const buyNowItem = {
-          ...product,
-          quantity: 1,
-          // Ensure defaults exist so the DB doesn't reject it
-          selectedSize: product.selectedSize || product.sizes?.[0] || "N/A",
-          selectedColor: product.selectedColor || product.colors?.[0] || "N/A",
-          price: parseFloat(product.price),
-        };
-
-        openPaymentModal([buyNowItem]);
-      }
+        window.cartManager.addToCart(product);
+        openCartModal();
     };
 
     document
@@ -1529,11 +1520,11 @@ function closeAuthModal() {
 }
 
 // [FIX 3: Checkout Flow (Cart -> Address -> Payment)]
+// [FIXED] Checkout Modal: Global Delivery & No Redundant Coupon Input
 function openPaymentModal(itemsInput) {
-  // Normalize input to array
   const items = Array.isArray(itemsInput) ? itemsInput : [itemsInput];
 
-  // Ensure quantity and defaults
+  // Default quantity check
   items.forEach((i) => {
     if (!i.quantity) i.quantity = 1;
     if (!i.price) i.price = 0;
@@ -1551,7 +1542,7 @@ function openPaymentModal(itemsInput) {
 
   // 1. Render Items with Estimated Delivery
   const deliveryDate = window.cartManager.getEstimatedDelivery();
-
+  
   document.getElementById("payment-items").innerHTML = items
     .map(
       (item) => `
@@ -1560,15 +1551,13 @@ function openPaymentModal(itemsInput) {
           <div style="font-weight:600;">${item.title} (x${item.quantity})</div>
           <div style="font-size:0.8rem; color:#27ae60;"><i class="fas fa-truck"></i> Est. Delivery: ${deliveryDate}</div>
       </div>
-      <span style="font-weight:600;">₹${(item.price * item.quantity).toFixed(
-        2
-      )}</span>
+      <span style="font-weight:600;">₹${(item.price * item.quantity).toFixed(2)}</span>
     </div>
   `
     )
     .join("");
 
-  // 2. Render Addresses (Existing Logic)
+  // 2. Render Addresses
   const addressList = document.getElementById("checkout-addresses-list");
   if (user.addresses && user.addresses.length > 0) {
     addressList.innerHTML = user.addresses
@@ -1589,13 +1578,10 @@ function openPaymentModal(itemsInput) {
       "<p>No addresses found. Please add one in Profile.</p>";
   }
 
-  // 3. Render Delivery Options (Existing Logic)
+  // 3. Render Delivery Options (With 'Global')
   const paymentSection = document.getElementById("checkout-payment-section");
-  paymentSection
-    .querySelectorAll(
-      ".delivery-section, .checkout-extras, .checkout-coupon-section"
-    )
-    .forEach((el) => el.remove());
+  // Clear previous injections
+  paymentSection.querySelectorAll(".delivery-section, .checkout-extras, .checkout-coupon-section").forEach((el) => el.remove());
 
   const deliveryHTML = `
     <div class="delivery-section" style="margin-bottom:20px; padding-bottom:15px; border-bottom:1px solid #eee;">
@@ -1614,9 +1600,9 @@ function openPaymentModal(itemsInput) {
                 </div>
             </label>
             <label class="payment-option">
-                <input type="radio" name="delivery-method" value="Pickup"> 
+                <input type="radio" name="delivery-method" value="International"> 
                 <div class="payment-option-content" style="padding:10px; font-size:0.8rem; min-height:auto;">
-                    <i class="fas fa-store" style="font-size:1.2rem;"></i> <span>Pickup</span>
+                    <i class="fas fa-globe" style="font-size:1.2rem;"></i> <span>Global</span>
                 </div>
             </label>
         </div>
@@ -1633,17 +1619,6 @@ function openPaymentModal(itemsInput) {
                 <input type="checkbox" id="has-insurance"> <span><i class="fas fa-shield-alt"></i> Insurance (+₹100)</span>
             </label>
         </div>
-    </div>
-
-    <div class="checkout-coupon-section" style="margin-bottom:20px; border-bottom:1px solid #eee; padding-bottom:15px;">
-        <h4 style="margin:0 0 10px; font-size:1rem;">Apply Coupon</h4>
-        <div style="display:flex; gap:10px;">
-            <input type="text" id="checkout-coupon-input" placeholder="Enter Code" style="flex:1; padding:8px; border:1px solid #ddd; border-radius:4px;" value="${
-              window.cartManager.coupon ? window.cartManager.coupon.code : ""
-            }">
-            <button id="btn-checkout-coupon" style="background:#333; color:white; border:none; padding:0 15px; border-radius:4px; cursor:pointer;">Apply</button>
-        </div>
-        <div id="checkout-coupon-msg" style="font-size:0.8rem; margin-top:5px;"></div>
     </div>
   `;
 
@@ -1670,45 +1645,18 @@ function openPaymentModal(itemsInput) {
     document.getElementById("checkout-payment-section").style.display = "block";
   };
 
-  // --- Summary & Calculation Logic ---
+  // --- Summary Calculation ---
   const renderSummary = () => {
-    // This uses the updated calculateTotals which now accepts coupons for custom items
     const calc = window.cartManager.calculateTotals(items);
-
+    
     const summaryHTML = `
-          <div style="display:flex; justify-content:space-between; margin-bottom:5px;"><span>Subtotal</span><span>₹${calc.subtotal.toFixed(
-            2
-          )}</span></div>
-          <div style="display:flex; justify-content:space-between; margin-bottom:5px;"><span>Tax (18%)</span><span>₹${calc.tax.toFixed(
-            2
-          )}</span></div>
-          <div style="display:flex; justify-content:space-between; margin-bottom:5px;"><span>Shipping</span><span>₹${calc.shipping.toFixed(
-            2
-          )}</span></div>
-          ${
-            calc.giftCost > 0
-              ? `<div style="display:flex; justify-content:space-between; margin-bottom:5px; color:#d35400;"><span>Gift Wrap</span><span>+₹${calc.giftCost}</span></div>`
-              : ""
-          }
-          ${
-            calc.insuranceCost > 0
-              ? `<div style="display:flex; justify-content:space-between; margin-bottom:5px; color:#2980b9;"><span>Insurance</span><span>+₹${calc.insuranceCost}</span></div>`
-              : ""
-          }
-          ${
-            calc.bulkSavings > 0
-              ? `<div style="display:flex; justify-content:space-between; margin-bottom:5px; color:#27ae60;"><span>Bulk Discount</span><span>-₹${calc.bulkSavings.toFixed(
-                  2
-                )}</span></div>`
-              : ""
-          }
-          ${
-            calc.couponDiscount > 0
-              ? `<div style="display:flex; justify-content:space-between; margin-bottom:5px; color:#27ae60;"><span>Coupon (${
-                  window.cartManager.coupon?.code
-                })</span><span>-₹${calc.couponDiscount.toFixed(2)}</span></div>`
-              : ""
-          }
+          <div style="display:flex; justify-content:space-between; margin-bottom:5px;"><span>Subtotal</span><span>₹${calc.subtotal.toFixed(2)}</span></div>
+          <div style="display:flex; justify-content:space-between; margin-bottom:5px;"><span>Tax (18%)</span><span>₹${calc.tax.toFixed(2)}</span></div>
+          <div style="display:flex; justify-content:space-between; margin-bottom:5px;"><span>Shipping</span><span>₹${calc.shipping.toFixed(2)}</span></div>
+          ${calc.giftCost > 0 ? `<div style="display:flex; justify-content:space-between; margin-bottom:5px; color:#d35400;"><span>Gift Wrap</span><span>+₹${calc.giftCost}</span></div>` : ""}
+          ${calc.insuranceCost > 0 ? `<div style="display:flex; justify-content:space-between; margin-bottom:5px; color:#2980b9;"><span>Insurance</span><span>+₹${calc.insuranceCost}</span></div>` : ""}
+          ${calc.bulkSavings > 0 ? `<div style="display:flex; justify-content:space-between; margin-bottom:5px; color:#27ae60;"><span>Bulk Discount</span><span>-₹${calc.bulkSavings.toFixed(2)}</span></div>` : ""}
+          ${calc.couponDiscount > 0 ? `<div style="display:flex; justify-content:space-between; margin-bottom:5px; color:#27ae60;"><span>Coupon (${window.cartManager.coupon?.code})</span><span>-₹${calc.couponDiscount.toFixed(2)}</span></div>` : ""}
           
           <div style="display:flex; justify-content:space-between; margin-top:10px; padding-top:10px; border-top:1px solid #ddd; font-weight:bold; font-size:1.1rem;">
               <span>Total</span><span>₹${calc.finalTotal.toFixed(2)}</span>
@@ -1718,35 +1666,9 @@ function openPaymentModal(itemsInput) {
   };
 
   // Attach Listeners
-  document
-    .querySelectorAll('input[name="delivery-method"]')
-    .forEach((r) => r.addEventListener("change", renderSummary));
+  document.querySelectorAll('input[name="delivery-method"]').forEach(r => r.addEventListener("change", renderSummary));
   document.getElementById("is-gift")?.addEventListener("change", renderSummary);
-  document
-    .getElementById("has-insurance")
-    ?.addEventListener("change", renderSummary);
-
-  // [FIX: Checkout Specific Coupon Logic]
-  const couponBtn = document.getElementById("btn-checkout-coupon");
-  if (couponBtn) {
-    couponBtn.onclick = async () => {
-      const code = document.getElementById("checkout-coupon-input").value;
-      const msg = document.getElementById("checkout-coupon-msg");
-
-      // Use CartManager's logic but don't rely on it to update THIS UI
-      await window.cartManager.applyCoupon(code); // This updates the global coupon state
-
-      if (window.cartManager.coupon) {
-        msg.textContent = `Applied! -₹${window.cartManager.coupon.discountAmount}`;
-        msg.style.color = "green";
-        renderSummary(); // Re-render this modal's summary
-      } else {
-        msg.textContent = "Invalid Coupon";
-        msg.style.color = "red";
-        renderSummary();
-      }
-    };
-  }
+  document.getElementById("has-insurance")?.addEventListener("change", renderSummary);
 
   // Initial Render
   renderSummary();
@@ -1759,56 +1681,42 @@ function openPaymentModal(itemsInput) {
   newPayBtn.onclick = async () => {
     const methodInput = document.querySelector('input[name="payment"]:checked');
     const method = methodInput ? methodInput.value : "cod";
-
-    // Simple Validation
-    if (
-      method === "card" &&
-      document.querySelector("#card-form input").value.length < 10
-    ) {
-      window.cartManager.showToast("Invalid Card Details", "error");
-      return;
+    
+    if(method === "card" && document.querySelector("#card-form input").value.length < 10) {
+        window.cartManager.showToast("Invalid Card Details", "error"); return;
     }
 
     newPayBtn.textContent = "Processing...";
     newPayBtn.disabled = true;
 
     const calc = window.cartManager.calculateTotals(items);
-    const selectedAddrIdx =
-      document.querySelector(".address-option-card.selected")?.dataset.idx || 0;
-
+    const selectedAddrIdx = document.querySelector(".address-option-card.selected")?.dataset.idx || 0;
+    
     const orderData = {
-      items: items, // [FIX] Now properly formatted from Fix 2
+      items: items,
       total: calc.finalTotal,
       subtotal: calc.subtotal,
       shipping: calc.shipping,
       tax: calc.tax,
       paymentMethod: method,
       address: user.addresses[selectedAddrIdx],
-      deliverySlot:
-        document.querySelector('input[name="delivery-method"]:checked')
-          ?.value || "Standard",
+      deliverySlot: document.querySelector('input[name="delivery-method"]:checked')?.value || "Standard",
       giftOption: { isGift: document.getElementById("is-gift")?.checked },
-      coupon: window.cartManager.coupon, // Save used coupon
+      coupon: window.cartManager.coupon 
     };
 
     try {
       const res = await fetch(`${API_BASE_URL}/orders`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${_authToken}`,
-        },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${_authToken}` },
         body: JSON.stringify(orderData),
       });
 
       if (!res.ok) throw new Error("Order failed");
-
+      
       window.cartManager.showToast("Order placed successfully!", "success");
-      // If we bought from cart, clear it. If 'Buy Now', keep cart.
-      if (itemsInput === window.cartManager.cart) {
-        window.cartManager.clearCart();
-      }
-
+      window.cartManager.clearCart(); 
+      
       closePaymentModal();
       closeCartModal();
       newPayBtn.textContent = "Place Order";
