@@ -1451,7 +1451,7 @@ body {
 
 .products-container {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-template-columns: repeat(2, 1fr) !important;
   gap: 30px;
 }
 
@@ -4253,4 +4253,53 @@ body {
 }
 .stock-warning i {
   margin-right: 4px;
+}
+
+/* --- Order Timeline --- */
+.order-timeline {
+  display: flex;
+  justify-content: space-between;
+  margin: 20px 0;
+  position: relative;
+}
+.order-timeline::before {
+  content: "";
+  position: absolute;
+  top: 15px;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: #eee;
+  z-index: 1;
+}
+.timeline-step {
+  position: relative;
+  z-index: 2;
+  text-align: center;
+  background: white;
+  padding: 0 5px;
+}
+.timeline-icon {
+  width: 30px;
+  height: 30px;
+  background: #eee;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 5px;
+  color: #999;
+  transition: all 0.3s;
+}
+.timeline-step.active .timeline-icon {
+  background: var(--success-color);
+  color: white;
+}
+.timeline-step p {
+  font-size: 0.75rem;
+  color: #666;
+}
+.timeline-step.active p {
+  color: var(--success-color);
+  font-weight: bold;
 }

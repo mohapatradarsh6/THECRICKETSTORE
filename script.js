@@ -326,7 +326,7 @@ class CartManager {
   calculateTotals(customItems = null) {
     const itemsToCalc = customItems || this.cart;
 
-    if (itemsToCalc.length === 0) {
+    if (itemsToCalc.length === 0)
       return {
         subtotal: 0,
         bulkSavings: 0,
@@ -337,7 +337,6 @@ class CartManager {
         couponDiscount: 0,
         finalTotal: 0,
       };
-    }
 
     let subtotal = 0;
     let bulkSavings = 0;
@@ -346,11 +345,29 @@ class CartManager {
       let itemTotal =
         (parseFloat(item.price) || 0) * (parseInt(item.quantity) || 1);
       if (item.quantity >= 2) {
-        const discount = itemTotal * 0.1;
-        bulkSavings += discount;
+        // Bulk Discount
+        bulkSavings += itemTotal * 0.1;
       }
       subtotal += itemTotal;
     });
+
+    // --- NEW: Dynamic Shipping Logic ---
+    // We read the selected radio button from the DOM
+    const deliveryMethod =
+      document.querySelector('input[name="delivery-method"]:checked')?.value ||
+      "Standard";
+
+    let shipping = 0;
+    if (deliveryMethod === "Pickup") {
+      shipping = 0;
+    } else if (deliveryMethod === "Same-Day") {
+      shipping = 250; // Premium cost
+    } else if (deliveryMethod === "International") {
+      shipping = 2500; // High cost
+    } else {
+      // Standard / Scheduled
+      shipping = subtotal - bulkSavings > 2000 ? 0 : 150;
+    }
 
     const isGift = document.getElementById("is-gift")?.checked || false;
     const hasInsurance =
@@ -358,9 +375,7 @@ class CartManager {
 
     const giftCost = isGift ? 50 : 0;
     const insuranceCost = hasInsurance ? 100 : 0;
-
     const tax = (subtotal - bulkSavings) * 0.18;
-    const shipping = subtotal - bulkSavings > 2000 ? 0 : 150;
 
     let couponDiscount = 0;
     if (this.coupon && !customItems) {
@@ -378,6 +393,7 @@ class CartManager {
         couponDiscount
     );
 
+    // Update DOM if visible
     if (document.getElementById("payment-total")) {
       document.getElementById("payment-total").textContent =
         finalTotal.toFixed(2);
@@ -392,7 +408,30 @@ class CartManager {
       insuranceCost,
       couponDiscount,
       finalTotal,
+      deliveryMethod,
     };
+  }
+
+  // --- Rating Logic Helper ---
+  generateRatingHTML(rating) {
+    const score = parseFloat(rating) || 0;
+    let stars = "";
+
+    // Loop 5 times to create 5 stars
+    for (let i = 1; i <= 5; i++) {
+      if (score >= i) {
+        // Full Star
+        stars += '<i class="fas fa-star" style="color: #ffc107;"></i>';
+      } else if (score >= i - 0.5) {
+        // Half Star
+        stars += '<i class="fas fa-star-half-alt" style="color: #ffc107;"></i>';
+      } else {
+        // Empty Star
+        stars += '<i class="far fa-star" style="color: #ccc;"></i>';
+      }
+    }
+
+    return `<div class="stars" style="display:flex; gap:2px;">${stars}</div>`;
   }
 
   // --- UI Updates ---
@@ -1524,6 +1563,63 @@ function openPaymentModal(items) {
     addressList.innerHTML =
       "<p>No addresses found. Please add one in Profile.</p>";
   }
+  const paymentSection = document.getElementById("checkout-payment-section");
+  const deliveryHTML = `
+    <div class="delivery-section" style="margin-bottom:20px; padding-bottom:15px; border-bottom:1px solid #eee;">
+        <h4 style="margin:15px 0 10px; font-size:1rem;">Delivery Method</h4>
+        <div class="payment-methods-grid" style="grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap:10px; margin:0;">
+            <label class="payment-option">
+                <input type="radio" name="delivery-method" value="Standard" checked onchange="window.cartManager.updateUI()"> 
+                <div class="payment-option-content" style="padding:10px; font-size:0.8rem; min-height:auto;">
+                    <i class="fas fa-truck" style="font-size:1.2rem;"></i> <span>Standard</span>
+                </div>
+            </label>
+            <label class="payment-option">
+                <input type="radio" name="delivery-method" value="Same-Day" onchange="window.cartManager.updateUI()"> 
+                <div class="payment-option-content" style="padding:10px; font-size:0.8rem; min-height:auto;">
+                    <i class="fas fa-bolt" style="font-size:1.2rem;"></i> <span>Same-Day</span>
+                </div>
+            </label>
+            <label class="payment-option">
+                <input type="radio" name="delivery-method" value="Pickup" onchange="window.cartManager.updateUI()"> 
+                <div class="payment-option-content" style="padding:10px; font-size:0.8rem; min-height:auto;">
+                    <i class="fas fa-store" style="font-size:1.2rem;"></i> <span>Pickup</span>
+                </div>
+            </label>
+            <label class="payment-option">
+                <input type="radio" name="delivery-method" value="International" onchange="window.cartManager.updateUI()"> 
+                <div class="payment-option-content" style="padding:10px; font-size:0.8rem; min-height:auto;">
+                    <i class="fas fa-globe" style="font-size:1.2rem;"></i> <span>Global</span>
+                </div>
+            </label>
+        </div>
+
+        <div style="margin-top:15px;">
+            <label style="font-size:0.9rem; font-weight:600; display:block; margin-bottom:5px;"><i class="fas fa-pen"></i> Delivery Instructions</label>
+            <textarea id="delivery-instructions" rows="2" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:6px; font-family:inherit;" placeholder="Gate code, leave at door, etc."></textarea>
+        </div>
+
+         <div class="checkout-extras" style="margin-top:15px;">
+            <label style="display:flex; align-items:center; gap:10px; cursor:pointer; margin-bottom:5px;">
+                <input type="checkbox" id="is-gift" onchange="toggleGiftMessage()"> 
+                <span><i class="fas fa-gift"></i> Add Gift Wrap (+₹50)</span>
+            </label>
+            <div id="gift-message-box" style="display:none; margin-left:25px; margin-bottom:10px;">
+                <input type="text" id="gift-message" placeholder="Enter gift message..." style="width:100%; padding:8px; border:1px solid #ddd; border-radius:4px;">
+            </div>
+
+            <label style="display:flex; align-items:center; gap:10px; cursor:pointer;">
+                <input type="checkbox" id="has-insurance"> 
+                <span><i class="fas fa-shield-alt"></i> Add Shipping Insurance (+₹100)</span>
+            </label>
+        </div>
+    </div>
+  `;
+
+  const paymentHeader = paymentSection.querySelector("h3"); // "Select Payment Method"
+  if (paymentHeader) {
+    paymentHeader.insertAdjacentHTML("beforebegin", deliveryHTML);
+  }
 
   document.getElementById("checkout-address-section").style.display = "block";
   document.getElementById("checkout-payment-section").style.display = "none";
@@ -1821,7 +1917,12 @@ async function openOrdersModal() {
       </div>
     `;
   modal.style.display = "flex";
-
+  const getStepClass = (currentStatus, stepStatus) => {
+    const stages = ["Processing", "Shipped", "Out for Delivery", "Delivered"];
+    return stages.indexOf(currentStatus) >= stages.indexOf(stepStatus)
+      ? "active"
+      : "";
+  };
   try {
     const res = await fetch(`${API_BASE_URL}/orders`, {
       method: "GET",
@@ -1848,10 +1949,20 @@ async function openOrdersModal() {
                          .toUpperCase()}</strong> <span style="font-size:0.8rem; color:#666;">${new Date(
             o.orderDate
           ).toLocaleDateString()}</span></div>
-                       <div class="order-status status-${
-                         o.status?.toLowerCase() || "processing"
-                       }">${o.status || "Processing"}</div>
-                   </div>
+                       <div class="order-timeline">
+    <div class="timeline-step ${getStepClass(o.status, "Processing")}">
+        <div class="timeline-icon"><i class="fas fa-box"></i></div>
+        <p>Processing</p>
+    </div>
+    <div class="timeline-step ${getStepClass(o.status, "Shipped")}">
+        <div class="timeline-icon"><i class="fas fa-shipping-fast"></i></div>
+        <p>Shipped</p>
+    </div>
+    <div class="timeline-step ${getStepClass(o.status, "Delivered")}">
+        <div class="timeline-icon"><i class="fas fa-check"></i></div>
+        <p>Delivered</p>
+    </div>
+</div>
                    <div class="order-items">
                        ${o.items
                          .map(

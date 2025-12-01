@@ -37,8 +37,18 @@ const orderSchema = new mongoose.Schema({
     hasInsurance: { type: Boolean, default: false },
     cost: { type: Number, default: 0 },
   },
-  deliverySlot: { type: String },
-  scheduledDate: { type: Date },
+  delivery: {
+    method: {
+      type: String,
+      enum: ["Standard", "Same-Day", "Scheduled", "Pickup", "International"],
+      default: "Standard",
+    },
+    slot: String, // e.g. "Morning", "10:00 AM"
+    date: Date, // For Scheduled
+    pickupLocation: String, // For Click & Collect
+    instructions: String, // Gate code, safe place
+    cost: { type: Number, default: 0 },
+  },
 
   status: {
     type: String,
