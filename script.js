@@ -1563,6 +1563,8 @@ function openPaymentModal(items) {
     addressList.innerHTML =
       "<p>No addresses found. Please add one in Profile.</p>";
   }
+
+  // --- FIX START: Dynamic Delivery HTML (Removed inline onchange) ---
   const paymentSection = document.getElementById("checkout-payment-section");
   paymentSection
     .querySelectorAll(".delivery-section, .checkout-extras")
@@ -1573,25 +1575,25 @@ function openPaymentModal(items) {
         <h4 style="margin:15px 0 10px; font-size:1rem;">Delivery Method</h4>
         <div class="payment-methods-grid" style="grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap:10px; margin:0;">
             <label class="payment-option">
-                <input type="radio" name="delivery-method" value="Standard" checked onchange="renderSummary()"> 
+                <input type="radio" name="delivery-method" value="Standard" checked> 
                 <div class="payment-option-content" style="padding:10px; font-size:0.8rem; min-height:auto;">
                     <i class="fas fa-truck" style="font-size:1.2rem;"></i> <span>Standard</span>
                 </div>
             </label>
             <label class="payment-option">
-                <input type="radio" name="delivery-method" value="Same-Day" onchange="renderSummary()"> 
+                <input type="radio" name="delivery-method" value="Same-Day"> 
                 <div class="payment-option-content" style="padding:10px; font-size:0.8rem; min-height:auto;">
                     <i class="fas fa-bolt" style="font-size:1.2rem;"></i> <span>Same-Day</span>
                 </div>
             </label>
             <label class="payment-option">
-                <input type="radio" name="delivery-method" value="Pickup" onchange="renderSummary()"> 
+                <input type="radio" name="delivery-method" value="Pickup"> 
                 <div class="payment-option-content" style="padding:10px; font-size:0.8rem; min-height:auto;">
                     <i class="fas fa-store" style="font-size:1.2rem;"></i> <span>Pickup</span>
                 </div>
             </label>
             <label class="payment-option">
-                <input type="radio" name="delivery-method" value="International" onchange="renderSummary()"> 
+                <input type="radio" name="delivery-method" value="International"> 
                 <div class="payment-option-content" style="padding:10px; font-size:0.8rem; min-height:auto;">
                     <i class="fas fa-globe" style="font-size:1.2rem;"></i> <span>Global</span>
                 </div>
@@ -1605,20 +1607,18 @@ function openPaymentModal(items) {
 
          <div class="checkout-extras" style="margin-top:15px;">
             <label style="display:flex; align-items:center; gap:10px; cursor:pointer; margin-bottom:5px;">
-                <input type="checkbox" id="is-gift" onchange="renderSummary()"> 
+                <input type="checkbox" id="is-gift"> 
                 <span><i class="fas fa-gift"></i> Add Gift Wrap (+₹50)</span>
             </label>
-            <div id="gift-message-box" style="display:none; margin-left:25px; margin-bottom:10px;">
-                <input type="text" id="gift-message" placeholder="Enter gift message..." style="width:100%; padding:8px; border:1px solid #ddd; border-radius:4px;">
-            </div>
-
+            
             <label style="display:flex; align-items:center; gap:10px; cursor:pointer;">
-                <input type="checkbox" id="has-insurance" onchange="renderSummary()"> 
+                <input type="checkbox" id="has-insurance"> 
                 <span><i class="fas fa-shield-alt"></i> Add Shipping Insurance (+₹100)</span>
             </label>
         </div>
     </div>
   `;
+  // --- FIX END ---
 
   const paymentHeader = paymentSection.querySelector("h3"); // "Select Payment Method"
   if (paymentHeader) {
@@ -1643,7 +1643,7 @@ function openPaymentModal(items) {
     document.getElementById("checkout-payment-section").style.display = "block";
   };
 
-  // Detailed Price Breakdown Logic (The Fix for C)
+  // Detailed Price Breakdown Logic
   const renderSummary = () => {
     const calc = window.cartManager.calculateTotals(items);
     const summaryHTML = `
@@ -1684,15 +1684,23 @@ function openPaymentModal(items) {
               <span>Total</span><span>₹${calc.finalTotal.toFixed(2)}</span>
           </div>
       `;
-    // Use .order-summary which is the container in your HTML
     document.querySelector(".order-summary").innerHTML = summaryHTML;
   };
 
-  renderSummary();
+  // FIX: Explicitly attach listeners AFTER injecting HTML
+  // This ensures the local renderSummary function is called correctly
+  document
+    .querySelectorAll('input[name="delivery-method"]')
+    .forEach((radio) => {
+      radio.addEventListener("change", renderSummary);
+    });
   document.getElementById("is-gift")?.addEventListener("change", renderSummary);
   document
     .getElementById("has-insurance")
     ?.addEventListener("change", renderSummary);
+
+  // Initial Render
+  renderSummary();
 
   // Pay Now Logic
   const payBtn = document.getElementById("pay-now");
@@ -1703,6 +1711,7 @@ function openPaymentModal(items) {
     const methodInput = document.querySelector('input[name="payment"]:checked');
     const method = methodInput ? methodInput.value : "cod";
 
+    // Validation
     if (method === "card") {
       const num = document.querySelector(
         "#card-form input[placeholder*='Card Number']"
@@ -1715,13 +1724,13 @@ function openPaymentModal(items) {
           "Please enter valid card details",
           "error"
         );
-        return; // STOP HERE
+        return;
       }
     } else if (method === "upi") {
       const upiId = document.querySelector("#upi-form input")?.value;
       if (!upiId || !upiId.includes("@")) {
         window.cartManager.showToast("Please enter valid UPI ID", "error");
-        return; // STOP HERE
+        return;
       }
     }
 
@@ -1729,8 +1738,6 @@ function openPaymentModal(items) {
     newPayBtn.disabled = true;
 
     const calc = window.cartManager.calculateTotals(items);
-
-    // Safely get address
     const selectedAddrIdx =
       document.querySelector(".address-option-card.selected")?.dataset.idx || 0;
     const shippingAddress = user.addresses
@@ -1744,9 +1751,11 @@ function openPaymentModal(items) {
     }
 
     const deliverySlot =
-      document.getElementById("delivery-slot")?.value || "Standard";
+      document.querySelector('input[name="delivery-method"]:checked')?.value ||
+      "Standard";
     const isGift = document.getElementById("is-gift")?.checked || false;
-    const giftMessage = document.getElementById("gift-message")?.value || "";
+    const giftMessage =
+      document.getElementById("delivery-instructions")?.value || ""; // Reuse text area or add specific
     const hasInsurance =
       document.getElementById("has-insurance")?.checked || false;
 
@@ -1758,7 +1767,7 @@ function openPaymentModal(items) {
         shipping: calc.shipping,
         tax: calc.tax,
         paymentMethod: method,
-        address: shippingAddress, // Fix for Defect A
+        address: shippingAddress,
         deliverySlot: deliverySlot,
         giftOption: { isGift, message: giftMessage, wrapCost: isGift ? 50 : 0 },
         insurance: { hasInsurance, cost: hasInsurance ? 100 : 0 },
