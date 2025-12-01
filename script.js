@@ -14,6 +14,7 @@ let _wishlistData = [];
 let _searchHistoryData = [];
 let _currentUser = null;
 let _authToken = null;
+let _ordersData = []; // Store orders locally for "Buy Again" functionality
 
 // Initialize state from LocalStorage (Keeps you logged in)
 const storedUser = localStorage.getItem("user");
@@ -351,21 +352,18 @@ class CartManager {
       subtotal += itemTotal;
     });
 
-    // --- NEW: Dynamic Shipping Logic ---
-    // We read the selected radio button from the DOM
+    // --- Dynamic Shipping Logic ---
     const deliveryMethod =
       document.querySelector('input[name="delivery-method"]:checked')?.value ||
       "Standard";
 
     let shipping = 0;
-    if (deliveryMethod === "Pickup") {
-      shipping = 0;
-    } else if (deliveryMethod === "Same-Day") {
+    if (deliveryMethod === "Same-Day") {
       shipping = 250; // Premium cost
     } else if (deliveryMethod === "International") {
       shipping = 2500; // High cost
     } else {
-      // Standard / Scheduled
+      // Standard: Free over 2000
       shipping = subtotal - bulkSavings > 2000 ? 0 : 150;
     }
 
@@ -378,7 +376,8 @@ class CartManager {
     const tax = (subtotal - bulkSavings) * 0.18;
 
     let couponDiscount = 0;
-    if (this.coupon && !customItems) {
+    // Allow coupon discount for both cart and Buy Now (customItems)
+    if (this.coupon) {
       couponDiscount = this.coupon.discountAmount;
     }
 
@@ -998,8 +997,10 @@ class ProductManager {
         window.cartManager.toggleWishlist(product);
       } else if (e.target.closest(".btn-buy-now")) {
         if (e.target.disabled) return;
+        // [FIXED] Buy Now -> Add to Cart -> Open Cart Modal
         window.cartManager.addToCart(product);
         openCartModal();
+      }
     };
 
     document
@@ -1224,7 +1225,7 @@ class QuickViewModal {
 
     const actionsDiv = this.modal.querySelector(".quick-view-actions");
 
-    // FIX: Insert New Sections BEFORE the Add to Cart Button
+    // Insert New Sections BEFORE the Add to Cart Button
     const fbtElement = this.createFBTElement(product);
     const relatedElement = this.createRelatedElement(product);
 
@@ -1519,7 +1520,6 @@ function closeAuthModal() {
   }
 }
 
-// [FIX 3: Checkout Flow (Cart -> Address -> Payment)]
 // [FIXED] Checkout Modal: Global Delivery & No Redundant Coupon Input
 function openPaymentModal(itemsInput) {
   const items = Array.isArray(itemsInput) ? itemsInput : [itemsInput];
@@ -1542,7 +1542,7 @@ function openPaymentModal(itemsInput) {
 
   // 1. Render Items with Estimated Delivery
   const deliveryDate = window.cartManager.getEstimatedDelivery();
-  
+
   document.getElementById("payment-items").innerHTML = items
     .map(
       (item) => `
@@ -1551,7 +1551,9 @@ function openPaymentModal(itemsInput) {
           <div style="font-weight:600;">${item.title} (x${item.quantity})</div>
           <div style="font-size:0.8rem; color:#27ae60;"><i class="fas fa-truck"></i> Est. Delivery: ${deliveryDate}</div>
       </div>
-      <span style="font-weight:600;">₹${(item.price * item.quantity).toFixed(2)}</span>
+      <span style="font-weight:600;">₹${(item.price * item.quantity).toFixed(
+        2
+      )}</span>
     </div>
   `
     )
@@ -1581,7 +1583,11 @@ function openPaymentModal(itemsInput) {
   // 3. Render Delivery Options (With 'Global')
   const paymentSection = document.getElementById("checkout-payment-section");
   // Clear previous injections
-  paymentSection.querySelectorAll(".delivery-section, .checkout-extras, .checkout-coupon-section").forEach((el) => el.remove());
+  paymentSection
+    .querySelectorAll(
+      ".delivery-section, .checkout-extras, .checkout-coupon-section"
+    )
+    .forEach((el) => el.remove());
 
   const deliveryHTML = `
     <div class="delivery-section" style="margin-bottom:20px; padding-bottom:15px; border-bottom:1px solid #eee;">
@@ -1648,15 +1654,41 @@ function openPaymentModal(itemsInput) {
   // --- Summary Calculation ---
   const renderSummary = () => {
     const calc = window.cartManager.calculateTotals(items);
-    
+
     const summaryHTML = `
-          <div style="display:flex; justify-content:space-between; margin-bottom:5px;"><span>Subtotal</span><span>₹${calc.subtotal.toFixed(2)}</span></div>
-          <div style="display:flex; justify-content:space-between; margin-bottom:5px;"><span>Tax (18%)</span><span>₹${calc.tax.toFixed(2)}</span></div>
-          <div style="display:flex; justify-content:space-between; margin-bottom:5px;"><span>Shipping</span><span>₹${calc.shipping.toFixed(2)}</span></div>
-          ${calc.giftCost > 0 ? `<div style="display:flex; justify-content:space-between; margin-bottom:5px; color:#d35400;"><span>Gift Wrap</span><span>+₹${calc.giftCost}</span></div>` : ""}
-          ${calc.insuranceCost > 0 ? `<div style="display:flex; justify-content:space-between; margin-bottom:5px; color:#2980b9;"><span>Insurance</span><span>+₹${calc.insuranceCost}</span></div>` : ""}
-          ${calc.bulkSavings > 0 ? `<div style="display:flex; justify-content:space-between; margin-bottom:5px; color:#27ae60;"><span>Bulk Discount</span><span>-₹${calc.bulkSavings.toFixed(2)}</span></div>` : ""}
-          ${calc.couponDiscount > 0 ? `<div style="display:flex; justify-content:space-between; margin-bottom:5px; color:#27ae60;"><span>Coupon (${window.cartManager.coupon?.code})</span><span>-₹${calc.couponDiscount.toFixed(2)}</span></div>` : ""}
+          <div style="display:flex; justify-content:space-between; margin-bottom:5px;"><span>Subtotal</span><span>₹${calc.subtotal.toFixed(
+            2
+          )}</span></div>
+          <div style="display:flex; justify-content:space-between; margin-bottom:5px;"><span>Tax (18%)</span><span>₹${calc.tax.toFixed(
+            2
+          )}</span></div>
+          <div style="display:flex; justify-content:space-between; margin-bottom:5px;"><span>Shipping</span><span>₹${calc.shipping.toFixed(
+            2
+          )}</span></div>
+          ${
+            calc.giftCost > 0
+              ? `<div style="display:flex; justify-content:space-between; margin-bottom:5px; color:#d35400;"><span>Gift Wrap</span><span>+₹${calc.giftCost}</span></div>`
+              : ""
+          }
+          ${
+            calc.insuranceCost > 0
+              ? `<div style="display:flex; justify-content:space-between; margin-bottom:5px; color:#2980b9;"><span>Insurance</span><span>+₹${calc.insuranceCost}</span></div>`
+              : ""
+          }
+          ${
+            calc.bulkSavings > 0
+              ? `<div style="display:flex; justify-content:space-between; margin-bottom:5px; color:#27ae60;"><span>Bulk Discount</span><span>-₹${calc.bulkSavings.toFixed(
+                  2
+                )}</span></div>`
+              : ""
+          }
+          ${
+            calc.couponDiscount > 0
+              ? `<div style="display:flex; justify-content:space-between; margin-bottom:5px; color:#27ae60;"><span>Coupon (${
+                  window.cartManager.coupon?.code
+                })</span><span>-₹${calc.couponDiscount.toFixed(2)}</span></div>`
+              : ""
+          }
           
           <div style="display:flex; justify-content:space-between; margin-top:10px; padding-top:10px; border-top:1px solid #ddd; font-weight:bold; font-size:1.1rem;">
               <span>Total</span><span>₹${calc.finalTotal.toFixed(2)}</span>
@@ -1666,9 +1698,13 @@ function openPaymentModal(itemsInput) {
   };
 
   // Attach Listeners
-  document.querySelectorAll('input[name="delivery-method"]').forEach(r => r.addEventListener("change", renderSummary));
+  document
+    .querySelectorAll('input[name="delivery-method"]')
+    .forEach((r) => r.addEventListener("change", renderSummary));
   document.getElementById("is-gift")?.addEventListener("change", renderSummary);
-  document.getElementById("has-insurance")?.addEventListener("change", renderSummary);
+  document
+    .getElementById("has-insurance")
+    ?.addEventListener("change", renderSummary);
 
   // Initial Render
   renderSummary();
@@ -1681,17 +1717,22 @@ function openPaymentModal(itemsInput) {
   newPayBtn.onclick = async () => {
     const methodInput = document.querySelector('input[name="payment"]:checked');
     const method = methodInput ? methodInput.value : "cod";
-    
-    if(method === "card" && document.querySelector("#card-form input").value.length < 10) {
-        window.cartManager.showToast("Invalid Card Details", "error"); return;
+
+    if (
+      method === "card" &&
+      document.querySelector("#card-form input").value.length < 10
+    ) {
+      window.cartManager.showToast("Invalid Card Details", "error");
+      return;
     }
 
     newPayBtn.textContent = "Processing...";
     newPayBtn.disabled = true;
 
     const calc = window.cartManager.calculateTotals(items);
-    const selectedAddrIdx = document.querySelector(".address-option-card.selected")?.dataset.idx || 0;
-    
+    const selectedAddrIdx =
+      document.querySelector(".address-option-card.selected")?.dataset.idx || 0;
+
     const orderData = {
       items: items,
       total: calc.finalTotal,
@@ -1700,23 +1741,31 @@ function openPaymentModal(itemsInput) {
       tax: calc.tax,
       paymentMethod: method,
       address: user.addresses[selectedAddrIdx],
-      deliverySlot: document.querySelector('input[name="delivery-method"]:checked')?.value || "Standard",
+      deliverySlot:
+        document.querySelector('input[name="delivery-method"]:checked')
+          ?.value || "Standard",
       giftOption: { isGift: document.getElementById("is-gift")?.checked },
-      coupon: window.cartManager.coupon 
+      coupon: window.cartManager.coupon,
     };
 
     try {
       const res = await fetch(`${API_BASE_URL}/orders`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${_authToken}` },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${_authToken}`,
+        },
         body: JSON.stringify(orderData),
       });
 
       if (!res.ok) throw new Error("Order failed");
-      
+
       window.cartManager.showToast("Order placed successfully!", "success");
-      window.cartManager.clearCart(); 
-      
+      // If we bought from cart, clear it.
+      if (itemsInput === window.cartManager.cart) {
+        window.cartManager.clearCart();
+      }
+
       closePaymentModal();
       closeCartModal();
       newPayBtn.textContent = "Place Order";
@@ -1731,6 +1780,7 @@ function openPaymentModal(itemsInput) {
 
   modal.style.display = "flex";
 }
+
 function selectAddress(el) {
   document
     .querySelectorAll(".address-option-card")
@@ -1878,7 +1928,7 @@ async function openOrdersModal() {
     if (!res.ok) throw new Error("Failed to fetch");
     const orders = await res.json();
 
-    // FIX: Store orders globally so we can access items for 'Buy Again'
+    // Store orders globally so we can access items for 'Buy Again'
     _ordersData = orders;
 
     if (orders.length === 0) {
@@ -1906,12 +1956,14 @@ async function openOrdersModal() {
                        }">${o.status || "Processing"}</div>
                    </div>
                    <div class="order-items">
-                       ${o.items
+                       ${(o.items || [])
                          .map(
                            (i) =>
                              `<div class="order-item">
-                                <span>${i.title} <span style="color:#666;">x${i.quantity}</span></span>
-                                <span>₹${i.price}</span>
+                                <span>${i.title} <span style="color:#666;">x${
+                               i.quantity || 1
+                             }</span></span>
+                                <span>₹${i.price || 0}</span>
                               </div>`
                          )
                          .join("")}
