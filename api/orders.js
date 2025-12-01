@@ -19,7 +19,6 @@ const orderSchema = new mongoose.Schema({
   tax: Number,
   paymentMethod: String,
 
-  // --- FIX: Added Address Field (Was missing) ---
   address: {
     street: String,
     city: String,
@@ -37,18 +36,8 @@ const orderSchema = new mongoose.Schema({
     hasInsurance: { type: Boolean, default: false },
     cost: { type: Number, default: 0 },
   },
-  delivery: {
-    method: {
-      type: String,
-      enum: ["Standard", "Same-Day", "Scheduled", "Pickup", "International"],
-      default: "Standard",
-    },
-    slot: String, // e.g. "Morning", "10:00 AM"
-    date: Date, // For Scheduled
-    pickupLocation: String, // For Click & Collect
-    instructions: String, // Gate code, safe place
-    cost: { type: Number, default: 0 },
-  },
+  deliverySlot: { type: String },
+  scheduledDate: { type: Date },
 
   status: {
     type: String,
@@ -64,16 +53,8 @@ const orderSchema = new mongoose.Schema({
     ],
   },
 
-  cancellation: {
-    reason: String,
-    cancelledAt: Date,
-  },
-
-  returnRequest: {
-    reason: String,
-    status: String,
-    requestedAt: Date,
-  },
+  cancellation: { reason: String, cancelledAt: Date },
+  returnRequest: { reason: String, status: String, requestedAt: Date },
 
   trackingId: {
     type: String,
@@ -128,14 +109,57 @@ const handler = async (req, res) => {
     return res.status(401).json({ error: "Invalid token" });
   }
 
-  // --- GET: Fetch Orders ---
+  // --- GET: Fetch Orders (With Auto Status Update) ---
   if (req.method === "GET") {
     try {
-      const orders = await Order.find({ userEmail: decodedUser.email }).sort({
+      let orders = await Order.find({ userEmail: decodedUser.email }).sort({
         orderDate: -1,
       });
+
+      // AUTO-UPDATE STATUS LOGIC
+      const now = new Date();
+      let updated = false;
+
+      for (let order of orders) {
+        // Skip if already final state
+        if (["Delivered", "Cancelled", "Returned"].includes(order.status))
+          continue;
+
+        const daysPassed =
+          (now - new Date(order.orderDate)) / (1000 * 60 * 60 * 24);
+
+        // 1. Move to Shipped after 3 days
+        if (order.status === "Processing" && daysPassed > 3) {
+          order.status = "Shipped";
+          await order.save();
+          updated = true;
+        }
+
+        // 2. Move to Delivered if Scheduled Date has passed (or 6 days default)
+        const deliveryDate =
+          order.scheduledDate ||
+          new Date(
+            new Date(order.orderDate).setDate(
+              new Date(order.orderDate).getDate() + 6
+            )
+          );
+        if (now > deliveryDate && order.status !== "Delivered") {
+          order.status = "Delivered";
+          await order.save();
+          updated = true;
+        }
+      }
+
+      // Re-fetch if updates happened to ensure clean data
+      if (updated) {
+        orders = await Order.find({ userEmail: decodedUser.email }).sort({
+          orderDate: -1,
+        });
+      }
+
       return res.status(200).json(orders);
     } catch (error) {
+      console.error(error);
       return res.status(500).json({ error: "Failed to fetch orders" });
     }
   }
@@ -143,7 +167,6 @@ const handler = async (req, res) => {
   // --- POST: Create New Order ---
   if (req.method === "POST") {
     try {
-      // FIX: Extract 'address' from body
       const {
         items,
         total,
@@ -168,8 +191,8 @@ const handler = async (req, res) => {
         giftOption,
         insurance,
         deliverySlot,
-        address, // FIX: Save Address
-        scheduledDate: new Date(new Date().setDate(new Date().getDate() + 5)),
+        address,
+        scheduledDate: new Date(new Date().setDate(new Date().getDate() + 5)), // 5 Days Delivery
       });
 
       await newOrder.save();
