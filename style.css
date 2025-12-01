@@ -3290,9 +3290,11 @@ body {
   .hero-content h2 {
     font-size: 2.5rem;
   }
-
   .products-container {
-    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    display: grid;
+    /* Force 3 equal columns */
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 30px;
   }
 }
 @media (max-width: 768px) {

@@ -1564,30 +1564,34 @@ function openPaymentModal(items) {
       "<p>No addresses found. Please add one in Profile.</p>";
   }
   const paymentSection = document.getElementById("checkout-payment-section");
+  paymentSection
+    .querySelectorAll(".delivery-section, .checkout-extras")
+    .forEach((el) => el.remove());
+
   const deliveryHTML = `
     <div class="delivery-section" style="margin-bottom:20px; padding-bottom:15px; border-bottom:1px solid #eee;">
         <h4 style="margin:15px 0 10px; font-size:1rem;">Delivery Method</h4>
         <div class="payment-methods-grid" style="grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap:10px; margin:0;">
             <label class="payment-option">
-                <input type="radio" name="delivery-method" value="Standard" checked onchange="window.cartManager.updateUI()"> 
+                <input type="radio" name="delivery-method" value="Standard" checked onchange="renderSummary()"> 
                 <div class="payment-option-content" style="padding:10px; font-size:0.8rem; min-height:auto;">
                     <i class="fas fa-truck" style="font-size:1.2rem;"></i> <span>Standard</span>
                 </div>
             </label>
             <label class="payment-option">
-                <input type="radio" name="delivery-method" value="Same-Day" onchange="window.cartManager.updateUI()"> 
+                <input type="radio" name="delivery-method" value="Same-Day" onchange="renderSummary()"> 
                 <div class="payment-option-content" style="padding:10px; font-size:0.8rem; min-height:auto;">
                     <i class="fas fa-bolt" style="font-size:1.2rem;"></i> <span>Same-Day</span>
                 </div>
             </label>
             <label class="payment-option">
-                <input type="radio" name="delivery-method" value="Pickup" onchange="window.cartManager.updateUI()"> 
+                <input type="radio" name="delivery-method" value="Pickup" onchange="renderSummary()"> 
                 <div class="payment-option-content" style="padding:10px; font-size:0.8rem; min-height:auto;">
                     <i class="fas fa-store" style="font-size:1.2rem;"></i> <span>Pickup</span>
                 </div>
             </label>
             <label class="payment-option">
-                <input type="radio" name="delivery-method" value="International" onchange="window.cartManager.updateUI()"> 
+                <input type="radio" name="delivery-method" value="International" onchange="renderSummary()"> 
                 <div class="payment-option-content" style="padding:10px; font-size:0.8rem; min-height:auto;">
                     <i class="fas fa-globe" style="font-size:1.2rem;"></i> <span>Global</span>
                 </div>
@@ -1601,7 +1605,7 @@ function openPaymentModal(items) {
 
          <div class="checkout-extras" style="margin-top:15px;">
             <label style="display:flex; align-items:center; gap:10px; cursor:pointer; margin-bottom:5px;">
-                <input type="checkbox" id="is-gift" onchange="toggleGiftMessage()"> 
+                <input type="checkbox" id="is-gift" onchange="renderSummary()"> 
                 <span><i class="fas fa-gift"></i> Add Gift Wrap (+₹50)</span>
             </label>
             <div id="gift-message-box" style="display:none; margin-left:25px; margin-bottom:10px;">
@@ -1609,7 +1613,7 @@ function openPaymentModal(items) {
             </div>
 
             <label style="display:flex; align-items:center; gap:10px; cursor:pointer;">
-                <input type="checkbox" id="has-insurance"> 
+                <input type="checkbox" id="has-insurance" onchange="renderSummary()"> 
                 <span><i class="fas fa-shield-alt"></i> Add Shipping Insurance (+₹100)</span>
             </label>
         </div>
